@@ -1,0 +1,49 @@
+name: Sincronización Espejo
+
+on:
+  push:
+    branches: [ '**' ] # Se activa con cambios en cualquier rama
+  delete:        
+    branches: [ '**' ] 
+
+jobs:
+  mirror:
+    # Solo se ejecuta para el repositorio finvora - no se ejecuta para el repo espejo
+    if: github.repository == 'JSoza1/finvora'
+    runs-on: ubuntu-latest
+
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    
+    steps:
+      - name: Descarga de código fuente (Todas las ramas)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Descarga todo el historial
+          persist-credentials: false
+
+      - name: Sincronizar con repositorio externo
+        env:
+          TOKEN: ${{ secrets.BUSINESS_REPO_TOKEN2 }}
+          # Nombre de cuenta github del espejo
+          DESTINY_USER: "Gopay2" 
+        run: |
+          # 1. Configuración de identidad (evita errores de Git)
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+
+          # 2. Limpieza de cabeceras para usar el Token Personal (PAT)
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          
+          # 3. CREAR RAMAS LOCALES
+          # Este paso asegura que la Action "vea" todas las ramas que existen en el origen
+          # para que no intente borrarlas en el destino por accidente.
+          git branch -r | grep -v '\->' | while read remote; do git branch --track "${remote#origin/}" "$remote" || true; done
+
+          # 4. Configuración del destino remoto
+          # URL del repositorio espejo - editar ultima parte si es necesario
+          REMOTE_URL="https://x-access-token:${TOKEN}@github.com/${DESTINY_USER}/finvora.git"
+          
+          # 5. Sincronización Inteligente con --prune
+          # Ahora que todas las ramas son "locales", el prune solo borrará lo que realmente no existe.
+          git push --force "$REMOTE_URL" "refs/heads/*:refs/heads/*" "refs/tags/*:refs/tags/*" --prune

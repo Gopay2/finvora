@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+@theme {
+  --color-secondary: #a2e7ff;
+  --color-error: #ffb4ab;
+  --color-surface-container-highest: #32353d;
+  --color-background: #10131a;
+  --color-on-secondary-fixed: #001f27;
+  --color-surface-container: #1d1f27;
+  --color-secondary-fixed: #b4ebff;
+  --color-primary-container: #001f3f;
+  --color-on-secondary: #003642;
+  --color-outline: #8e9198;
+  --color-inverse-surface: #e1e2ec;
+  --color-inverse-on-surface: #2d3038;
+  --color-secondary-container: #00d2fd;
+  --color-tertiary-fixed: #ffdbcc;
+  --color-on-primary-fixed-variant: #2f486a;
+  --color-tertiary-fixed-dim: #ffb693;
+  --color-on-tertiary-container: #e15e00;
+  --color-on-primary-container: #6f88ad;
+  --color-primary-fixed-dim: #afc8f0;
+  --color-on-surface-variant: #c4c6cf;
+  --color-on-background: #e1e2ec;
+  --color-surface-container-low: #191b23;
+  --color-on-secondary-container: #005669;
+  --color-surface-container-lowest: #0b0e15;
+  --color-surface-bright: #363941;
+  --color-on-primary: #163152;
+  --color-primary: #afc8f0;
+  --color-on-surface: #e1e2ec;
+  --color-surface: #10131a;
+  --color-on-secondary-fixed-variant: #004e5f;
+  --color-surface-container-high: #272a32;
+  --color-primary-fixed: #d4e3ff;
+  --color-on-tertiary: #561f00;
+  --color-tertiary-container: #3a1200;
+  --color-on-tertiary-fixed: #351000;
+  --color-secondary-fixed-dim: #3cd7ff;
+  --color-surface-variant: #32353d;
+  --color-error-container: #93000a;
+  --color-inverse-primary: #476083;
+  --color-on-error-container: #ffdad6;
+  --color-on-primary-fixed: #001c3a;
+  --color-surface-tint: #afc8f0;
+  --color-tertiary: #ffb693;
+  --color-outline-variant: #43474e;
+  --color-surface-dim: #10131a;
+  --color-on-error: #690005;
+  --color-on-tertiary-fixed-variant: #7a3000;
+
+  --font-headline: var(--font-roboto);
+  --font-display: var(--font-roboto);
+  --font-body: var(--font-roboto);
+  --font-label: var(--font-roboto);
+  --animate-peek: peek-slide 2.5s ease-in-out 1s;
+}
+
+@utility glass-effect {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.material-symbols-outlined {
+  font-variation-settings:
+  'FILL' 0,
+  'wght' 400,
+  'GRAD' 0,
+  'opsz' 24;
+}
+
+@keyframes peek-slide {
+  0%, 100% { transform: translateX(0); }
+  30% { transform: translateX(-40px); }
+  60% { transform: translateX(15px); }
+  80% { transform: translateX(-5px); }
+}
+
+
+/* Corregir el color de autocompletado (Autofill) de los navegadores */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #020617 inset !important; /* Color slate-950 */
+    -webkit-text-fill-color: #f1f5f9 !important; /* Color slate-100 */
+    transition: background-color 5000s ease-in-out 0s;
+    border-radius: 0.75rem;
+}
+
+/* También para Firefox y otros navegadores */
+input:autofill {
+    background-color: #020617 !important;
+    color: #f1f5f9 !important;
+}
