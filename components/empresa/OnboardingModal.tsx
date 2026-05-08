@@ -39,7 +39,7 @@ export default function OnboardingModal({ isOpen }: OnboardingModalProps) {
           <div className="w-16 h-16 bg-secondary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-secondary/20">
             <span className="material-symbols-outlined text-secondary text-3xl">person_add</span>
           </div>
-          <h2 className="text-2xl font-bold text-white">¡Bienvenido a GoPay!</h2>
+          <h2 className="text-2xl font-bold text-white">¡Bienvenido a Finvora!</h2>
           <p className="text-slate-400 text-sm">
             Antes de comenzar, por favor elige un nombre de usuario único. 
             Este nombre aparecerá en tus registros y notificaciones.

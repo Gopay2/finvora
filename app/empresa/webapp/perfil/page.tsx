@@ -22,7 +22,7 @@ export default async function PerfilPage() {
           <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
             Mi Perfil
           </h2>
-          <p className="text-slate-400 text-sm">Gestiona tu identidad en GoPay</p>
+          <p className="text-slate-400 text-sm">Gestiona tu identidad en Finvora</p>
         </div>
         <Link href="/empresa/webapp" className="text-slate-500 hover:text-slate-300 flex items-center gap-2 text-sm transition-colors">
           <span className="material-symbols-outlined text-base">arrow_back</span>

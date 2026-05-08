@@ -69,7 +69,7 @@ export async function submitVenta(formData: FormData) {
     fields.push({ name: "💬 Comentarios", value: data.comentarios, inline: false });
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://gopay.mx';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://finvora.mx';
 
   const embed = {
     title: "NUEVA VENTA REGISTRADA 🚀",
@@ -87,8 +87,8 @@ export async function submitVenta(formData: FormData) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        username: "GoPay Ventas",
-        avatar_url: `${siteUrl}/brands/gopaylogo.webp`,
+        username: "Finvora Ventas",
+        avatar_url: `${siteUrl}/brands/finvoralogo.webp`,
         content: content,
         embeds: [embed]
       }),

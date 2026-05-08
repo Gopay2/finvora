@@ -39,8 +39,8 @@ export default function EmpresaPage() {
       <section className={styles.heroSection}>
         <div className={styles.logoWrapper}>
           <img 
-            src="/brands/gopaylogo.webp" 
-            alt="GoPay Logo" 
+            src="/brands/finvoralogo.webp" 
+            alt="Finvora Logo" 
             className={styles.logo}
           />
         </div>

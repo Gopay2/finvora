@@ -6,7 +6,7 @@ import React from "react";
  */
 export default function WhatsAppButton() {
   const phoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || "";
-  const message = "Hola, me gustaría saber más sobre el crédito de GoPay.";
+  const message = "Hola, me gustaría saber más sobre el crédito de Finvora.";
   const whatsappUrl = phoneNumber ? `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}` : "#";
 
   return (

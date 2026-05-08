@@ -1,4 +1,4 @@
-# Documentación de Base de Datos - GoPay
+# Documentación de Base de Datos - Finvora
 
 Esta carpeta contiene la definición modular de la infraestructura de datos. Se ha dividido en archivos numerados para indicar el orden de ejecución necesario en Supabase.
 

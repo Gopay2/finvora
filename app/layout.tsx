@@ -14,7 +14,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "GoPay - Tu celular nuevo en 5 minutos",
+  title: "Finvora - Tu celular nuevo en 5 minutos",
   description: "Compra tu celular a crédito con pagos semanales. 9 de cada 10 personas son aprobadas.",
 };
 

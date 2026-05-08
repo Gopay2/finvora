@@ -47,9 +47,9 @@ export default function HeaderEmpresa() {
         <div className={styles.logoContainer}>
           <Link href="/">
             <img
-              alt="GoPay Logo"
+              alt="Finvora Logo"
               className={styles.logo}
-              src="/brands/gopaylogo.webp"
+              src="/brands/finvoralogo.webp"
             />
           </Link>
         </div>

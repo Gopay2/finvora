@@ -57,8 +57,8 @@ export default async function WebAppLayout({
             <Link href="/empresa" className="flex items-center group">
               <div className="relative w-48 h-12 flex items-center">
                 <img
-                  src="/brands/gopaylogo.webp"
-                  alt="GoPay Logo"
+                  src="/brands/finvoralogo.webp"
+                  alt="Finvora Logo"
                   className="absolute -left-4 w-auto h-42 object-contain brightness-0 invert opacity-80 group-hover:opacity-100 transition-all duration-300 drop-shadow-[0_0_5px_rgba(255,255,255,0.1)] group-hover:drop-shadow-[0_0_20px_rgba(0,255,255,0.8)]"
                 />
               </div>

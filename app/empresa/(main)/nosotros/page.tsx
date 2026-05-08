@@ -27,7 +27,7 @@ export default function NosotrosPage() {
         <h1 className={styles.title}>Nuestra Historia</h1>
         <div className={styles.textContainer}>
           <p>
-            Fundada en 2024, GoPay nació con la misión de democratizar el acceso a la tecnología.
+            Fundada en 2024, Finvora nació con la misión de democratizar el acceso a la tecnología.
             Creemos que todos deberían tener la oportunidad de contar con un smartphone de última
             generación sin que el pago inicial sea un obstáculo insuperable.
           </p>

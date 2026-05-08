@@ -34,8 +34,8 @@ function LoginContent() {
       
       <Link href="/empresa">
         <img 
-          src="/brands/gopaylogo.webp" 
-          alt="GoPay Logo" 
+          src="/brands/finvoralogo.webp" 
+          alt="Finvora Logo" 
           className={styles.logo}
         />
       </Link>

@@ -26,7 +26,7 @@ const styles = {
 
 /**
  * BrandIntroduction Component
- * Displays the main GoPay logo and the slogan with glowing effects.
+ * Displays the main Finvora logo and the slogan with glowing effects.
  */
 function BrandIntroduction() {
   return (
@@ -34,9 +34,9 @@ function BrandIntroduction() {
       <div className={styles.brandContainer}>
         <div className={styles.brandGlow}></div>
         <img
-          alt="GoPay Brand Logo"
+          alt="Finvora Brand Logo"
           className={styles.brandLogo}
-          src="/brands/gopaylogo.webp"
+          src="/brands/finvoralogo.webp"
         />
         <div className={styles.brandLabelContainer}>
           <span className={styles.brandLine}></span>
@@ -54,7 +54,7 @@ function BrandIntroduction() {
  */
 function HeroMain() {
   const phoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || "";
-  const message = "Hola, me gustaría saber más sobre el crédito de GoPay.";
+  const message = "Hola, me gustaría saber más sobre el crédito de Finvora.";
   const whatsappUrl = phoneNumber ? `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}` : "#";
 
   return (

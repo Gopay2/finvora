@@ -24,7 +24,7 @@ const styles = {
 
 /**
  * HowItWorksSection Component
- * Explains the 3 simple steps to get a smartphone with GoPay.
+ * Explains the 3 simple steps to get a smartphone with Finvora.
  */
 export default function HowItWorksSection() {
   return (

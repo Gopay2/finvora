@@ -51,9 +51,9 @@ export default function Header() {
       <div className={styles.container}>
         <div className={styles.logoContainer}>
           <img
-            alt="GoPay Logo"
+            alt="Finvora Logo"
             className={styles.logo}
-            src="/brands/gopaylogo.webp"
+            src="/brands/finvoralogo.webp"
           />
         </div>
 

@@ -31,13 +31,13 @@ export default function Footer() {
         <div className={styles.brandColumn}>
           <div className={styles.logoWrapper}>
             <img
-              alt="GoPay Logo"
+              alt="Finvora Logo"
               className={styles.logoImage}
-              src="/brands/gopaylogo.webp"
+              src="/brands/finvoralogo.webp"
             />
           </div>
           <p className={styles.brandDescription}>
-            © 2026 GoPay México. Tu celular nuevo en 5 minutos, sin salir de casa. Transformando el acceso a la tecnología en México.
+            © 2026 Finvora México. Tu celular nuevo en 5 minutos, sin salir de casa. Transformando el acceso a la tecnología en México.
           </p>
         </div>
 
@@ -47,7 +47,7 @@ export default function Footer() {
           <ul className={styles.contactList}>
             <li className={styles.contactItem}>
               <span className="material-symbols-outlined text-sm" data-icon="mail">mail</span>
-              contacto@gopay.mx
+              contacto@finvora.mx
             </li>
           </ul>
         </div>
@@ -72,7 +72,7 @@ export default function Footer() {
         </div>
       </div>
       <div className={styles.bottomBar}>
-        <p className={styles.legalText}>GoPay es una marca registrada. Todos los derechos reservados 2026.</p>
+        <p className={styles.legalText}>Finvora es una marca registrada. Todos los derechos reservados 2026.</p>
       </div>
     </footer>
   );
