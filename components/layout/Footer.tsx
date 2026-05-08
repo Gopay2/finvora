@@ -37,7 +37,7 @@ export default function Footer() {
             />
           </div>
           <p className={styles.brandDescription}>
-            © 2026 Finvora México. Tu celular nuevo en 5 minutos, sin salir de casa. Transformando el acceso a la tecnología en México.
+            © 2026 Finvora. Tu celular nuevo en 5 minutos, sin salir de casa. Transformando el acceso a la tecnología en México.
           </p>
         </div>
 
