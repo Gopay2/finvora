@@ -36,6 +36,7 @@ export default async function WebAppLayout({
   const { data: profile } = await supabase
     .from("perfiles")
     .select("role, username")
+    .eq("id", user.id)
     .single();
 
   const userRole = profile?.role || "Closer";
