@@ -50,19 +50,42 @@ El sistema implementa **RBAC (Role-Based Access Control)** gestionado desde la b
 3.  **Identidad (Onboarding)**: Los usuarios deben elegir un `username` único al primer ingreso. Esto garantiza la trazabilidad en Discord y en el header de la webapp.
 4.  **Protección**: La validación de roles se realiza en el servidor (Server Components) para prevenir accesos no autorizados.
 
-## 📧 Configuración de Mensajería (Resend)
+## 📧 Configuración de Mensajería (Resend + SMTP)
 
-Para garantizar la entrega de correos institucionales, se ha integrado **Resend** como proveedor SMTP:
+Para garantizar que los correos lleguen a la bandeja de entrada y no a Spam, se utiliza **Resend** como proveedor SMTP personalizado en Supabase.
 
-### Configuración DNS (Vercel)
-Se deben añadir los registros MX, TXT y CNAME proporcionados por Resend en el panel de DNS de Vercel para el dominio `finvora.mx`.
+### Paso 0: Crear API Key en Resend
+1.  Entra a tu cuenta de **Resend**.
+2.  Ve a **API Keys > Create API Key**.
+3.  **Permisos**: Selecciona **"Sending Access"** (Mínimo privilegio recomendado).
+4.  Copia la clave (empieza con `re_...`).
 
-### Configuración SMTP en Supabase
-- **Host**: `smtp.resend.com`
-- **Port**: `587`
-- **User**: `resend`
-- **Password**: `[API_KEY_RESEND]`
-- **Sender**: `noreply@finvora.mx`
+### Paso 1: Validación de Dominio (Cuidado de Reputación)
+Se recomienda configurar un **subdominio** (ej: `app.tudominio.com`) en lugar del dominio raíz. Esto aísla la reputación de los envíos automáticos.
+
+**Pasos en Vercel DNS:**
+Si el dominio tiene los nameservers en Vercel, los registros DNS (MX, TXT y CNAME) que entrega Resend deben añadirse en:
+`Vercel Project > Settings > Domains > [Tu Dominio] > DNS Records`.
+
+### Paso 2: Configuración en el Dashboard de Supabase
+1.  Ve a **Project Settings > Authentication > SMTP Settings**.
+2.  Activa **Enable Custom SMTP**.
+3.  Rellena los campos:
+    - **Sender email**: `no-reply@app.tudominio.com` (Debe coincidir con el subdominio verificado).
+    - **Sender name**: `Finvora`
+    - **SMTP Host**: `smtp.resend.com`
+    - **SMTP Port**: `465`
+    - **SMTP Username**: `resend`
+    - **SMTP Password**: `[TU_API_KEY_DE_RESEND]`
+4.  Haz clic en **Save**.
+
+### Paso 3: Configuración de URLs de Redirección
+Para que los enlaces de confirmación de email y recuperación de contraseña funcionen correctamente, ve a **Authentication > URL Configuration**:
+
+1.  **Site URL**: Define la URL principal de tu aplicación (ej: `https://finvora.mx`).
+2.  **Redirect URLs**: Añade las URLs permitidas para redirecciones tras la autenticación:
+    - `https://tu-dominio.com/**` (Producción).
+    - `http://localhost:3000/**` (Desarrollo local).
 
 ## 🚀 Despliegue en Producción
 

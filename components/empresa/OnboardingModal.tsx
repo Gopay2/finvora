@@ -24,8 +24,8 @@ export default function OnboardingModal({ isOpen }: OnboardingModalProps) {
     const result = await updateUsername(username);
 
     if (result.success) {
-      // Recargar la página para que el layout detecte el cambio de perfil
-      router.refresh();
+      // Forzar recarga total para asegurar que el layout detecte el nuevo perfil
+      window.location.reload();
     } else {
       setError(result.error || "Ocurrió un error.");
       setIsPending(false);

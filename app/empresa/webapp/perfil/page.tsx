@@ -13,6 +13,7 @@ export default async function PerfilPage() {
   const { data: profile } = await supabase
     .from("perfiles")
     .select("role, username, email")
+    .eq("id", user.id)
     .single();
 
   return (

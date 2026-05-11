@@ -17,8 +17,11 @@ GRANT ALL ON TABLE public.perfiles TO authenticated;
 CREATE POLICY "Lectura de perfiles para autenticados" 
 ON public.perfiles FOR SELECT TO authenticated USING (true);
 
--- Nota: No hay políticas de UPDATE/INSERT. 
--- Los cambios se deben hacer manualmente en el dashboard de Supabase.
+-- Escritura: Usuarios pueden actualizar su propio username
+CREATE POLICY "Usuarios pueden actualizar su propio username" 
+ON public.perfiles FOR UPDATE TO authenticated 
+USING (auth.uid() = id)
+WITH CHECK (auth.uid() = id);
 
 -- 4. AUTOMATIZACIÓN (TRIGGERS)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
