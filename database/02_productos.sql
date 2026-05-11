@@ -17,11 +17,11 @@ ALTER TABLE public.productos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Permitir lectura de productos a todos" 
 ON public.productos FOR SELECT TO authenticated USING (true);
 
--- Escritura: Solo Admin o Supervisor
-CREATE POLICY "Admin y Supervisor pueden modificar productos" 
+-- Escritura: Admin, Supervisor o Developer
+CREATE POLICY "Admin, Supervisor y Developer pueden modificar productos" 
 ON public.productos FOR ALL TO authenticated 
 USING (EXISTS (
     SELECT 1 FROM perfiles 
     WHERE perfiles.id = auth.uid() 
-    AND perfiles.role IN ('Admin', 'Supervisor')
+    AND perfiles.role IN ('Admin', 'Supervisor', 'Developer')
 ));
