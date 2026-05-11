@@ -12,11 +12,15 @@ Define la base de usuarios y la seguridad de perfiles.
 
 ### 2. `02_productos.sql`
 Define el catálogo maestro de equipos.
-*   **Permisos**: Todos ven los productos, solo Admin/Sup editan.
+*   **Permisos**: Todos ven los productos, solo Admin/Sup/Dev editan.
 
 ### 3. `03_stock.sql`
 Define el inventario físico disponible.
-*   **Permisos**: Todos ven el stock, solo Admin/Sup editan.
+*   **Permisos**: Todos ven el stock, solo Admin/Sup/Dev editan.
+
+### 4. `actualizar_permisos.sql`
+Actualiza los permisos de las tablas.
+*   **FormatoSQL**: Para actualizar los permisos de las tablas, ejecuta los scripts SQL en el editor SQL de Supabase.
 
 ---
 
@@ -24,7 +28,7 @@ Define el inventario físico disponible.
 
 Todas las tablas utilizan **Row Level Security (RLS)** blindada en la base de datos.
 
-| Tabla | Ver (Closer) | Editar (Closer) | Ver (Admin/Sup) | Editar (Admin/Sup) |
+| Tabla | Ver (Closer) | Editar (Closer) | Ver (Admin/Supervisor/Developer) | Editar (Admin/Supervisor/Developer) |
 | :--- | :---: | :---: | :---: | :---: |
 | `perfiles` | ✅ Sí | ❌ No | ✅ Sí | ❌ (Solo Supabase) |
 | `productos` | ✅ Sí | ❌ No | ✅ Sí | ✅ Sí |

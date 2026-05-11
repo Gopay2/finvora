@@ -14,11 +14,11 @@ ALTER TABLE public.stock ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Permitir lectura de stock a todos" 
 ON public.stock FOR SELECT TO authenticated USING (true);
 
--- Escritura: Solo Admin o Supervisor
-CREATE POLICY "Admin y Supervisor pueden modificar stock" 
+-- Escritura: Admin, Supervisor o Developer
+CREATE POLICY "Admin, Supervisor y Developer pueden modificar stock" 
 ON public.stock FOR ALL TO authenticated 
 USING (EXISTS (
     SELECT 1 FROM perfiles 
     WHERE perfiles.id = auth.uid() 
-    AND perfiles.role IN ('Admin', 'Supervisor')
+    AND perfiles.role IN ('Admin', 'Supervisor', 'Developer')
 ));

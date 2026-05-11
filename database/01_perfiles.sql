@@ -1,5 +1,5 @@
 -- 1. TIPOS ENUMERADOS
-CREATE TYPE user_role AS ENUM ('Admin', 'Closer', 'Supervisor');
+CREATE TYPE user_role AS ENUM ('Admin', 'Closer', 'Supervisor', 'Developer');
 
 -- 2. TABLAS
 CREATE TABLE public.perfiles (
