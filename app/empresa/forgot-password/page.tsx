@@ -47,7 +47,11 @@ export default function ForgotPasswordPage({
             />
           </div>
 
-          <SubmitButton pendingText="Enviando..." className={styles.button}>Enviar email de recuperación</SubmitButton>
+          <SubmitButton 
+            label="Enviar email de recuperación" 
+            loadingLabel="Enviando..." 
+            className={styles.button} 
+          />
         </form>
 
         <div className="text-center pt-4 border-t border-slate-800/50">
