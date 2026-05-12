@@ -2,12 +2,22 @@ import { createClient } from "./supabase/server";
 
 export async function getUserProfile() {
   const supabase = await createClient();
+  
+  // Obtener el usuario actual
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { id: null, role: "Closer", username: null };
+  }
+
   const { data: profile } = await supabase
     .from("perfiles")
-    .select("role, username")
+    .select("id, role, username")
+    .eq("id", user.id)
     .single();
     
   return {
+    id: profile?.id || user.id,
     role: profile?.role || "Closer",
     username: profile?.username || null
   };

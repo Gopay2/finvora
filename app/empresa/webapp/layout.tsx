@@ -41,7 +41,7 @@ export default async function WebAppLayout({
 
   const userRole = profile?.role || "Closer";
   const username = profile?.username;
-  const isAdmin = userRole === "Admin";
+  const isHighPrivilege = userRole === "Admin" || userRole === "Developer";
 
   // Mostramos el modal si no hay username definido
   const showOnboarding = !username;
@@ -69,7 +69,7 @@ export default async function WebAppLayout({
                 {username ? (
                   <div className="flex items-center gap-3">
                     <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider border ${
-                      isAdmin ? "bg-secondary/10 text-secondary border-secondary/20" : "bg-slate-800 text-slate-400 border-slate-700"
+                      isHighPrivilege ? "bg-secondary/10 text-secondary border-secondary/20" : "bg-slate-800 text-slate-400 border-slate-700"
                     }`}>
                       {userRole}
                     </span>
