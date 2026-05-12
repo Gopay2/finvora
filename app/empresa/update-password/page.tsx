@@ -44,7 +44,11 @@ export default function UpdatePasswordPage({
             />
           </div>
 
-          <SubmitButton pendingText="Actualizando..." className={styles.button}>Actualizar Contraseña</SubmitButton>
+          <SubmitButton 
+            label="Actualizar Contraseña" 
+            loadingLabel="Actualizando..." 
+            className={styles.button} 
+          />
         </form>
       </div>
     </div>
