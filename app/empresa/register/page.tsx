@@ -77,9 +77,11 @@ function RegisterContent() {
           Al registrarte, aceptas nuestros términos de servicio y políticas de privacidad.
         </p>
         
-        <SubmitButton pendingText="Creando cuenta..." className={styles.button}>
-          Registrarse
-        </SubmitButton>
+        <SubmitButton 
+          label="Registrarse" 
+          loadingLabel="Creando cuenta..." 
+          className={styles.button} 
+        />
       </form>
       
       <div className={styles.footerLink}>
