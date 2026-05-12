@@ -2,8 +2,9 @@
 
 CREATE TABLE public.stock (
     imei TEXT PRIMARY KEY,
-    producto_id UUID NOT NULL REFERENCES public.productos(id) ON DELETE CASCADE,
+    producto_id UUID NOT NULL REFERENCES public.productos(id) ON DELETE RESTRICT,
     zona TEXT NOT NULL,
+    estado TEXT DEFAULT 'Disponible' CHECK (estado IN ('Disponible', 'En envío', 'Vendido')),
     fecha_ingreso TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

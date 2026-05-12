@@ -1,4 +1,4 @@
-# Finvora - Plataforma de Gestión Empresarial
+# 📱 Finvora - Plataforma de Gestión Empresarial
 
 Este repositorio contiene la aplicación web de Finvora, diseñada para la gestión de ventas, stock y métricas de negocio. El sistema utiliza una arquitectura moderna basada en Next.js, Supabase para la infraestructura de datos y autenticación, y Resend para la mensajería transaccional.
 
@@ -35,8 +35,8 @@ La aplicación utiliza un sistema de rutas anidadas y layouts compartidos para o
 - `/empresa/forgot-password`: Solicitud de recuperación de cuenta.
 - `/empresa/webapp`: Panel de control principal (Menú de apps).
 - `/empresa/webapp/ventas`: Registro de nuevos pedidos y notificaciones.
-- `/empresa/webapp/stock`: Consulta y actualización de stock (Solo Admin).
-- `/empresa/webapp/dashboard`: Métricas y rendimiento empresarial (Solo Admin).
+- `/empresa/webapp/stock`: Consulta y actualización de stock (Admin/Supervisor/Dev).
+- `/empresa/webapp/dashboard`: Métricas y rendimiento empresarial (Admin/Dev).
 - `/empresa/webapp/perfil`: Gestión de identidad (Nombre de usuario y rol).
 
 ## 🔐 Gestión de Roles y Seguridad
@@ -44,8 +44,9 @@ La aplicación utiliza un sistema de rutas anidadas y layouts compartidos para o
 El sistema implementa **RBAC (Role-Based Access Control)** gestionado desde la base de datos:
 
 1.  **Roles**:
-    - `Admin`: Acceso total a todas las secciones y edición de datos.
-    - `Closer`: Acceso restringido únicamente al Formulario de Ventas.
+    - `Admin / Developer`: Acceso total a todas las secciones y edición de datos.
+    - `Supervisor`: Acceso a gestión de inventario y métricas.
+    - `Closer`: Acceso restringido al Formulario de Ventas y vista de solo lectura del Stock.
 2.  **Sincronización**: Los perfiles se crean automáticamente mediante un Trigger en Supabase tras el registro exitoso. El esquema completo se encuentra en `database/schema.sql`.
 3.  **Identidad (Onboarding)**: Los usuarios deben elegir un `username` único al primer ingreso. Esto garantiza la trazabilidad en Discord y en el header de la webapp.
 4.  **Protección**: La validación de roles se realiza en el servidor (Server Components) para prevenir accesos no autorizados.
@@ -103,7 +104,8 @@ El sistema de ventas envía notificaciones automáticas a un canal de Discord co
 
 - **Configuración**: Se debe crear un Webhook en Discord y asignar su URL a la variable `DISCORD_WEBHOOK_URL`.
 - **Formato**: Los datos llegan como *Embeds* estilizados con colores de marca y campos organizados.
-- **Campos**: Incluye datos del cliente, equipo, enganche, fecha/hora de entrega y comentarios opcionales.
+- **Campos**: Incluye datos del cliente, equipo (seleccionado jerárquicamente), enganche, fecha/hora de entrega y comentarios opcionales.
+- **Flujo**: Al marcar una unidad como vendida, el sistema otorga **20 segundos de gracia** para cancelar antes de migrar la unidad de Stock a Ventas.
 
 ## 📱 Desarrollo y Pruebas Móviles
 

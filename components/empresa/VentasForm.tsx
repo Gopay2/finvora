@@ -1,23 +1,61 @@
 'use client';
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
+import { submitVenta } from "@/app/empresa/webapp/ventas/actions";
+
+interface VentasFormProps {
+  productos: any[];
+}
 
 const styles = {
   formCard: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl space-y-6",
   inputGroup: "space-y-2",
   label: "text-sm font-medium text-slate-300 ml-1",
-  input: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all",
+  input: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed",
   button: "w-full bg-secondary text-slate-950 font-bold py-4 rounded-xl hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/20 cursor-pointer"
 };
 
-import { submitVenta } from "@/app/empresa/webapp/ventas/actions";
-
-export default function VentasForm() {
+export default function VentasForm({ productos }: VentasFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
-  const [hasIne, setHasIne] = useState(true);
+  
+  // Estado para la selección jerárquica
+  const [selectedModelKey, setSelectedModelKey] = useState<string>("");
+  const [selectedColor, setSelectedColor] = useState<string>("");
+  
   const formRef = useRef<HTMLFormElement>(null);
   const lastPickerOpen = useRef(0);
+
+  // 1. Agrupamos productos por "Base" (Marca + Modelo + Almacenamiento + RAM)
+  const modelosUnicos = useMemo(() => {
+    const map = new Map();
+    productos.forEach(p => {
+      const key = `${p.marca} ${p.modelo} (${p.almacenamiento}/${p.ram})`;
+      if (!map.has(key)) {
+        map.set(key, {
+          display: key,
+          marca: p.marca,
+          modelo: p.modelo,
+          almacenamiento: p.almacenamiento,
+          ram: p.ram
+        });
+      }
+    });
+    return Array.from(map.entries());
+  }, [productos]);
+
+  // 2. Colores disponibles para el modelo seleccionado
+  const coloresDisponibles = useMemo(() => {
+    if (!selectedModelKey) return [];
+    return productos
+      .filter(p => `${p.marca} ${p.modelo} (${p.almacenamiento}/${p.ram})` === selectedModelKey)
+      .map(p => p.color);
+  }, [selectedModelKey, productos]);
+
+  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedModelKey(e.target.value);
+    setSelectedColor(""); // Resetear color al cambiar modelo
+  };
 
   const handleOpenPicker = (e: React.MouseEvent<HTMLInputElement>) => {
     const now = Date.now();
@@ -39,11 +77,22 @@ export default function VentasForm() {
     setStatus(null);
 
     const formData = new FormData(e.currentTarget);
+    
+    // Aseguramos que los valores limpios del modelo y color se envíen
+    // El modelo base (sin el paréntesis de la memoria para que sea más limpio en el log)
+    const baseInfo = modelosUnicos.find(([key]) => key === selectedModelKey)?.[1];
+    if (baseInfo) {
+      formData.set("celular", `${baseInfo.marca} ${baseInfo.modelo}`);
+    }
+    formData.set("color_celular", selectedColor);
+
     const result = await submitVenta(formData);
 
     if (result.success) {
       setStatus({ type: 'success', message: '¡Venta registrada y enviada a Discord!' });
       formRef.current?.reset();
+      setSelectedModelKey("");
+      setSelectedColor("");
     } else {
       setStatus({ type: 'error', message: result.error || 'Error al procesar la venta.' });
     }
@@ -69,13 +118,12 @@ export default function VentasForm() {
         </div>
 
         <div className={styles.inputGroup}>
-          <label className={styles.label}>¿Cuenta con Identificación? (Física vigente)</label>
+          <label className={styles.label}>¿Cuenta con Identificación?</label>
           <select
             name="identificacion_fisica"
             className={`${styles.input} appearance-none cursor-pointer bg-slate-950`}
             style={{ colorScheme: 'dark' }}
             required
-            onChange={(e) => setHasIne(e.target.value === "Si")}
           >
             <option value="Si" className="bg-slate-950 text-white">Sí cuenta con INE/Residencia</option>
             <option value="No" className="bg-slate-950 text-white">No cuenta con INE/Residencia</option>
@@ -114,14 +162,52 @@ export default function VentasForm() {
             />
           </div>
         </div>
+
+        {/* SELECTOR DE MODELO (PASO 1) */}
         <div className={styles.inputGroup}>
-          <label className={styles.label}>Celular</label>
-          <input type="text" name="celular" className={styles.input} required placeholder="Modelo del equipo" />
+          <label className={styles.label}>Modelo de Celular</label>
+          <select
+            value={selectedModelKey}
+            className={`${styles.input} appearance-none cursor-pointer bg-slate-950`}
+            style={{ colorScheme: 'dark' }}
+            required
+            onChange={handleModelChange}
+          >
+            <option value="" className="bg-slate-950 text-slate-500 italic">Seleccione un modelo...</option>
+            {modelosUnicos.map(([key, info]) => (
+              <option key={key} value={key} className="bg-slate-950 text-white">
+                {info.display}
+              </option>
+            ))}
+          </select>
         </div>
+
+        {/* SELECTOR DE COLOR (PASO 2 - DEPENDIENTE) */}
         <div className={styles.inputGroup}>
-          <label className={styles.label}>Color celular</label>
-          <input type="text" name="color_celular" className={styles.input} required placeholder="Color del equipo" />
+          <label className={styles.label}>Color disponible</label>
+          <select
+            name="color_celular_select"
+            value={selectedColor}
+            className={`${styles.input} appearance-none cursor-pointer bg-slate-950`}
+            style={{ colorScheme: 'dark' }}
+            required
+            disabled={!selectedModelKey}
+            onChange={(e) => setSelectedColor(e.target.value)}
+          >
+            <option value="" className="bg-slate-950 text-slate-500 italic">
+              {!selectedModelKey ? "Primero elija un modelo" : "Seleccione un color..."}
+            </option>
+            {coloresDisponibles.map((color) => (
+              <option key={color} value={color} className="bg-slate-950 text-white">
+                {color}
+              </option>
+            ))}
+          </select>
+          {/* Inputs ocultos para compatibilidad */}
+          <input type="hidden" name="celular" value={selectedModelKey} />
+          <input type="hidden" name="color_celular" value={selectedColor} />
         </div>
+
         <div className={styles.inputGroup}>
           <label className={styles.label}>¿Cuenta activa?</label>
           <select
@@ -187,6 +273,5 @@ export default function VentasForm() {
         )}
       </button>
     </form>
-
   );
 }

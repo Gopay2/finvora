@@ -106,9 +106,11 @@ export default function LoginContent() {
           </Link>
         </div>
         
-        <SubmitButton pendingText="Iniciando sesión..." className={styles.button}>
-          Iniciar Sesión
-        </SubmitButton>
+        <SubmitButton 
+          label="Iniciar Sesión" 
+          loadingLabel="Iniciando sesión..." 
+          className={styles.button} 
+        />
       </form>
       
       <div className={styles.footerLink}>
