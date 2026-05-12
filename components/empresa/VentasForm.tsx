@@ -19,42 +19,48 @@ export default function VentasForm({ productos }: VentasFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   
-  // Estado para la selección jerárquica
   const [selectedModelKey, setSelectedModelKey] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
   
   const formRef = useRef<HTMLFormElement>(null);
   const lastPickerOpen = useRef(0);
 
-  // 1. Agrupamos productos por "Base" (Marca + Modelo + Almacenamiento + RAM)
+  // 1. Agrupamos modelos y definimos el nuevo formato de visualización
   const modelosUnicos = useMemo(() => {
     const map = new Map();
     productos.forEach(p => {
-      const key = `${p.marca} ${p.modelo} (${p.almacenamiento}/${p.ram})`;
-      if (!map.has(key)) {
-        map.set(key, {
-          display: key,
+      // Formato: MARCA MODELO - 256GB - 8GB
+      const display = `${p.marca} ${p.modelo} - ${p.almacenamiento} - ${p.ram}`;
+      const existing = map.get(display);
+      
+      if (!existing) {
+        map.set(display, {
+          display: display,
           marca: p.marca,
           modelo: p.modelo,
-          almacenamiento: p.almacenamiento,
-          ram: p.ram
+          totalStock: p.cantidadStock
         });
+      } else {
+        existing.totalStock += p.cantidadStock;
       }
     });
     return Array.from(map.entries());
   }, [productos]);
 
-  // 2. Colores disponibles para el modelo seleccionado
-  const coloresDisponibles = useMemo(() => {
+  // 2. Colores disponibles para el modelo seleccionado (ahora usamos el nuevo display como clave)
+  const variantesColor = useMemo(() => {
     if (!selectedModelKey) return [];
     return productos
-      .filter(p => `${p.marca} ${p.modelo} (${p.almacenamiento}/${p.ram})` === selectedModelKey)
-      .map(p => p.color);
+      .filter(p => `${p.marca} ${p.modelo} - ${p.almacenamiento} - ${p.ram}` === selectedModelKey)
+      .map(p => ({
+        color: p.color,
+        hasStock: p.cantidadStock > 0
+      }));
   }, [selectedModelKey, productos]);
 
   const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedModelKey(e.target.value);
-    setSelectedColor(""); // Resetear color al cambiar modelo
+    setSelectedColor("");
   };
 
   const handleOpenPicker = (e: React.MouseEvent<HTMLInputElement>) => {
@@ -77,10 +83,8 @@ export default function VentasForm({ productos }: VentasFormProps) {
     setStatus(null);
 
     const formData = new FormData(e.currentTarget);
-    
-    // Aseguramos que los valores limpios del modelo y color se envíen
-    // El modelo base (sin el paréntesis de la memoria para que sea más limpio en el log)
     const baseInfo = modelosUnicos.find(([key]) => key === selectedModelKey)?.[1];
+    
     if (baseInfo) {
       formData.set("celular", `${baseInfo.marca} ${baseInfo.modelo}`);
     }
@@ -163,7 +167,7 @@ export default function VentasForm({ productos }: VentasFormProps) {
           </div>
         </div>
 
-        {/* SELECTOR DE MODELO (PASO 1) */}
+        {/* SELECTOR DE MODELO CON NUEVO FORMATO */}
         <div className={styles.inputGroup}>
           <label className={styles.label}>Modelo de Celular</label>
           <select
@@ -175,14 +179,19 @@ export default function VentasForm({ productos }: VentasFormProps) {
           >
             <option value="" className="bg-slate-950 text-slate-500 italic">Seleccione un modelo...</option>
             {modelosUnicos.map(([key, info]) => (
-              <option key={key} value={key} className="bg-slate-950 text-white">
-                {info.display}
+              <option 
+                key={key} 
+                value={key} 
+                className="bg-slate-950 text-white"
+                disabled={info.totalStock === 0}
+              >
+                {info.display} {info.totalStock === 0 ? "(Sin stock)" : ""}
               </option>
             ))}
           </select>
         </div>
 
-        {/* SELECTOR DE COLOR (PASO 2 - DEPENDIENTE) */}
+        {/* SELECTOR DE COLOR */}
         <div className={styles.inputGroup}>
           <label className={styles.label}>Color disponible</label>
           <select
@@ -197,13 +206,17 @@ export default function VentasForm({ productos }: VentasFormProps) {
             <option value="" className="bg-slate-950 text-slate-500 italic">
               {!selectedModelKey ? "Primero elija un modelo" : "Seleccione un color..."}
             </option>
-            {coloresDisponibles.map((color) => (
-              <option key={color} value={color} className="bg-slate-950 text-white">
-                {color}
+            {variantesColor.map((v) => (
+              <option 
+                key={v.color} 
+                value={v.color} 
+                className="bg-slate-950 text-white"
+                disabled={!v.hasStock}
+              >
+                {v.color} {!v.hasStock ? "(Sin stock)" : ""}
               </option>
             ))}
           </select>
-          {/* Inputs ocultos para compatibilidad */}
           <input type="hidden" name="celular" value={selectedModelKey} />
           <input type="hidden" name="color_celular" value={selectedColor} />
         </div>

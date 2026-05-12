@@ -23,11 +23,29 @@ export default async function VentasPage() {
 
   const supabase = await createClient();
 
-  // Obtenemos los productos para el select del formulario
+  // 1. Obtenemos todos los productos del catálogo
   const { data: productos } = await supabase
     .from("productos")
     .select("id, marca, modelo, color, almacenamiento, ram")
     .order('marca', { ascending: true });
+
+  // 2. Obtenemos el stock actual para contar disponibilidades
+  const { data: stockItems } = await supabase
+    .from("stock")
+    .select("producto_id, estado");
+
+  // Procesamos los productos para incluir la cantidad de stock disponible con tipado explícito
+  const productosConStock = (productos || []).map((p: any) => {
+    // Contamos cuántas unidades de este producto específico están 'Disponible' o 'En envío'
+    const unidades = (stockItems || []).filter((s: any) => 
+      s.producto_id === p.id && (s.estado === 'Disponible' || s.estado === 'En envío')
+    ).length;
+    
+    return {
+      ...p,
+      cantidadStock: unidades
+    };
+  });
 
   return (
     <div className={styles.container}>
@@ -38,8 +56,8 @@ export default async function VentasPage() {
         </Link>
       </header>
 
-      {/* Pasamos los productos al formulario */}
-      <VentasForm productos={productos || []} />
+      {/* Pasamos los productos procesados al formulario */}
+      <VentasForm productos={productosConStock} />
     </div>
   );
 }
