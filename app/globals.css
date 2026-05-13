@@ -54,9 +54,15 @@
   --font-body: var(--font-roboto);
   --font-label: var(--font-roboto);
   --animate-peek: peek-slide 2.5s ease-in-out 1s;
+  --animate-shimmer-smooth: shimmer-loop 4s linear infinite;
 }
 
-@utility glass-effect {
+@keyframes shimmer-loop {
+  0% { transform: translateX(-150%) skewX(-15deg); }
+  100% { transform: translateX(150%) skewX(-15deg); }
+}
+
+.glass-effect {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
@@ -93,3 +99,4 @@ input:autofill {
     background-color: #020617 !important;
     color: #f1f5f9 !important;
 }
+
