@@ -5,6 +5,7 @@ import AccessDenied from "@/components/empresa/AccessDenied";
 import StockProductoForm from "@/components/empresa/StockProductoForm";
 import { createClient } from "@/utils/supabase/server";
 import DeleteProductButton from "@/components/empresa/DeleteProductButton";
+import EditProductButton from "@/components/empresa/EditProductButton";
 
 const styles = {
   container: "max-w-6xl mx-auto space-y-10 animate-in fade-in duration-500",
@@ -79,8 +80,10 @@ export default async function ProductosPage() {
                       </span>
                     </td>
                     <td className={styles.td}>
-                      {/* Usamos el nuevo componente de botón de cliente */}
-                      <DeleteProductButton id={p.id} />
+                      <div className="flex items-center justify-center gap-2">
+                        <EditProductButton product={p} />
+                        <DeleteProductButton id={p.id} />
+                      </div>
                     </td>
                   </tr>
                 ))

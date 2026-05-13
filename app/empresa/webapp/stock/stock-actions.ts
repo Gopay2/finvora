@@ -41,6 +41,42 @@ export async function crearProducto(formData: FormData) {
   redirect('/empresa/webapp/stock/productos');
 }
 
+export async function editarProducto(formData: FormData) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+    return { error: "No tienes permisos para realizar esta acción" };
+  }
+
+  const supabase = await createClient();
+  const id = formData.get('id') as string;
+  const marca = formData.get('marca') as string;
+  const modelo = formData.get('modelo') as string;
+  const color = formData.get('color') as string;
+  const almacenamiento = formData.get('almacenamiento') as string;
+  const ram = formData.get('ram') as string;
+  const precio = parseFloat(formData.get('precio') as string);
+
+  const { error } = await supabase
+    .from('productos')
+    .update({
+      marca,
+      modelo,
+      color,
+      almacenamiento,
+      ram,
+      precio
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error("Error al editar producto:", error);
+    return { error: "No se pudo actualizar el producto." };
+  }
+
+  revalidatePath('/empresa/webapp/stock/productos');
+  return { success: true };
+}
+
 export async function eliminarProducto(formData: FormData) {
   const { role } = await getUserProfile();
   if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
@@ -150,16 +186,16 @@ export async function registrarVenta(imei: string, vendedorId?: string) {
 
   const supabase = await createClient();
 
-  // 1. Obtener datos del equipo antes de borrarlo
+  // 1. Obtener datos del equipo antes de borrarlo (incluyendo el precio del catálogo)
   const { data: item, error: fetchError } = await supabase
     .from('stock')
-    .select('*')
+    .select('*, productos(precio)')
     .eq('imei', imei)
     .single();
 
   if (fetchError || !item) return { error: "No se encontró el equipo en stock" };
 
-  // 2. Mover a la tabla de ventas
+  // 2. Mover a la tabla de ventas (congelando el precio de costo actual)
   const { error: insertError } = await supabase
     .from('ventas')
     .insert({
@@ -167,6 +203,7 @@ export async function registrarVenta(imei: string, vendedorId?: string) {
       producto_id: item.producto_id,
       vendedor_id: vendedorId || currentUserId,
       zona: item.zona,
+      precio_costo: (item.productos as any)?.precio || 0,
       fecha_ingreso: item.fecha_ingreso
     });
 

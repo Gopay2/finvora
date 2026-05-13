@@ -192,7 +192,7 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
                   setVendedorSeleccionado(e.target.value);
                   if (error) setError(null);
                 }}
-                className={`w-full bg-slate-950 border rounded-xl px-4 py-3 text-slate-100 focus:outline-none transition-all ${error ? 'border-red-500/50 focus:border-red-500' : 'border-slate-800 focus:border-secondary'}`}
+                className={`w-full bg-slate-950 border rounded-xl px-4 py-3 text-slate-100 focus:outline-none transition-all appearance-none cursor-pointer ${error ? 'border-red-500/50 focus:border-red-500' : 'border-slate-800 focus:border-secondary'}`}
                 style={{ colorScheme: 'dark' }}
               >
                 <option value="">Elegir vendedor...</option>

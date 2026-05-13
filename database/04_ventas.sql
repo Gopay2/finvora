@@ -6,6 +6,7 @@ CREATE TABLE public.ventas (
     producto_id UUID NOT NULL REFERENCES public.productos(id) ON DELETE RESTRICT,
     vendedor_id UUID REFERENCES public.perfiles(id) ON DELETE SET NULL,
     zona TEXT NOT NULL,
+    precio_costo DECIMAL(12,2),
     fecha_ingreso TIMESTAMP WITH TIME ZONE NOT NULL,
     fecha_venta TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
