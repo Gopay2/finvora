@@ -19,7 +19,8 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
   const colors: Record<string, string> = {
     Disponible: "bg-green-500/10 text-green-400 border-green-500/20",
     "En envío": "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    Vendido: "bg-red-500/10 text-red-400 border-red-500/20"
+    Vendido: "bg-red-500/10 text-red-400 border-red-500/20",
+    "A consultar": "bg-purple-500/10 text-purple-400 border-purple-500/20"
   };
 
   useEffect(() => {
@@ -104,6 +105,7 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
           }}
         >
           <option value="Disponible" className="bg-slate-950 text-white">Disponible</option>
+          <option value="A consultar" className="bg-slate-950 text-white">A consultar</option>
           <option value="En envío" className="bg-slate-950 text-white">En envío</option>
           <option value="Vendido" className="bg-slate-950 text-white">Vendido</option>
         </select>

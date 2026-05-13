@@ -76,11 +76,19 @@ export default function StockCargarForm({ productos }: StockCargarFormProps) {
               style={{ colorScheme: 'dark' }}
             >
               <option value="Repartidor Angel" className="bg-slate-950 text-white">Repartidor Angel</option>
-              <option value="Repartidor X" className="bg-slate-950 text-white">Repartidor X</option>
-              <option value="Cambaceo X" className="bg-slate-950 text-white">Cambaceo X</option>
-              <option value="Cambaceo Y" className="bg-slate-950 text-white">Cambaceo Y</option>
-              <option value="Local A" className="bg-slate-950 text-white">Local A</option>
-              <option value="Local B" className="bg-slate-950 text-white">Local B</option>
+              <option value="Repartidor Felix" className="bg-slate-950 text-white">Repartidor Felix</option>
+              <option value="Repartidor Eleazar" className="bg-slate-950 text-white">Repartidor Eleazar</option>
+              <option value="Repartidor Humberto" className="bg-slate-950 text-white">Repartidor Humberto</option>
+              <option value="Repartidor JR (CT)" className="bg-slate-950 text-white">Repartidor JR (CT)</option>
+              <option value="Repartidor Hector (CT)" className="bg-slate-950 text-white">Repartidor Hector (CT)</option>
+              <option value="Local Fusion Tech" className="bg-slate-950 text-white">Local Fusion Tech</option>
+              <option value="Local Rosarito" className="bg-slate-950 text-white">Local Rosarito</option>
+              <option value="Local CyM 1" className="bg-slate-950 text-white">Local CyM 1</option>
+              <option value="Local CyM 2" className="bg-slate-950 text-white">Local CyM 2</option>
+              <option value="Local Olgin" className="bg-slate-950 text-white">Local Olgin</option>
+              <option value="Cambaceo Victor" className="bg-slate-950 text-white">Cambaceo Victor</option>
+              <option value="Cambaceo Esteban" className="bg-slate-950 text-white">Cambaceo Esteban</option>
+              <option value="Proveedor Android" className="bg-slate-950 text-white">Proveedor Android</option>
             </select>
             <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-base">
               expand_more

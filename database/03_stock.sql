@@ -4,7 +4,7 @@ CREATE TABLE public.stock (
     imei TEXT PRIMARY KEY,
     producto_id UUID NOT NULL REFERENCES public.productos(id) ON DELETE RESTRICT,
     zona TEXT NOT NULL,
-    estado TEXT DEFAULT 'Disponible' CHECK (estado IN ('Disponible', 'En envío', 'Vendido')),
+    estado TEXT DEFAULT 'Disponible' CHECK (estado IN ('Disponible', 'En envío', 'Vendido', 'A consultar')),
     fecha_ingreso TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
