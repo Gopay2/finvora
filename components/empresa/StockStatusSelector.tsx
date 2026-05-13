@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { actualizarEstadoStock, registrarVenta, getVendedores } from "@/app/empresa/webapp/stock/stock-actions";
 
 interface StockStatusSelectorProps {
@@ -22,8 +23,14 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
   const [showSellerModal, setShowSellerModal] = useState(false);
   const [vendedores, setVendedores] = useState<Vendedor[]>([]);
   const [vendedorSeleccionado, setVendedorSeleccionado] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const colors: Record<string, string> = {
     Disponible: "bg-green-500/10 text-green-400 border-green-500/20",
@@ -57,7 +64,7 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
     setLoading(true);
     const result = await registrarVenta(imei, vendedorSeleccionado || undefined);
     if (result.error) {
-      alert(result.error);
+      setError(result.error);
       setEstado(estadoActual);
       setTimeLeft(null);
     }
@@ -70,6 +77,7 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
     const nuevoEstado = e.target.value;
     
     if (nuevoEstado === "Vendido") {
+      setError(null);
       setShowSellerModal(true);
       return;
     }
@@ -83,22 +91,26 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
     if (result.success) {
       setEstado(nuevoEstado);
     } else {
-      alert("Error al actualizar estado");
+      setError("Error al actualizar estado");
+      // Desaparecer error después de 3 segundos
+      setTimeout(() => setError(null), 3000);
     }
     setLoading(false);
   };
 
   const handleConfirmVenta = () => {
     if (!vendedorSeleccionado) {
-      alert("Por favor, selecciona quién realizó la venta.");
+      setError("Debes seleccionar quién realizó la venta");
       return;
     }
+    setError(null);
     setShowSellerModal(false);
     setEstado("Vendido");
     setTimeLeft(20);
   };
 
   const handleCancelVenta = () => {
+    setError(null);
     setShowSellerModal(false);
     setEstado(estadoActual);
   };
@@ -154,9 +166,17 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
         </div>
       )}
 
-      {/* Modal de Selección de Vendedor */}
-      {showSellerModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+      {error && !showSellerModal && (
+        <div className="absolute -bottom-6 w-max">
+          <span className="text-[10px] text-red-400 font-bold bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
+            {error}
+          </span>
+        </div>
+      )}
+
+      {/* Modal de Selección de Vendedor - Usando Portal para evitar recortes de la tabla */}
+      {showSellerModal && mounted && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full space-y-4 animate-in zoom-in duration-200">
             <div className="text-center space-y-2">
               <span className="material-symbols-outlined text-secondary text-4xl">person_search</span>
@@ -168,8 +188,11 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
               <label className="text-xs font-bold text-slate-500 uppercase ml-1">Vendedor</label>
               <select 
                 value={vendedorSeleccionado}
-                onChange={(e) => setVendedorSeleccionado(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all"
+                onChange={(e) => {
+                  setVendedorSeleccionado(e.target.value);
+                  if (error) setError(null);
+                }}
+                className={`w-full bg-slate-950 border rounded-xl px-4 py-3 text-slate-100 focus:outline-none transition-all ${error ? 'border-red-500/50 focus:border-red-500' : 'border-slate-800 focus:border-secondary'}`}
                 style={{ colorScheme: 'dark' }}
               >
                 <option value="">Elegir vendedor...</option>
@@ -183,6 +206,13 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
                   );
                 })}
               </select>
+              
+              {error && (
+                <div className="flex items-center gap-1.5 text-red-400 text-xs mt-1 animate-in fade-in slide-in-from-top-1">
+                  <span className="material-symbols-outlined text-sm">error</span>
+                  {error}
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 pt-2">
@@ -200,7 +230,8 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
