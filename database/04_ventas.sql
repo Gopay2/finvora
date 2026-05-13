@@ -4,7 +4,7 @@ CREATE TABLE public.ventas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     imei TEXT NOT NULL,
     producto_id UUID NOT NULL REFERENCES public.productos(id) ON DELETE RESTRICT,
-    vendedor_id UUID REFERENCES auth.users(id),
+    vendedor_id UUID REFERENCES public.perfiles(id) ON DELETE SET NULL,
     zona TEXT NOT NULL,
     fecha_ingreso TIMESTAMP WITH TIME ZONE NOT NULL,
     fecha_venta TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL

@@ -10,13 +10,13 @@ export const revalidate = 0;
 
 const styles = {
   container: "max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700",
-  header: "flex flex-col md:flex-row md:items-center justify-between gap-6",
+  header: "flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6",
   titleGroup: "space-y-1",
-  title: "text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent",
-  actions: "flex items-center gap-3",
-  btnPrimary: "flex items-center justify-center gap-2 px-5 py-2.5 bg-secondary text-slate-950 font-bold rounded-xl hover:bg-secondary/90 border border-transparent transition-all text-sm cursor-pointer",
-  btnOutline: "flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 text-slate-200 border border-slate-700 rounded-xl hover:bg-slate-700 transition-all text-sm cursor-pointer",
-  btnHome: "flex items-center justify-center px-4 py-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl hover:bg-slate-700 hover:text-white transition-all cursor-pointer",
+  title: "text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent",
+  actions: "flex items-center justify-center md:justify-end gap-4 md:gap-3",
+  btnPrimary: "flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-5 py-2.5 bg-secondary text-slate-950 font-bold rounded-xl hover:bg-secondary/90 border border-transparent transition-all text-xs md:text-sm cursor-pointer whitespace-nowrap",
+  btnOutline: "flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-5 py-2.5 bg-slate-800 text-slate-200 border border-slate-700 rounded-xl hover:bg-slate-700 transition-all text-xs md:text-sm cursor-pointer whitespace-nowrap",
+  btnHome: "flex items-center justify-center px-3 md:px-4 py-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl hover:bg-slate-700 hover:text-white transition-all cursor-pointer",
   tableWrapper: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden",
   table: "w-full text-center border-collapse",
   th: "px-6 py-4 text-slate-500 text-xs uppercase tracking-wider font-bold border-b border-slate-800 text-center",
@@ -121,9 +121,9 @@ export default async function StockPage() {
                     </td>
                     <td className={styles.td}>
                       <div className="flex flex-col items-center gap-1">
-                        <StockStatusSelector 
-                          imei={item.imei} 
-                          estadoActual={item.estado} 
+                        <StockStatusSelector
+                          imei={item.imei}
+                          estadoActual={item.estado}
                           disabled={!canEdit}
                         />
                       </div>

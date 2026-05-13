@@ -36,7 +36,7 @@ export default async function VentasPage() {
 
   // Procesamos los productos para incluir la cantidad de stock disponible con tipado explícito
   const productosConStock = (productos || []).map((p: any) => {
-    // Contamos cuántas unidades de este producto específico están 'Disponible' o 'En envío'
+    // Contamos cuántas unidades de este producto específico están 'Disponible', 'En envío' o 'A consultar'
     const unidades = (stockItems || []).filter((s: any) => 
       s.producto_id === p.id && (s.estado === 'Disponible' || s.estado === 'En envío' || s.estado === 'A consultar')
     ).length;

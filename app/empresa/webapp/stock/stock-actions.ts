@@ -128,8 +128,22 @@ export async function actualizarEstadoStock(imei: string, nuevoEstado: string) {
   return { success: true };
 }
 
-export async function registrarVenta(imei: string) {
-  const { role, id: userId } = await getUserProfile();
+export async function getVendedores() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('perfiles')
+    .select('id, username, role')
+    .order('username', { ascending: true });
+
+  if (error) {
+    console.error("Error al obtener vendedores:", error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function registrarVenta(imei: string, vendedorId?: string) {
+  const { role, id: currentUserId } = await getUserProfile();
   if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
     return { error: "No autorizado" };
   }
@@ -151,7 +165,7 @@ export async function registrarVenta(imei: string) {
     .insert({
       imei: item.imei,
       producto_id: item.producto_id,
-      vendedor_id: userId,
+      vendedor_id: vendedorId || currentUserId,
       zona: item.zona,
       fecha_ingreso: item.fecha_ingreso
     });

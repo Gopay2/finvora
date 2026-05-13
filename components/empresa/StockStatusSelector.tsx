@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from "react";
-import { actualizarEstadoStock, registrarVenta } from "@/app/empresa/webapp/stock/stock-actions";
+import { actualizarEstadoStock, registrarVenta, getVendedores } from "@/app/empresa/webapp/stock/stock-actions";
 
 interface StockStatusSelectorProps {
   imei: string;
@@ -9,10 +9,19 @@ interface StockStatusSelectorProps {
   disabled?: boolean;
 }
 
+interface Vendedor {
+  id: string;
+  username: string | null;
+  role: string;
+}
+
 export default function StockStatusSelector({ imei, estadoActual, disabled = false }: StockStatusSelectorProps) {
   const [estado, setEstado] = useState(estadoActual);
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [showSellerModal, setShowSellerModal] = useState(false);
+  const [vendedores, setVendedores] = useState<Vendedor[]>([]);
+  const [vendedorSeleccionado, setVendedorSeleccionado] = useState<string>("");
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -22,6 +31,14 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
     Vendido: "bg-red-500/10 text-red-400 border-red-500/20",
     "A consultar": "bg-purple-500/10 text-purple-400 border-purple-500/20"
   };
+
+  useEffect(() => {
+    async function loadVendedores() {
+      const data = await getVendedores();
+      setVendedores(data as Vendedor[]);
+    }
+    loadVendedores();
+  }, []);
 
   useEffect(() => {
     if (timeLeft !== null && timeLeft > 0) {
@@ -38,7 +55,7 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
 
   const ejecutarVentaDefinitiva = async () => {
     setLoading(true);
-    const result = await registrarVenta(imei);
+    const result = await registrarVenta(imei, vendedorSeleccionado || undefined);
     if (result.error) {
       alert(result.error);
       setEstado(estadoActual);
@@ -53,8 +70,7 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
     const nuevoEstado = e.target.value;
     
     if (nuevoEstado === "Vendido") {
-      setEstado("Vendido");
-      setTimeLeft(20);
+      setShowSellerModal(true);
       return;
     }
 
@@ -70,6 +86,21 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
       alert("Error al actualizar estado");
     }
     setLoading(false);
+  };
+
+  const handleConfirmVenta = () => {
+    if (!vendedorSeleccionado) {
+      alert("Por favor, selecciona quién realizó la venta.");
+      return;
+    }
+    setShowSellerModal(false);
+    setEstado("Vendido");
+    setTimeLeft(20);
+  };
+
+  const handleCancelVenta = () => {
+    setShowSellerModal(false);
+    setEstado(estadoActual);
   };
 
   // Si está desactivado, mostramos un badge estático en lugar de un select
@@ -120,6 +151,55 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
           <span className="text-[11px] text-red-400 font-black tracking-tighter animate-pulse uppercase">
             Confirmando en {timeLeft}...
           </span>
+        </div>
+      )}
+
+      {/* Modal de Selección de Vendedor */}
+      {showSellerModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full space-y-4 animate-in zoom-in duration-200">
+            <div className="text-center space-y-2">
+              <span className="material-symbols-outlined text-secondary text-4xl">person_search</span>
+              <h3 className="text-lg font-bold text-white">¿Quién realizó la venta?</h3>
+              <p className="text-slate-400 text-sm">Selecciona al vendedor para registrar la venta correctamente.</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase ml-1">Vendedor</label>
+              <select 
+                value={vendedorSeleccionado}
+                onChange={(e) => setVendedorSeleccionado(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all"
+                style={{ colorScheme: 'dark' }}
+              >
+                <option value="">Elegir vendedor...</option>
+                {vendedores.map(v => {
+                  const name = v.username || 'Sin nombre';
+                  const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+                  return (
+                    <option key={v.id} value={v.id}>
+                      {v.role ? `[${v.role}]` : "[Closer]"} {capitalizedName}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button 
+                onClick={handleCancelVenta}
+                className="flex-1 px-4 py-2.5 bg-slate-800 text-slate-300 rounded-xl font-bold hover:bg-slate-700 hover:text-white transition-all text-sm cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleConfirmVenta}
+                className="flex-1 px-4 py-2.5 bg-secondary text-slate-950 rounded-xl font-bold hover:bg-white transition-all text-sm shadow-lg shadow-secondary/20 cursor-pointer"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
