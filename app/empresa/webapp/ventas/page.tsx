@@ -38,7 +38,7 @@ export default async function VentasPage() {
   const productosConStock = (productos || []).map((p: any) => {
     // Contamos cuántas unidades de este producto específico están 'Disponible' o 'En envío'
     const unidades = (stockItems || []).filter((s: any) => 
-      s.producto_id === p.id && (s.estado === 'Disponible' || s.estado === 'En envío')
+      s.producto_id === p.id && (s.estado === 'Disponible' || s.estado === 'En envío' || s.estado === 'A consultar')
     ).length;
     
     return {

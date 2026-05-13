@@ -31,8 +31,13 @@ BEGIN
   VALUES (new.id, 'Closer', new.email);
   RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- 5. BLINDAJE: Revocar acceso directo a la función (solo debe ejecutarse vía trigger)
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM public;
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM authenticated;

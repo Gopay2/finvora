@@ -9,6 +9,7 @@ Este repositorio contiene la aplicación web de Finvora, diseñada para la gesti
 - **Email Service**: Resend (vía SMTP personalizado).
 - **Notificaciones**: Discord Webhooks (Notificaciones de ventas en tiempo real).
 - **Hosting y DNS**: Vercel.
+- **Librerías Extra**: XLSX (Generación de reportes Excel).
 
 ## ⚙️ Configuración de Entorno
 
@@ -98,6 +99,18 @@ Para garantizar el funcionamiento de los flujos de autenticación en producción
     - `https://finvora.mx/empresa/update-password`
 3.  **Email Confirmation**: Asegurarse de que "Confirm Email" esté activado en el panel de Supabase para mayor seguridad.
 
+## 📦 Gestión de Inventario y Stock
+
+El módulo de stock permite el control total de las unidades físicas (IMEIs) vinculadas al catálogo de productos:
+
+- **Estados del Stock**:
+    - `Disponible`: Listo para la venta.
+    - `A consultar` (Nuevo): Unidades con disponibilidad o precio bajo revisión especial (Color Púrpura).
+    - `En envío`: Unidad en tránsito hacia el cliente o sucursal.
+    - `Vendido`: Unidad procesada y movida al historial de ventas.
+- **Reportes Excel**: El sistema incluye un botón de descarga rápida en la vista de stock que genera un archivo `.xlsx` con todo el inventario detallado (Marca, Modelo, Color, RAM, Almacenamiento, Ubicación y Estado), optimizado para auditorías rápidas.
+- **Validaciones**: Se implementan Row Level Security (RLS) y restricciones a nivel de base de datos (`CHECK constraints`) para garantizar la integridad de los estados.
+
 ## 🤖 Integración con Discord
 
 El sistema de ventas envía notificaciones automáticas a un canal de Discord configurado mediante un Webhook.
@@ -115,4 +128,4 @@ Para probar la aplicación en dispositivos físicos (iPhone/Android) durante el 
 2.  **Configuración de Origen**: Es necesario actualizar `allowedDevOrigins` en `next.config.ts` con la IP actual para permitir la carga de recursos de Next.js y el funcionamiento de componentes interactivos (como el menú hamburguesa o selectores de fecha).
 
 ---
-*Documento de uso interno - Finvora 2026*
+*Desarrollado por Jsoza para Finvora 2026*

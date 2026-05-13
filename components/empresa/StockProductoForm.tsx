@@ -102,7 +102,7 @@ export default function StockProductoForm() {
 
         {/* Precio */}
         <div className={styles.inputGroup}>
-          <label className={styles.label}>Precio de Venta</label>
+          <label className={styles.label}>Precio de Compra</label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono">$</span>
             <input name="precio" type="number" step="0.01" placeholder="0.00" required className={`${styles.input} pl-8`} />
