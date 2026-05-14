@@ -6,7 +6,7 @@ import AccessDenied from "@/components/empresa/AccessDenied";
 export default async function DetalleVentasPage() {
   const { role: userRole } = await getUserProfile();
 
-  if (!isAllowed(userRole, ["Admin", "Developer", "Supervisor"])) {
+  if (!isAllowed(userRole, ["Admin", "Developer"])) {
     return <AccessDenied role={userRole} sectionName="Detalle de Ventas" />;
   }
 
