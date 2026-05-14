@@ -1,4 +1,13 @@
 import React from "react";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Finvora WebApp",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { logout } from "../login/actions";

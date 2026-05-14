@@ -2,7 +2,16 @@ import React, { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { Metadata } from "next";
 import LoginContent from "@/components/empresa/LoginContent";
+
+export const metadata: Metadata = {
+  title: "Acceso Empleados | Finvora",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 const styles = {
   wrapper: "min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 font-[family-name:var(--font-outfit)]",
