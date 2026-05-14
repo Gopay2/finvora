@@ -4,7 +4,7 @@ import { getUserProfile, isAllowed } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
 import { createClient } from "@/utils/supabase/server";
 import StockStatusSelector from "@/components/empresa/StockStatusSelector";
-import DownloadStockButton from "@/components/empresa/DownloadStockButton";
+import DownloadExcelButton from "@/components/empresa/DownloadExcelButton";
 
 export const revalidate = 0;
 
@@ -76,7 +76,10 @@ export default async function StockPage() {
                 <span className="material-symbols-outlined text-lg">inventory_2</span>
                 Stock
               </Link>
-              <DownloadStockButton data={unidades || []} />
+              <DownloadExcelButton 
+                data={unidades || []}
+                type="stock"
+              />
             </>
           )}
           <Link href="/empresa/webapp" className={styles.btnHome} title="Volver al Inicio">
