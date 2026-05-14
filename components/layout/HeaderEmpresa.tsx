@@ -61,13 +61,6 @@ export default function HeaderEmpresa() {
               {navItem.label}
             </Link>
           ))}
-          <Link
-            href="/empresa/login"
-            title="Acceso Empleados"
-            className={styles.employeeLogin}
-          >
-            <span className="material-symbols-outlined text-3xl">person</span>
-          </Link>
         </nav>
 
         {/* Mobile Menu Button */}
@@ -107,14 +100,6 @@ export default function HeaderEmpresa() {
               {navItem.label}
             </Link>
           ))}
-          <Link
-            href="/empresa/login"
-            className={styles.employeeLoginMobile}
-            onClick={() => setIsMenuOpen(false)}
-          >
-            <span className="material-symbols-outlined text-2xl">person</span>
-            <span>Acceso Empleados</span>
-          </Link>
         </nav>
       </div>
     </header>
