@@ -72,7 +72,7 @@ const PieChartMock = ({ segments = 2 }: { segments?: number }) => {
 export default async function DashboardPage() {
   const { role: userRole } = await getUserProfile();
 
-  if (!isAllowed(userRole, ["Admin", "Developer", "Supervisor"])) {
+  if (!isAllowed(userRole, ["Admin", "Developer"])) {
     return <AccessDenied role={userRole} sectionName="Dashboard" />;
   }
 

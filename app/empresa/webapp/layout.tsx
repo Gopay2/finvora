@@ -48,7 +48,7 @@ export default async function WebAppLayout({
     .eq("id", user.id)
     .single();
 
-  const userRole = profile?.role || "Closer";
+  const userRole = profile?.role || "Sin rol";
   const username = profile?.username;
   const isHighPrivilege = userRole === "Admin" || userRole === "Developer";
 

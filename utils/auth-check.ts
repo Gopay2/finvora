@@ -7,7 +7,7 @@ export async function getUserProfile() {
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
-    return { id: null, role: "Closer", username: null };
+    return { id: null, role: "Sin rol", username: null };
   }
 
   const { data: profile } = await supabase
@@ -18,7 +18,7 @@ export async function getUserProfile() {
     
   return {
     id: profile?.id || user.id,
-    role: profile?.role || "Closer",
+    role: profile?.role || "Sin rol",
     username: profile?.username || null
   };
 }
