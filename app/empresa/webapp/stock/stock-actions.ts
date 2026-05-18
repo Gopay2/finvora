@@ -164,6 +164,28 @@ export async function actualizarEstadoStock(imei: string, nuevoEstado: string) {
   return { success: true };
 }
 
+export async function actualizarZonaStock(imei: string, nuevaZona: string) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+    return { error: "No autorizado" };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('stock')
+    .update({ zona: nuevaZona })
+    .eq('imei', imei);
+
+  if (error) {
+    console.error("Error al actualizar ubicación:", error);
+    return { error: error.message };
+  }
+
+  revalidatePath('/empresa/webapp/stock');
+  return { success: true };
+}
+
 export async function getVendedores() {
   const supabase = await createClient();
   const { data, error } = await supabase

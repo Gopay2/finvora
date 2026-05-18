@@ -4,6 +4,7 @@ import { getUserProfile, isAllowed } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
 import { createClient } from "@/utils/supabase/server";
 import StockStatusSelector from "@/components/empresa/StockStatusSelector";
+import StockZoneSelector from "@/components/empresa/StockZoneSelector";
 import DownloadExcelButton from "@/components/empresa/DownloadExcelButton";
 
 export const revalidate = 0;
@@ -120,7 +121,11 @@ export default async function StockPage() {
                       </div>
                     </td>
                     <td className={styles.td}>
-                      <span className={styles.zonaBadge}>{item.zona}</span>
+                      <StockZoneSelector
+                        imei={item.imei}
+                        zonaActual={item.zona}
+                        disabled={!canEdit}
+                      />
                     </td>
                     <td className={styles.td}>
                       <div className="flex flex-col items-center gap-1">
