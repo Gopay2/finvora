@@ -28,21 +28,83 @@ const styles = {
 
 
 
-// Componente para el gráfico de torta (Mock SVG)
-const PieChartMock = ({ segments = 2 }: { segments?: number }) => {
-  if (segments === 2) {
+// Componente para el gráfico de torta dinámico
+const PerformancePieChart = ({ topSales, totalSales }: { topSales: number, totalSales: number }) => {
+  if (totalSales === 0) {
     return (
       <div className="flex-1 w-full flex items-center justify-center min-h-0">
-        <svg viewBox="0 0 100 100" className="w-full h-full max-w-[220px] max-h-[220px] transform -rotate-90 drop-shadow-2xl">
-          <path d="M 50 50 L 50 1 A 49 49 0 1 1 3.4 65.14 Z" fill="#10b981" className="hover:opacity-80 transition-opacity" />
-          <text x="75" y="55" fill="#001f27" fontSize="11" fontWeight="black" transform="rotate(90 75 55)" className="pointer-events-none">70%</text>
-          <path d="M 50 50 L 3.4 65.14 A 49 49 0 0 1 50 1 Z" fill="#3b82f6" className="hover:opacity-80 transition-opacity" />
-          <text x="25" y="25" fill="#001c3a" fontSize="11" fontWeight="black" transform="rotate(90 25 25)" className="pointer-events-none">30%</text>
-        </svg>
+        <span className="text-slate-500 text-sm font-bold uppercase tracking-wider">Sin ventas</span>
       </div>
     );
   }
-  return null;
+
+  const topPct = topSales / totalSales;
+  const restPct = 1 - topPct;
+  
+  const radius = 25;
+  const circumference = 2 * Math.PI * radius;
+  const topDash = topPct * circumference;
+
+  const getLabelPos = (pct: number) => {
+    const angle = pct * 2 * Math.PI;
+    const x = 50 + Math.cos(angle) * 28; // Radio para el texto ajustado a 28
+    const y = 50 + Math.sin(angle) * 28;
+    return { x, y };
+  };
+
+  const topPos = getLabelPos(topPct / 2);
+  const restPos = getLabelPos(topPct + restPct / 2);
+
+  return (
+    <div className="flex-1 w-full flex items-center justify-center min-h-0">
+      <svg viewBox="0 0 100 100" className="w-full h-full max-w-[220px] max-h-[220px] transform -rotate-90 drop-shadow-2xl">
+        {/* Resto de vendedores (fondo completo) */}
+        <circle 
+          r={radius} cx="50" cy="50" 
+          fill="transparent" 
+          stroke="#3b82f6" 
+          strokeWidth="50" 
+          className="hover:opacity-80 transition-opacity" 
+        />
+        {/* Mejor vendedor (porción superior) */}
+        {topPct > 0 && (
+          <circle 
+            r={radius} cx="50" cy="50" 
+            fill="transparent" 
+            stroke="#10b981" 
+            strokeWidth="50" 
+            strokeDasharray={`${topDash} ${circumference}`} 
+            strokeDashoffset="0" 
+            className="hover:opacity-80 transition-opacity" 
+          />
+        )}
+        
+        {/* Textos */}
+        {restPct > 0.05 && (
+          <text 
+            x={restPos.x} y={restPos.y} 
+            fill="#001c3a" fontSize="11" fontWeight="black" 
+            textAnchor="middle" dominantBaseline="central"
+            transform={`rotate(90 ${restPos.x} ${restPos.y})`} 
+            className="pointer-events-none"
+          >
+            {Math.round(restPct * 100)}%
+          </text>
+        )}
+        {topPct > 0.05 && (
+          <text 
+            x={topPos.x} y={topPos.y} 
+            fill="#001f27" fontSize="11" fontWeight="black" 
+            textAnchor="middle" dominantBaseline="central"
+            transform={`rotate(90 ${topPos.x} ${topPos.y})`} 
+            className="pointer-events-none"
+          >
+            {Math.round(topPct * 100)}%
+          </text>
+        )}
+      </svg>
+    </div>
+  );
 };
 
 export default async function DashboardPage() {
@@ -118,7 +180,10 @@ export default async function DashboardPage() {
   });
 
   // Determinar ganadores
-  const mejorVendedorRaw = Object.entries(vendedoresStats).sort((a, b) => b[1] - a[1])[0]?.[0] || "---";
+  const sortedVendedores = Object.entries(vendedoresStats).sort((a, b) => b[1] - a[1]);
+  const mejorVendedorRaw = sortedVendedores[0]?.[0] || "---";
+  const mejorVendedorCount = sortedVendedores[0]?.[1] || 0;
+
   const mejorVendedor = mejorVendedorRaw !== "---" 
     ? mejorVendedorRaw.charAt(0).toUpperCase() + mejorVendedorRaw.slice(1)
     : "---";
@@ -181,7 +246,7 @@ export default async function DashboardPage() {
               <h4 className="text-slate-500 text-xs font-bold uppercase tracking-[0.2em] mb-1">Top Closers</h4>
               <p className="text-white font-black text-2xl">Rendimiento</p>
             </div>
-            <PieChartMock segments={2} />
+            <PerformancePieChart topSales={mejorVendedorCount} totalSales={sales.length} />
             <div className="flex gap-6 mt-6">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/20"></div>
