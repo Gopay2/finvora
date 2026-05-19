@@ -4,11 +4,7 @@ import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { editarProducto } from "@/app/empresa/webapp/stock/stock-actions";
 
-// OPCIONES DEL CATÁLOGO (Igual que en StockProductoForm)
-const MARCAS = ["Apple", "Samsung", "Xiaomi", "Motorola", "Honor", "Infinix"];
-const COLORES = ["Negro", "Blanco", "Gris", "Azul", "Verde", "Rosa", "Amarillo", "Rojo", "Naranja", "Violeta", "Celeste"];
-const RAMS = ["4GB", "6GB", "8GB", "12GB", "16GB", "24GB"];
-const ALMACENAMIENTOS = ["64GB", "128GB", "256GB", "512GB", "1TB"];
+import { MARCAS, COLORES, RAMS, ALMACENAMIENTOS } from "@/utils/constants";
 
 interface Product {
   id: string;
