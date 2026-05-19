@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
         source: '/(.*)',
         headers: [
           {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' blob: data: https://*.supabase.co; connect-src 'self' https://*.supabase.co https://*.discord.com; frame-ancestors 'none';"
+          },
+          {
             key: 'X-DNS-Prefetch-Control',
             value: 'on'
           },

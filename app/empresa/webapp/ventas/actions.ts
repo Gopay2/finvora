@@ -3,24 +3,38 @@
 import { createClient } from "@/utils/supabase/server";
 
 /**
- * Acción de servidor para enviar los datos de la venta a Discord mediante un Webhook.
+ * Server Action que procesa el registro y envío de una nueva venta directa a un canal de Discord.
+ * Realiza verificaciones de sesión del vendedor, formatea un enlace interactivo de WhatsApp
+ * para contacto rápido con el cliente, y estructura un Embed estético de Discord para notificaciones
+ * de ventas de alta prioridad.
+ * 
+ * @security Valida de forma estricta que exista una sesión de usuario activa para prevenir el spam o inyecciones de ventas falsas desde clientes no autenticados.
+ * @param formData Datos enviados desde el formulario de Ventas (nombre de cliente, identificación, CURP, enganche, dirección, teléfono, etc.)
+ * @returns Objeto de respuesta que indica si el envío fue exitoso o el mensaje de error correspondiente.
  */
 export async function submitVenta(formData: FormData) {
   const supabase = await createClient();
 
-  // Obtenemos el perfil del usuario logueado
-  const { data: { user } } = await supabase.auth.getUser();
+  // 1. CONTROL DE ACCESO: Validamos activamente que el usuario esté logueado
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { success: false, error: "No autorizado. Debes iniciar sesión." };
+  }
+
+  // 2. OBTENER INFORMACIÓN DE PERFIL: Recuperamos el nombre de usuario y rol del vendedor
   const { data: profile } = await supabase
     .from("perfiles")
     .select("role, username")
-    .eq("id", user?.id)
+    .eq("id", user.id)
     .single();
 
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   const userDisplayName = profile?.username
     ? `${profile.role}: ${capitalize(profile.username)}`
-    : user?.email;
+    : user.email;
 
+  // 3. CONFIGURACIÓN DEL WEBHOOK: Cargamos la URL del webhook de Discord desde las variables de entorno
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
   if (!webhookUrl) {
@@ -28,7 +42,7 @@ export async function submitVenta(formData: FormData) {
     return { success: false, error: "Error de configuración en el servidor." };
   }
 
-  // Extraemos los datos del formulario
+  // 4. EXTRACCIÓN DE DATOS: Obtenemos los campos clave capturados del formulario
   const data = {
     nombre: formData.get("nombre_cliente") as string,
     identificacion: formData.get("identificacion_fisica") as string,
@@ -44,11 +58,11 @@ export async function submitVenta(formData: FormData) {
     comentarios: formData.get("comentarios") as string,
   };
 
-  // Limpiamos el teléfono para el link de WhatsApp (solo números)
+  // 5. ENLACE DE WHATSAPP: Limpiamos el teléfono (solo dígitos) para habilitar un chat directo con el cliente
   const cleanPhone = data.telefono.replace(/\D/g, '');
   const whatsappUrl = `https://wa.me/${cleanPhone}`;
 
-  // Formateamos el mensaje para Discord usando "Embeds" para que se vea prolijo
+  // 6. ESTRUCTURA DEL PAYLOAD: Diseñamos los campos (fields) del Embed para organizar visualmente los datos
   const fields = [
     { name: "👤 Vendedor", value: `**${userDisplayName}**`, inline: false },
     { name: "👤 Cliente", value: `**${data.nombre}**`, inline: false },
@@ -63,25 +77,27 @@ export async function submitVenta(formData: FormData) {
     { name: "⏰ Hora de Entrega", value: data.hora, inline: false },
   ];
 
-
-  // Agregamos comentarios solo si existen
+  // Agregamos el campo de comentarios de forma condicional si no está vacío
   if (data.comentarios && data.comentarios.trim() !== "") {
     fields.push({ name: "💬 Comentarios", value: data.comentarios, inline: false });
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://finvora.mx';
 
+  // 7. DISEÑO ESTÉTICO DEL EMBED: Configuramos un color rojo llamativo y metadatos limpios
   const embed = {
     title: "NUEVA VENTA REGISTRADA 🚀",
     description: `Registrado a través de la app web.`,
-    color: 0xef4444, // Rojo llamativo para alertas de venta
+    color: 0xef4444, // Rojo llamativo para llamar la atención del equipo de operaciones
     fields: fields,
     timestamp: new Date().toISOString(),
   };
 
+  // Mención opcional a un rol específico de Discord (ej. Coordinadores o Closers) si está configurado
   const roleId = process.env.DISCORD_ROLE_ID;
   const content = roleId ? `🛎️ <@&${roleId}>` : undefined;
 
+  // 8. ENVÍO DEL MENSAJE: Realizamos la llamada HTTP POST al Webhook
   try {
     const response = await fetch(webhookUrl, {
       method: 'POST',

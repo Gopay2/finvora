@@ -2,8 +2,24 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getUserProfile, isAllowed } from "@/utils/auth-check";
 
+
+/**
+ * Obtiene todos los repartos programados para un mes y año específicos.
+ * Incluye información relacionada de repartidores, zonas, vendedores y productos.
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Closer, Developer
+ * @param year Año de consulta (ej. 2026)
+ * @param month Mes de consulta (0-indexed, 0 = Enero, 11 = Diciembre)
+ * @returns Objeto con estado de éxito y los datos de los repartos o mensaje de error
+ */
 export async function getRepartosMes(year: number, month: number) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Developer"])) {
+    return { success: false, error: "No autorizado" };
+  }
+
   const supabase = await createClient();
 
   // Primer y último día del mes
@@ -53,7 +69,20 @@ export async function getRepartosMes(year: number, month: number) {
   return { success: true, data };
 }
 
+
+/**
+ * Obtiene toda la información de catálogo necesaria para poblar los formularios de logística.
+ * Trae repartidores activos, zonas de reparto, vendedores registrados y equipos disponibles en stock.
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Closer, Developer
+ * @returns Objeto con catálogos de apoyo para la programación de repartos
+ */
 export async function getLogisticsFormData() {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Developer"])) {
+    return { success: false, error: "No autorizado" };
+  }
+
   const supabase = await createClient();
 
   // 1. Obtener repartidores activos
@@ -124,6 +153,14 @@ export async function getLogisticsFormData() {
   };
 }
 
+
+/**
+ * Registra un nuevo reparto programado en la base de datos.
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Developer
+ * @param formData Datos completos del reparto (fecha, horario, repartidor, zona, vendedor, imei, producto y notas)
+ * @returns Estado de éxito o error al insertar el registro
+ */
 export async function crearReparto(formData: {
   fecha_reparto: string;
   horario: string;
@@ -134,6 +171,11 @@ export async function crearReparto(formData: {
   producto_id: string;
   notas?: string;
 }) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+    return { success: false, error: "No autorizado" };
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -158,7 +200,20 @@ export async function crearReparto(formData: {
   return { success: true };
 }
 
+
+/**
+ * Elimina permanentemente un reparto programado de la base de datos.
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Developer
+ * @param repartoId ID único del reparto a eliminar
+ * @returns Estado de éxito o error de la operación
+ */
 export async function eliminarReparto(repartoId: string) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+    return { success: false, error: "No autorizado" };
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -179,7 +234,19 @@ export async function eliminarReparto(repartoId: string) {
 // ACCIONES DE REPARTIDORES
 // ==========================================
 
+
+/**
+ * Obtiene la lista completa de repartidores registrados ordenados alfabéticamente.
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Closer, Developer
+ * @returns Listado completo de repartidores
+ */
 export async function getRepartidoresList() {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Developer"])) {
+    return { success: false, error: "No autorizado" };
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('repartidores')
@@ -193,7 +260,21 @@ export async function getRepartidoresList() {
   return { success: true, data: data || [] };
 }
 
+
+/**
+ * Registra un nuevo repartidor en el sistema con estado activo.
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Developer
+ * @param nombre Nombre completo del repartidor
+ * @param zonaHoraria Zona horaria para control de entregas (default: America/Mexico_City)
+ * @returns Estado de éxito o error de la creación
+ */
 export async function crearRepartidor(nombre: string, zonaHoraria?: string) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+    return { success: false, error: "No autorizado" };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from('repartidores')
@@ -208,7 +289,22 @@ export async function crearRepartidor(nombre: string, zonaHoraria?: string) {
   return { success: true };
 }
 
+
+/**
+ * Activa o desactiva a un repartidor para habilitar/deshabilitar su asignación en nuevos repartos.
+ * Revalida las rutas afectadas para refrescar el estado en el calendario y listados.
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Developer
+ * @param repartidorId ID único del repartidor
+ * @param activo Nuevo estado de activación
+ * @returns Estado de éxito o error de la actualización
+ */
 export async function toggleRepartidorActivo(repartidorId: string, activo: boolean) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+    return { success: false, error: "No autorizado" };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from('repartidores')
@@ -225,7 +321,20 @@ export async function toggleRepartidorActivo(repartidorId: string, activo: boole
   return { success: true };
 }
 
+
+/**
+ * Elimina un repartidor del sistema de la base de datos.
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Developer
+ * @param repartidorId ID único del repartidor a eliminar
+ * @returns Estado de éxito o error de la eliminación
+ */
 export async function eliminarRepartidor(repartidorId: string) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+    return { success: false, error: "No autorizado" };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from('repartidores')
@@ -246,7 +355,19 @@ export async function eliminarRepartidor(repartidorId: string) {
 // ACCIONES DE ZONAS
 // ==========================================
 
+
+/**
+ * Obtiene el listado completo de zonas de reparto, incluyendo el repartidor asignado a cada una.
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Closer, Developer
+ * @returns Listado de zonas con relaciones cargadas
+ */
 export async function getZonasList() {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Developer"])) {
+    return { success: false, error: "No autorizado" };
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('zonas_reparto')
@@ -270,11 +391,24 @@ export async function getZonasList() {
   return { success: true, data: data || [] };
 }
 
+
+/**
+ * Crea una nueva zona geográfica de reparto y la asocia a un repartidor encargado.
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Developer
+ * @param formData Datos de la zona (nombre, descripción opcional y repartidor asignado)
+ * @returns Estado de éxito o error de la creación
+ */
 export async function crearZona(formData: {
   repartidor_id: string;
   nombre_zona: string;
   descripcion?: string;
 }) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+    return { success: false, error: "No autorizado" };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from('zonas_reparto')
@@ -293,7 +427,20 @@ export async function crearZona(formData: {
   return { success: true };
 }
 
+
+/**
+ * Elimina una zona de reparto de la base de datos.
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Developer
+ * @param zonaId ID único de la zona a borrar
+ * @returns Estado de éxito o error de la operación
+ */
 export async function eliminarZona(zonaId: string) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+    return { success: false, error: "No autorizado" };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from('zonas_reparto')
