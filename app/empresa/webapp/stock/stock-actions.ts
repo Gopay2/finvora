@@ -248,3 +248,25 @@ export async function registrarVenta(imei: string, vendedorId?: string) {
   revalidatePath('/empresa/webapp/stock');
   return { success: true };
 }
+
+export async function eliminarStock(imei: string) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+    return { error: "No tienes permisos para realizar esta acción" };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('stock')
+    .delete()
+    .eq('imei', imei);
+
+  if (error) {
+    console.error("Error al eliminar del stock:", error);
+    return { error: "No se pudo eliminar el equipo del inventario." };
+  }
+
+  revalidatePath('/empresa/webapp/stock');
+  return { success: true };
+}

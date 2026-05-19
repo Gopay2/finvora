@@ -1,6 +1,7 @@
 'use client';
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -11,9 +12,17 @@ interface ConfirmModalProps {
 }
 
 export default function ConfirmModal({ isOpen, onClose, onConfirm, title, message }: ConfirmModalProps) {
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
 
-  return (
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  if (!isOpen) return null;
+  if (!mounted) return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
@@ -58,6 +67,7 @@ export default function ConfirmModal({ isOpen, onClose, onConfirm, title, messag
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
