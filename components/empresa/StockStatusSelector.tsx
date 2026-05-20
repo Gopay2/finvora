@@ -8,6 +8,7 @@ interface StockStatusSelectorProps {
   imei: string;
   estadoActual: string;
   disabled?: boolean;
+  vendedores?: Vendedor[];
 }
 
 interface Vendedor {
@@ -16,12 +17,12 @@ interface Vendedor {
   role: string;
 }
 
-export default function StockStatusSelector({ imei, estadoActual, disabled = false }: StockStatusSelectorProps) {
+export default function StockStatusSelector({ imei, estadoActual, disabled = false, vendedores = [] }: StockStatusSelectorProps) {
   const [estado, setEstado] = useState(estadoActual);
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [showSellerModal, setShowSellerModal] = useState(false);
-  const [vendedores, setVendedores] = useState<Vendedor[]>([]);
+  const [vendedoresList, setVendedoresList] = useState<Vendedor[]>(vendedores);
   const [vendedorSeleccionado, setVendedorSeleccionado] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -40,12 +41,16 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
   };
 
   useEffect(() => {
+    if (vendedores && vendedores.length > 0) {
+      setVendedoresList(vendedores);
+      return;
+    }
     async function loadVendedores() {
       const data = await getVendedores();
-      setVendedores(data as Vendedor[]);
+      setVendedoresList(data as Vendedor[]);
     }
     loadVendedores();
-  }, []);
+  }, [vendedores]);
 
   useEffect(() => {
     if (timeLeft !== null && timeLeft > 0) {
@@ -196,7 +201,7 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
                 style={{ colorScheme: 'dark' }}
               >
                 <option value="">Elegir vendedor...</option>
-                {vendedores.map(v => {
+                {vendedoresList.map(v => {
                   const name = v.username || 'Sin nombre';
                   const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
                   return (

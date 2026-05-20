@@ -3,16 +3,37 @@
 import React, { useState, useRef, useMemo } from "react";
 import { submitVenta } from "@/app/empresa/webapp/ventas/actions";
 
+interface Producto {
+  marca: string;
+  modelo: string;
+  almacenamiento: string;
+  ram: string;
+  color: string;
+  cantidadStock: number;
+}
+
 interface VentasFormProps {
-  productos: any[];
+  productos: Producto[];
 }
 
 const styles = {
   formCard: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl space-y-6",
   inputGroup: "space-y-2",
+  inputGroupFull: "space-y-2 md:col-span-2",
   label: "text-sm font-medium text-slate-300 ml-1",
   input: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed",
-  button: "w-full bg-secondary text-slate-950 font-bold py-4 rounded-xl hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/20 cursor-pointer"
+  selectInput: "w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed appearance-none cursor-pointer",
+  engancheInput: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed pl-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+  pickerInput: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed pl-10 [color-scheme:dark] cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden",
+  textarea: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed min-h-[100px] resize-none",
+  button: "w-full bg-secondary text-slate-950 font-bold py-4 rounded-xl hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/20 cursor-pointer flex items-center justify-center gap-2",
+  buttonDisabled: "w-full bg-secondary text-slate-950 font-bold py-4 rounded-xl hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/20 cursor-not-allowed flex items-center justify-center gap-2 opacity-70",
+  statusSuccess: "p-4 rounded-xl text-sm font-medium flex items-center gap-3 animate-peek bg-green-500/10 text-green-400 border border-green-500/20",
+  statusError: "p-4 rounded-xl text-sm font-medium flex items-center gap-3 animate-peek bg-red-500/10 text-red-400 border border-red-500/20",
+  formGrid: "grid grid-cols-1 md:grid-cols-2 gap-6",
+  relativeInputContainer: "relative flex items-center",
+  enganchePrefix: "absolute left-4 text-slate-400 pointer-events-none",
+  pickerIcon: "absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base"
 };
 
 export default function VentasForm({ productos }: VentasFormProps) {
@@ -58,31 +79,31 @@ export default function VentasForm({ productos }: VentasFormProps) {
       }));
   }, [selectedModelKey, productos]);
 
-  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedModelKey(e.target.value);
+  const handleModelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedModelKey(event.target.value);
     setSelectedColor("");
   };
 
-  const handleOpenPicker = (e: React.MouseEvent<HTMLInputElement>) => {
+  const handleOpenPicker = (event: React.MouseEvent<HTMLInputElement>) => {
     const now = Date.now();
     if (now - lastPickerOpen.current < 500) return;
 
     if ('showPicker' in HTMLInputElement.prototype) {
       try {
         lastPickerOpen.current = now;
-        (e.currentTarget as any).showPicker();
+        (event.currentTarget as any).showPicker();
       } catch (err) {
         lastPickerOpen.current = 0;
       }
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setIsSubmitting(true);
     setStatus(null);
 
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(event.currentTarget);
     const baseInfo = modelosUnicos.find(([key]) => key === selectedModelKey)?.[1];
     
     if (baseInfo) {
@@ -106,8 +127,7 @@ export default function VentasForm({ productos }: VentasFormProps) {
   return (
     <form ref={formRef} className={styles.formCard} onSubmit={handleSubmit}>
       {status && (
-        <div className={`p-4 rounded-xl text-sm font-medium flex items-center gap-3 animate-peek ${status.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
-          }`}>
+        <div className={status.type === 'success' ? styles.statusSuccess : styles.statusError}>
           <span className="material-symbols-outlined">
             {status.type === 'success' ? 'check_circle' : 'error'}
           </span>
@@ -115,8 +135,8 @@ export default function VentasForm({ productos }: VentasFormProps) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className={`${styles.inputGroup} md:col-span-2`}>
+      <div className={styles.formGrid}>
+        <div className={styles.inputGroupFull}>
           <label className={styles.label}>Nombre de cliente</label>
           <input type="text" name="nombre_cliente" className={styles.input} required placeholder="Nombre completo" />
         </div>
@@ -125,7 +145,7 @@ export default function VentasForm({ productos }: VentasFormProps) {
           <label className={styles.label}>¿Cuenta con Identificación?</label>
           <select
             name="identificacion_fisica"
-            className={`${styles.input} appearance-none cursor-pointer bg-slate-950`}
+            className={styles.selectInput}
             style={{ colorScheme: 'dark' }}
             required
           >
@@ -154,12 +174,12 @@ export default function VentasForm({ productos }: VentasFormProps) {
         </div>
         <div className={styles.inputGroup}>
           <label className={styles.label}>Enganche</label>
-          <div className="relative flex items-center">
-            <span className="absolute left-4 text-slate-400 pointer-events-none">$</span>
+          <div className={styles.relativeInputContainer}>
+            <span className={styles.enganchePrefix}>$</span>
             <input
               type="number"
               name="enganche"
-              className={`${styles.input} pl-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+              className={styles.engancheInput}
               required
               min="0"
               placeholder="0.00"
@@ -172,7 +192,7 @@ export default function VentasForm({ productos }: VentasFormProps) {
           <label className={styles.label}>Modelo de Celular</label>
           <select
             value={selectedModelKey}
-            className={`${styles.input} appearance-none cursor-pointer bg-slate-950`}
+            className={styles.selectInput}
             style={{ colorScheme: 'dark' }}
             required
             onChange={handleModelChange}
@@ -197,7 +217,7 @@ export default function VentasForm({ productos }: VentasFormProps) {
           <select
             name="color_celular_select"
             value={selectedColor}
-            className={`${styles.input} appearance-none cursor-pointer bg-slate-950`}
+            className={styles.selectInput}
             style={{ colorScheme: 'dark' }}
             required
             disabled={!selectedModelKey}
@@ -225,7 +245,7 @@ export default function VentasForm({ productos }: VentasFormProps) {
           <label className={styles.label}>¿Cuenta activa?</label>
           <select
             name="cuenta_activa"
-            className={`${styles.input} appearance-none cursor-pointer bg-slate-950`}
+            className={styles.selectInput}
             style={{ colorScheme: 'dark' }}
             required
             defaultValue="si"
@@ -236,12 +256,12 @@ export default function VentasForm({ productos }: VentasFormProps) {
         </div>
         <div className={styles.inputGroup}>
           <label className={styles.label}>Fecha de entrega</label>
-          <div className="relative flex items-center">
-            <span className="absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base">calendar_today</span>
+          <div className={styles.relativeInputContainer}>
+            <span className={styles.pickerIcon}>calendar_today</span>
             <input
               type="date"
               name="fecha_entrega"
-              className={`${styles.input} pl-10 [color-scheme:dark] cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden`}
+              className={styles.pickerInput}
               required
               onClick={handleOpenPicker}
             />
@@ -249,23 +269,23 @@ export default function VentasForm({ productos }: VentasFormProps) {
         </div>
         <div className={styles.inputGroup}>
           <label className={styles.label}>Hora de entrega</label>
-          <div className="relative flex items-center">
-            <span className="absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base">schedule</span>
+          <div className={styles.relativeInputContainer}>
+            <span className={styles.pickerIcon}>schedule</span>
             <input
               type="time"
               name="hora_entrega"
-              className={`${styles.input} pl-10 [color-scheme:dark] cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden`}
+              className={styles.pickerInput}
               required
               onClick={handleOpenPicker}
             />
           </div>
         </div>
 
-        <div className={`${styles.inputGroup} md:col-span-2`}>
+        <div className={styles.inputGroupFull}>
           <label className={styles.label}>Comentarios (Opcional)</label>
           <textarea
             name="comentarios"
-            className={`${styles.input} min-h-[100px] resize-none`}
+            className={styles.textarea}
             placeholder="Notas adicionales sobre la venta o entrega..."
           />
         </div>
@@ -273,7 +293,7 @@ export default function VentasForm({ productos }: VentasFormProps) {
 
       <button
         type="submit"
-        className={`${styles.button} flex items-center justify-center gap-2 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+        className={isSubmitting ? styles.buttonDisabled : styles.button}
         disabled={isSubmitting}
       >
         {isSubmitting ? (

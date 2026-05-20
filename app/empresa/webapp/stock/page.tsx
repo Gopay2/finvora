@@ -6,6 +6,8 @@ import { createClient } from "@/utils/supabase/server";
 import StockStatusSelector from "@/components/empresa/StockStatusSelector";
 import StockZoneSelector from "@/components/empresa/StockZoneSelector";
 import DownloadExcelButton from "@/components/empresa/DownloadExcelButton";
+import { getVendedores } from "@/app/empresa/webapp/stock/stock-actions";
+import DeleteStockButton from "@/components/empresa/DeleteStockButton";
 
 export const revalidate = 0;
 
@@ -36,6 +38,7 @@ export default async function StockPage() {
   }
 
   const supabase = await createClient();
+  const vendedores = await getVendedores();
 
   const { data: unidades, error } = await supabase
     .from("stock")
@@ -99,6 +102,7 @@ export default async function StockPage() {
                 <th className={styles.th}>Ubicación</th>
                 <th className={styles.th}>Estado</th>
                 <th className={styles.th}>Fecha Ingreso</th>
+                {canEdit && <th className={styles.th}>Acciones</th>}
               </tr>
             </thead>
             <tbody>
@@ -133,6 +137,7 @@ export default async function StockPage() {
                           imei={item.imei}
                           estadoActual={item.estado}
                           disabled={!canEdit}
+                          vendedores={vendedores}
                         />
                       </div>
                     </td>
@@ -145,11 +150,18 @@ export default async function StockPage() {
                         })}
                       </span>
                     </td>
+                    {canEdit && (
+                      <td className={styles.td}>
+                        <div className="flex items-center justify-center">
+                          <DeleteStockButton imei={item.imei} />
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center text-slate-500 italic">
+                  <td colSpan={canEdit ? 6 : 5} className="px-6 py-20 text-center text-slate-500 italic">
                     No hay unidades cargadas. Agregue en la seccion Stock
                   </td>
                 </tr>

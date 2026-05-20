@@ -1,6 +1,7 @@
 'use client';
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 interface AlertModalProps {
   isOpen: boolean;
@@ -11,7 +12,15 @@ interface AlertModalProps {
 }
 
 export default function AlertModal({ isOpen, onClose, title, message, type = 'error' }: AlertModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
   if (!isOpen) return null;
+  if (!mounted) return null;
 
   const colors = {
     error: "bg-red-500/10 text-red-500",
@@ -25,7 +34,7 @@ export default function AlertModal({ isOpen, onClose, title, message, type = 'er
     info: "info"
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
       <div 
         className="absolute inset-0 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300"
@@ -54,6 +63,7 @@ export default function AlertModal({ isOpen, onClose, title, message, type = 'er
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
