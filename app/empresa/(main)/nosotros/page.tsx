@@ -1,3 +1,10 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Sobre Nosotros | Historia y Equipo de Finvora",
+  description: "Descubre la historia, misión, valores y el equipo administrativo y técnico de Finvora dedicado a hacer el crédito de celulares 100% inclusivo en México.",
+};
+
 const styles = {
   wrapper: "flex flex-col items-center justify-center py-20 px-4 gap-32",
   section: "w-full max-w-4xl text-center",

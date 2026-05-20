@@ -1,4 +1,11 @@
 import Link from 'next/link';
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Finvora | Acceso Inteligente a Tecnología Celular",
+  description: "Conoce cómo en Finvora transformamos el acceso a la tecnología en México, conectando a miles de personas con smartphones nuevos a crédito con pagos semanales.",
+};
+
 
 const styles = {
   wrapper: "flex flex-col items-center py-20 px-4 gap-24",

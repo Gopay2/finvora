@@ -13,9 +13,41 @@ const outfit = Outfit({
   variable: "--font-outfit" 
 });
 
+const isProduction = process.env.NEXT_PUBLIC_APP_ENV === "production";
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://finvora.mx"),
   title: "Finvora - Tu celular nuevo en 5 minutos",
   description: "Compra tu celular a crédito con pagos semanales. 9 de cada 10 personas son aprobadas.",
+  alternates: {
+    canonical: "./",
+  },
+  robots: {
+    index: isProduction,
+    follow: isProduction,
+  },
+  openGraph: {
+    title: "Finvora - Tu celular nuevo en 5 minutos",
+    description: "Compra tu celular a crédito con pagos semanales. 9 de cada 10 personas son aprobadas.",
+    url: "https://finvora.mx",
+    siteName: "Finvora",
+    locale: "es_MX",
+    type: "website",
+    images: [
+      {
+        url: "/brands/finvoralogo.webp",
+        width: 1200,
+        height: 630,
+        alt: "Finvora - Tu celular a crédito en 5 minutos",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Finvora - Tu celular nuevo en 5 minutos",
+    description: "Compra tu celular a crédito con pagos semanales. 9 de cada 10 personas son aprobadas.",
+    images: ["/brands/finvoralogo.webp"],
+  },
 };
 
 export default function RootLayout({
