@@ -112,14 +112,14 @@ export default function SalesChart({ sales }: SalesChartProps) {
 
   return (
     <div className="flex flex-col h-full space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h3 className="text-xl font-bold text-white tracking-tight">Ventas</h3>
-        <div className="flex bg-slate-800/50 p-1 rounded-xl border border-slate-700">
+        <div className="grid grid-cols-4 sm:flex bg-slate-800/50 p-1 rounded-xl border border-slate-700 w-full sm:w-auto">
           {(['diario', 'semanal', 'mensual', 'anual'] as ViewType[]).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${
+              className={`py-1.5 sm:px-3 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase transition-all text-center w-full ${
                 view === v 
                   ? 'bg-secondary text-slate-950 shadow-lg shadow-secondary/20' 
                   : 'text-slate-500 hover:text-slate-300'
@@ -213,7 +213,7 @@ export default function SalesChart({ sales }: SalesChartProps) {
 
       </div>
 
-      <div className="flex justify-between text-slate-600 text-[10px] font-bold uppercase tracking-widest px-1">
+      <div className="flex justify-between text-slate-600 text-[8px] sm:text-[10px] font-bold uppercase tracking-normal sm:tracking-widest px-1">
         {chartData.map((d, i) => {
           let shouldShow = false;
           if (view === 'diario') shouldShow = i % 4 === 0 || i === 23;

@@ -14,16 +14,16 @@ const styles = {
   btnHome: "flex items-center justify-center px-4 py-2 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl hover:bg-slate-700 hover:text-white transition-all cursor-pointer",
 
   // KPI Cards Grid
-  kpiGrid: "grid grid-cols-2 md:grid-cols-5 gap-6",
-  kpiCard: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-5 rounded-2xl flex flex-col items-center justify-center space-y-1 hover:border-secondary/30 transition-all",
-  kpiValue: "text-xl font-bold text-white text-center",
-  kpiLabel: "text-[10px] uppercase tracking-widest text-slate-500 font-bold",
+  kpiGrid: "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6",
+  kpiCard: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-4 sm:p-5 rounded-2xl flex flex-col items-center justify-center space-y-1 hover:border-secondary/30 transition-all",
+  kpiValue: "text-lg sm:text-xl font-bold text-white text-center truncate w-full",
+  kpiLabel: "text-[8px] sm:text-[10px] uppercase tracking-widest text-slate-500 font-bold text-center",
 
   // Main Dashboard Layout
   mainGrid: "grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch",
-  largeCard: "lg:col-span-3 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-[2.5rem] relative overflow-hidden h-80 flex flex-col",
+  largeCard: "lg:col-span-3 bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-4 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] relative overflow-hidden h-[22rem] sm:h-80 flex flex-col",
   sideColumn: "lg:col-span-2 flex flex-col",
-  smallCard: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-[2.5rem] flex flex-col items-center justify-center h-80",
+  smallCard: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-4 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] flex flex-col items-center justify-center h-80",
 };
 
 
