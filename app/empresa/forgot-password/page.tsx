@@ -35,7 +35,7 @@ export default function ForgotPasswordPage({
         {searchParams.error && <div className={styles.error}>{searchParams.error}</div>}
         {searchParams.success && <div className={styles.success}>{searchParams.success}</div>}
 
-        <form action={resetPassword} className={styles.form}>
+        <form action={resetPassword} className={styles.form} suppressHydrationWarning>
           <div className={styles.inputGroup}>
             <label className={styles.label}>Email</label>
             <input
@@ -44,6 +44,7 @@ export default function ForgotPasswordPage({
               required
               className={styles.input}
               placeholder="tunombre@email.com"
+              suppressHydrationWarning
             />
           </div>
 

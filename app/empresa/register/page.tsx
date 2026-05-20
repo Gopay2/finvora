@@ -49,7 +49,7 @@ function RegisterContent() {
         </div>
       )}
       
-      <form className={styles.form} action={signup}>
+      <form className={styles.form} action={signup} suppressHydrationWarning>
         <div className={styles.inputGroup}>
           <label className={styles.label}>Correo Electrónico</label>
           <input 
@@ -58,6 +58,7 @@ function RegisterContent() {
             placeholder="tu@email.com" 
             className={styles.input}
             required
+            suppressHydrationWarning
           />
         </div>
         
@@ -70,6 +71,7 @@ function RegisterContent() {
             className={styles.input}
             required
             minLength={6}
+            suppressHydrationWarning
           />
         </div>
         

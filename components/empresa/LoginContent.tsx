@@ -67,7 +67,7 @@ export default function LoginContent() {
         </div>
       )}
       
-      <form className={styles.form} action={login}>
+      <form className={styles.form} action={login} suppressHydrationWarning>
         <div className={styles.inputGroup}>
           <label className={styles.label}>Correo Electrónico</label>
           <input 
@@ -76,6 +76,7 @@ export default function LoginContent() {
             placeholder="tu@email.com" 
             className={styles.input}
             required
+            suppressHydrationWarning
           />
         </div>
         
@@ -87,6 +88,7 @@ export default function LoginContent() {
             placeholder="••••••••" 
             className={styles.input}
             required
+            suppressHydrationWarning
           />
         </div>
         
@@ -95,6 +97,7 @@ export default function LoginContent() {
             <input 
               type="checkbox" 
               className="w-4 h-4 rounded border-slate-800 bg-slate-950 text-secondary focus:ring-secondary/20" 
+              suppressHydrationWarning
             />
             <span className="text-xs text-slate-400 group-hover:text-slate-300 transition-colors">Recordarme</span>
           </label>
