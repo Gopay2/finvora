@@ -1,3 +1,10 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Nuestros Servicios | Celulares a Crédito y Envíos | Finvora",
+  description: "Explora las soluciones de Finvora: financiamiento de smartphones con mínimos requisitos, pagos semanales cómodos, entrega inmediata en locales y envío a domicilio seguro.",
+};
+
 export default function ServiciosPage() {
   const servicios = [
     {
@@ -31,7 +38,7 @@ export default function ServiciosPage() {
               <span className="material-symbols-outlined text-4xl text-secondary mb-4">
                 {servicio.icono}
               </span>
-              <h3 className="text-2xl font-bold text-slate-200 mb-3">{servicio.titulo}</h3>
+              <h2 className="text-2xl font-bold text-slate-200 mb-3">{servicio.titulo}</h2>
               <p className="text-slate-400 text-lg leading-relaxed">{servicio.descripcion}</p>
             </div>
           ))}

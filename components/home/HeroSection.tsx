@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 
 const styles = {
   brandSection: "pt-28 pb-12 bg-slate-950 flex items-center justify-center border-b border-white/5",
@@ -33,10 +34,13 @@ function BrandIntroduction() {
     <section className={styles.brandSection}>
       <div className={styles.brandContainer}>
         <div className={styles.brandGlow}></div>
-        <img
+        <Image
           alt="Finvora Brand Logo"
           className={styles.brandLogo}
           src="/brands/finvoralogo.webp"
+          width={1024}
+          height={1024}
+          priority
         />
         <div className={styles.brandLabelContainer}>
           <span className={styles.brandLine}></span>
@@ -90,10 +94,13 @@ function HeroMain() {
         </div>
         <div className={styles.heroImageContainer}>
           <div className={styles.heroImageGlow}></div>
-          <img
+          <Image
             alt="Smartphones premium"
             className={styles.heroImage}
             src="/brands/chica2.webp"
+            width={1024}
+            height={1536}
+            priority
           />
         </div>
       </div>
