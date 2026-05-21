@@ -86,6 +86,7 @@ export default function StockCargarForm({ productos }: StockCargarFormProps) {
               <option value="Local CyM 1" className="bg-slate-950 text-white">Local CyM 1</option>
               <option value="Local CyM 2" className="bg-slate-950 text-white">Local CyM 2</option>
               <option value="Local Olgin" className="bg-slate-950 text-white">Local Olgin</option>
+              <option value="Monterrey" className="bg-slate-950 text-white">Monterrey</option>
               <option value="Cambaceo Victor" className="bg-slate-950 text-white">Cambaceo Victor</option>
               <option value="Cambaceo Esteban" className="bg-slate-950 text-white">Cambaceo Esteban</option>
               <option value="Proveedor Android" className="bg-slate-950 text-white">Proveedor Android</option>

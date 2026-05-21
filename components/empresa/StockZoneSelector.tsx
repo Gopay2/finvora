@@ -26,6 +26,7 @@ export default function StockZoneSelector({ imei, zonaActual, disabled = false }
     "Local CyM 1",
     "Local CyM 2",
     "Local Olgin",
+    "Monterrey",
     "Cambaceo Victor",
     "Cambaceo Esteban",
     "Proveedor Android"
