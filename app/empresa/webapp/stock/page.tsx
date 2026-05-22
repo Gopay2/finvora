@@ -33,7 +33,7 @@ export default async function StockPage() {
   const { role: userRole } = await getUserProfile();
   const canEdit = isAllowed(userRole, ["Admin", "Supervisor", "Developer"]);
 
-  if (!isAllowed(userRole, ["Admin", "Supervisor", "Closer", "Developer"])) {
+  if (!isAllowed(userRole, ["Admin", "Supervisor", "Closer", "Repartidor", "Developer"])) {
     return <AccessDenied role={userRole} sectionName="Stock de Ventas" />;
   }
 
@@ -57,7 +57,7 @@ export default async function StockPage() {
     `)
     .order('fecha_ingreso', { ascending: false });
 
-  if (userRole === "Closer") {
+  if (userRole === "Closer" || userRole === "Repartidor") {
     query.neq('estado', 'A consultar').neq('estado', 'En envío');
   }
 
