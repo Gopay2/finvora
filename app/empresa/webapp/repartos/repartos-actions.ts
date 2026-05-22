@@ -120,8 +120,8 @@ export async function getLogisticsFormData() {
     return { success: false, error: vendError.message };
   }
 
-  // 4. Obtener stock disponible o a consultar
-  const { data: stock, error: stockError } = await supabase
+  // 4. Obtener stock disponible o a consultar (ocultar 'A consultar' para el rol Closer)
+  const stockQuery = supabase
     .from('stock')
     .select(`
       imei,
@@ -134,8 +134,15 @@ export async function getLogisticsFormData() {
         ram
       )
     `)
-    .in('estado', ['Disponible', 'A consultar'])
     .order('fecha_ingreso', { ascending: false });
+
+  if (role === "Closer") {
+    stockQuery.eq('estado', 'Disponible');
+  } else {
+    stockQuery.in('estado', ['Disponible', 'A consultar']);
+  }
+
+  const { data: stock, error: stockError } = await stockQuery;
 
   if (stockError) {
     console.error("Error al obtener stock:", stockError);

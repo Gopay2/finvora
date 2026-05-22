@@ -227,12 +227,17 @@ export function useRepartosCalendar() {
       const [hoursStr, minutesStr] = formHorario.split(':');
       const deliveryHour = parseInt(hoursStr, 10);
       const deliveryMinute = parseInt(minutesStr, 10);
+      
+      const rep = formDataOptions.repartidores.find(r => r.id === formRepartidor);
+      const tz = rep?.zona_horaria || 'America/Mexico_City';
+      const driverNowString = new Date().toLocaleString('en-US', { timeZone: tz });
+      const driverNow = new Date(driverNowString);
+      const minAllowedTime = new Date(driverNow.getTime() + 60 * 60 * 1000); // 1 hora en el futuro
+      
       const deliveryDate = new Date(year, month, selectedDay || 1, deliveryHour, deliveryMinute);
-      const now = new Date();
-      const minAllowedTime = new Date(now.getTime() + 60 * 60 * 1000); // 1 hora en el futuro
 
       if (deliveryDate < minAllowedTime) {
-        setFormError("La fecha y hora del reparto debe ser al menos 1 hora en el futuro respecto a tu hora actual, para permitir que el repartidor tenga tiempo de llegar.");
+        setFormError("La fecha y hora del reparto debe ser al menos 1 hora en el futuro respecto a la hora actual del repartidor, para permitir que tenga tiempo de llegar.");
         setActionLoading(false);
         return;
       }

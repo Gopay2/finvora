@@ -79,8 +79,7 @@ export default function StockCargarForm({ productos }: StockCargarFormProps) {
               <option value="Repartidor Felix" className="bg-slate-950 text-white">Repartidor Felix</option>
               <option value="Repartidor Eleazar" className="bg-slate-950 text-white">Repartidor Eleazar</option>
               <option value="Repartidor Humberto" className="bg-slate-950 text-white">Repartidor Humberto</option>
-              <option value="Repartidor JR (CT)" className="bg-slate-950 text-white">Repartidor JR (CT)</option>
-              <option value="Repartidor Hector (CT)" className="bg-slate-950 text-white">Repartidor Hector (CT)</option>
+              <option value="Repartos CT" className="bg-slate-950 text-white">Repartos CT</option>
               <option value="Local Fusion Tech" className="bg-slate-950 text-white">Local Fusion Tech</option>
               <option value="Local Rosarito" className="bg-slate-950 text-white">Local Rosarito</option>
               <option value="Local CyM 1" className="bg-slate-950 text-white">Local CyM 1</option>
