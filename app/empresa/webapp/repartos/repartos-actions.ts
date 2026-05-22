@@ -16,7 +16,7 @@ import { getUserProfile, isAllowed } from "@/utils/auth-check";
  */
 export async function getRepartosMes(year: number, month: number) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Developer"])) {
+  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Repartidor", "Developer"])) {
     return { success: false, error: "No autorizado" };
   }
 
@@ -79,7 +79,7 @@ export async function getRepartosMes(year: number, month: number) {
  */
 export async function getLogisticsFormData() {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Developer"])) {
+  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Repartidor", "Developer"])) {
     return { success: false, error: "No autorizado" };
   }
 
@@ -136,7 +136,7 @@ export async function getLogisticsFormData() {
     `)
     .order('fecha_ingreso', { ascending: false });
 
-  if (role === "Closer") {
+  if (role === "Closer" || role === "Repartidor") {
     stockQuery.eq('estado', 'Disponible');
   } else {
     stockQuery.in('estado', ['Disponible', 'A consultar']);
@@ -250,7 +250,7 @@ export async function eliminarReparto(repartoId: string) {
  */
 export async function getRepartidoresList() {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Developer"])) {
+  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Repartidor", "Developer"])) {
     return { success: false, error: "No autorizado" };
   }
 
@@ -371,7 +371,7 @@ export async function eliminarRepartidor(repartidorId: string) {
  */
 export async function getZonasList() {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Developer"])) {
+  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Repartidor", "Developer"])) {
     return { success: false, error: "No autorizado" };
   }
 
