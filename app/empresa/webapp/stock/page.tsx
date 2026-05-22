@@ -40,7 +40,7 @@ export default async function StockPage() {
   const supabase = await createClient();
   const vendedores = await getVendedores();
 
-  const { data: unidades, error } = await supabase
+  const query = supabase
     .from("stock")
     .select(`
       imei,
@@ -56,6 +56,12 @@ export default async function StockPage() {
       )
     `)
     .order('fecha_ingreso', { ascending: false });
+
+  if (userRole === "Closer") {
+    query.neq('estado', 'A consultar').neq('estado', 'En envío');
+  }
+
+  const { data: unidades, error } = await query;
 
   if (error) {
     console.error("Error cargando inventario:", error);

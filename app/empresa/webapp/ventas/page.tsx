@@ -30,15 +30,21 @@ export default async function VentasPage() {
     .order('marca', { ascending: true });
 
   // 2. Obtenemos el stock actual para contar disponibilidades
-  const { data: stockItems } = await supabase
+  const queryStock = supabase
     .from("stock")
     .select("producto_id, estado");
 
+  if (userRole === "Closer") {
+    queryStock.neq("estado", "A consultar").neq("estado", "En envío");
+  }
+
+  const { data: stockItems } = await queryStock;
+
   // Procesamos los productos para incluir la cantidad de stock disponible con tipado explícito
   const productosConStock = (productos || []).map((p: any) => {
-    // Contamos cuántas unidades de este producto específico están 'Disponible', 'En envío' o 'A consultar'
+    // Contamos cuántas unidades de este producto específico están 'Disponible' o 'A consultar'
     const unidades = (stockItems || []).filter((s: any) => 
-      s.producto_id === p.id && (s.estado === 'Disponible' || s.estado === 'En envío' || s.estado === 'A consultar')
+      s.producto_id === p.id && (s.estado === 'Disponible' || s.estado === 'A consultar')
     ).length;
     
     return {

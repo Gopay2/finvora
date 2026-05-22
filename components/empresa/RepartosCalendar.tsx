@@ -411,10 +411,13 @@ export default function RepartosCalendar() {
                     return allHours.map((hour) => {
                       const formattedHour = `${String(hour).padStart(2, '0')}:00`;
                       
-                      // Calcular si esta hora en el día seleccionado ya pasó o tiene menos de 1 hora de anticipación
+                      // Calcular si esta hora en el día seleccionado ya pasó o tiene menos de 1 hora de anticipación en la zona horaria del repartidor
+                      const rep = formDataOptions.repartidores.find(r => r.id === selectedRepartidorTab);
+                      const tz = rep?.zona_horaria || 'America/Mexico_City';
+                      const driverNowString = new Date().toLocaleString('en-US', { timeZone: tz });
+                      const driverNow = new Date(driverNowString);
+                      const minAllowed = new Date(driverNow.getTime() + 60 * 60 * 1000);
                       const slotDate = new Date(year, month, selectedDay || 1, hour, 0);
-                      const now = new Date();
-                      const minAllowed = new Date(now.getTime() + 60 * 60 * 1000);
                       const isPastOrUnavailable = slotDate < minAllowed;
                       
                       // Buscar repartos para esta hora asignados a este repartidor específico
@@ -686,9 +689,12 @@ export default function RepartosCalendar() {
                       {Array.from({ length: 13 }, (_, i) => {
                         const hour = i + 8;
                         const formattedHour = `${String(hour).padStart(2, '0')}:00`;
+                        const rep = formDataOptions.repartidores.find(r => r.id === formRepartidor);
+                        const tz = rep?.zona_horaria || 'America/Mexico_City';
+                        const driverNowString = new Date().toLocaleString('en-US', { timeZone: tz });
+                        const driverNow = new Date(driverNowString);
+                        const minAllowed = new Date(driverNow.getTime() + 60 * 60 * 1000);
                         const slotDate = new Date(year, month, selectedDay || 1, hour, 0);
-                        const now = new Date();
-                        const minAllowed = new Date(now.getTime() + 60 * 60 * 1000);
                         const isPastOrUnavailable = slotDate < minAllowed;
                         return (
                           <option 
