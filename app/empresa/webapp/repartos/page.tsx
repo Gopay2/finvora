@@ -50,7 +50,7 @@ export default async function RepartosPage() {
 
       {/* Contenedor principal del calendario con borde redondeado y sombra */}
       <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-        <RepartosCalendar />
+        <RepartosCalendar userRole={userRole} />
       </div>
     </div>
   );

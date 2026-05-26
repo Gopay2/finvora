@@ -80,7 +80,7 @@ export interface FormDataOptions {
   stock: StockItem[];
 }
 
-export function useRepartosCalendar() {
+export function useRepartosCalendar(userRole?: string) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   // Estados de datos con tipado fuerte
@@ -248,7 +248,8 @@ export function useRepartosCalendar() {
       
       const deliveryDate = new Date(year, month, selectedDay || 1, deliveryHour, deliveryMinute);
 
-      if (deliveryDate < minAllowedTime) {
+      const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor';
+      if (!isPrivileged && deliveryDate < minAllowedTime) {
         setFormError("La fecha y hora del reparto debe ser al menos 1 hora en el futuro respecto a la hora actual del repartidor, para permitir que tenga tiempo de llegar.");
         setActionLoading(false);
         return;

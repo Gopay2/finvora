@@ -109,7 +109,11 @@ const styles = {
   formInput: "w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary transition-all appearance-none disabled:opacity-40 disabled:cursor-not-allowed",
 };
 
-export default function RepartosCalendar() {
+interface RepartosCalendarProps {
+  userRole?: string;
+}
+
+export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -163,7 +167,7 @@ export default function RepartosCalendar() {
     isToday,
     handleCrearReparto,
     handleEliminarReparto,
-  } = useRepartosCalendar();
+  } = useRepartosCalendar(userRole);
 
   return (
     <div className={styles.wrapper}>
@@ -419,7 +423,8 @@ export default function RepartosCalendar() {
                       const driverNow = new Date(driverNowString);
                       const minAllowed = new Date(driverNow.getTime() + 60 * 60 * 1000);
                       const slotDate = new Date(year, month, selectedDay || 1, hour, 0);
-                      const isPastOrUnavailable = slotDate < minAllowed;
+                      const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor';
+                      const isPastOrUnavailable = !isPrivileged && (slotDate < minAllowed);
                       
                       // Buscar repartos para esta hora asignados a este repartidor específico
                       const repsInHour = driverReps.filter(rep => {
@@ -696,7 +701,8 @@ export default function RepartosCalendar() {
                         const driverNow = new Date(driverNowString);
                         const minAllowed = new Date(driverNow.getTime() + 60 * 60 * 1000);
                         const slotDate = new Date(year, month, selectedDay || 1, hour, 0);
-                        const isPastOrUnavailable = slotDate < minAllowed;
+                        const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor';
+                        const isPastOrUnavailable = !isPrivileged && (slotDate < minAllowed);
                         return (
                           <option 
                             key={formattedHour} 
