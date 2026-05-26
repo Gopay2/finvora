@@ -48,7 +48,7 @@ export default async function CatalogoPublicoPage() {
   const whatsappPhone = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || "521234567890"; // Respaldo seguro
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-[family-name:var(--font-outfit)] flex flex-col justify-between">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-[family-name:var(--font-outfit)] flex flex-col justify-between overflow-x-hidden w-full">
       {/* Cabecera unificada de Finvora */}
       <Header />
 
@@ -77,7 +77,7 @@ export default async function CatalogoPublicoPage() {
           </div>
         </section>
 
-        {/* Componente Contenedor Interactivo (Filtros + Grid de Tarjetas) */}
+        {/* Componente Contenedor Interactivo (Filtros + Grid de Tarjetas Compactas) */}
         <CatalogoCliente 
           celulares={celulares} 
           whatsappPhone={whatsappPhone} 

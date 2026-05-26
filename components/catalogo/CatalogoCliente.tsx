@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from "react";
-import CatalogoCard from "./CatalogoCard";
+import CatalogoCardCompacta from "./CatalogoCardCompacta";
 
 interface CatalogoClienteProps {
   celulares: any[];
@@ -36,7 +36,7 @@ export default function CatalogoCliente({ celulares, whatsappPhone }: CatalogoCl
   }, [celulares, marcaSeleccionada]);
 
   return (
-    <section className="relative py-12 bg-slate-950 min-h-[60vh] flex flex-col gap-12">
+    <section className="relative py-12 bg-slate-950 min-h-[60vh] flex flex-col gap-12 overflow-hidden">
       {/* Resplandor de fondo general del catálogo */}
       <div className="absolute w-[500px] h-[500px] bg-[#3CD7FF]/5 rounded-full blur-[120px] -z-10 left-1/4 top-10 pointer-events-none" />
       <div className="absolute w-[400px] h-[400px] bg-secondary/5 rounded-full blur-[100px] -z-10 right-1/4 bottom-10 pointer-events-none" />
@@ -71,12 +71,11 @@ export default function CatalogoCliente({ celulares, whatsappPhone }: CatalogoCl
       {/* Cuadrícula de Productos */}
       <div className="max-w-7xl mx-auto px-6 w-full flex-1">
         {celularesFiltrados.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {celularesFiltrados.map((celular) => (
-              <CatalogoCard 
+              <CatalogoCardCompacta 
                 key={celular.id} 
                 celular={celular} 
-                whatsappPhone={whatsappPhone} 
               />
             ))}
           </div>
