@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useRepartosCalendar } from './useRepartosCalendar';
 
@@ -142,6 +142,7 @@ export default function RepartosCalendar() {
     zonasFiltradas,
     repartosDelDiaSeleccionado,
     formDataOptions,
+    repartidoresFiltradosLogistica,
     repartos,
 
     // Acciones y Setters
@@ -337,10 +338,10 @@ export default function RepartosCalendar() {
             {!isFormOpen && (
               <>
                 {/* Selector de Pestañas de Repartidores */}
-                {formDataOptions.repartidores.length > 0 ? (
+                {repartidoresFiltradosLogistica.length > 0 ? (
                   <div className={styles.tabsContainer}>
                     <div className={styles.tabsList}>
-                      {formDataOptions.repartidores.map((rep) => {
+                      {repartidoresFiltradosLogistica.map((rep) => {
                         const isActive = selectedRepartidorTab === rep.id;
                         const countRepartos = repartosDelDiaSeleccionado.filter(reparto => reparto.repartidores?.id === rep.id).length;
                         
@@ -412,7 +413,7 @@ export default function RepartosCalendar() {
                       const formattedHour = `${String(hour).padStart(2, '0')}:00`;
                       
                       // Calcular si esta hora en el día seleccionado ya pasó o tiene menos de 1 hora de anticipación en la zona horaria del repartidor
-                      const rep = formDataOptions.repartidores.find(r => r.id === selectedRepartidorTab);
+                      const rep = repartidoresFiltradosLogistica.find(r => r.id === selectedRepartidorTab);
                       const tz = rep?.zona_horaria || 'America/Mexico_City';
                       const driverNowString = new Date().toLocaleString('en-US', { timeZone: tz });
                       const driverNow = new Date(driverNowString);
@@ -644,7 +645,7 @@ export default function RepartosCalendar() {
                          style={{ colorScheme: 'dark' }}
                        >
                         <option value="">Seleccionar Repartidor</option>
-                        {formDataOptions.repartidores.map(repartidor => (
+                        {repartidoresFiltradosLogistica.map(repartidor => (
                           <option key={repartidor.id} value={repartidor.id}>
                             {repartidor.nombre}
                           </option>
@@ -689,7 +690,7 @@ export default function RepartosCalendar() {
                       {Array.from({ length: 13 }, (_, i) => {
                         const hour = i + 8;
                         const formattedHour = `${String(hour).padStart(2, '0')}:00`;
-                        const rep = formDataOptions.repartidores.find(r => r.id === formRepartidor);
+                        const rep = repartidoresFiltradosLogistica.find(r => r.id === formRepartidor);
                         const tz = rep?.zona_horaria || 'America/Mexico_City';
                         const driverNowString = new Date().toLocaleString('en-US', { timeZone: tz });
                         const driverNow = new Date(driverNowString);

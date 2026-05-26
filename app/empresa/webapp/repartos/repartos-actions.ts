@@ -136,7 +136,7 @@ export async function getLogisticsFormData() {
     `)
     .order('fecha_ingreso', { ascending: false });
 
-  if (role === "Closer" || role === "Repartidor") {
+  if (role === "Repartidor") {
     stockQuery.eq('estado', 'Disponible');
   } else {
     stockQuery.in('estado', ['Disponible', 'A consultar']);
@@ -431,6 +431,48 @@ export async function crearZona(formData: {
   }
 
   revalidatePath('/empresa/webapp/repartos/zonas');
+  return { success: true };
+}
+
+
+/**
+ * Modifica una zona geográfica de reparto existente.
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Developer
+ * @param zonaId ID de la zona a actualizar
+ * @param formData Datos actualizados de la zona (nombre, descripción opcional y repartidor asignado)
+ * @returns Estado de éxito o error de la actualización
+ */
+export async function editarZona(
+  zonaId: string,
+  formData: {
+    repartidor_id: string;
+    nombre_zona: string;
+    descripcion?: string;
+  }
+) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+    return { success: false, error: "No autorizado" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('zonas_reparto')
+    .update({
+      repartidor_id: formData.repartidor_id,
+      nombre_zona: formData.nombre_zona,
+      descripcion: formData.descripcion || ''
+    })
+    .eq('id', zonaId);
+
+  if (error) {
+    console.error("Error al editar zona:", error);
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath('/empresa/webapp/repartos/zonas');
+  revalidatePath('/empresa/webapp/repartos');
   return { success: true };
 }
 

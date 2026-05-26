@@ -4,16 +4,36 @@ import React, { useState, useRef, useMemo } from "react";
 import { submitVenta } from "@/app/empresa/webapp/ventas/actions";
 
 interface Producto {
+  id: string;
   marca: string;
   modelo: string;
   almacenamiento: string;
   ram: string;
   color: string;
+}
+
+interface ProductoConStock extends Producto {
   cantidadStock: number;
+}
+
+interface RepartoZonaInfo {
+  id: string;
+  nombre_zona: string;
+  repartidor_id: string;
+  repartidor_nombre: string;
+  repartidor_activo: boolean;
+}
+
+interface StockItem {
+  producto_id: string;
+  estado: string;
+  ubicacion: string | null;
 }
 
 interface VentasFormProps {
   productos: Producto[];
+  zonasReparto: RepartoZonaInfo[];
+  stockItems: StockItem[];
 }
 
 const styles = {
@@ -36,20 +56,52 @@ const styles = {
   pickerIcon: "absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base"
 };
 
-export default function VentasForm({ productos }: VentasFormProps) {
+export default function VentasForm({ productos, zonasReparto, stockItems }: VentasFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   
   const [selectedModelKey, setSelectedModelKey] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
+  const [selectedZona, setSelectedZona] = useState<string>("");
+  const [selectedRepartidorId, setSelectedRepartidorId] = useState<string>("");
   
   const formRef = useRef<HTMLFormElement>(null);
   const lastPickerOpen = useRef(0);
 
-  // 1. Agrupamos modelos y definimos el nuevo formato de visualización
+  // 1. Filtrar stockItems según el repartidor seleccionado
+  const stockFiltrado = useMemo(() => {
+    if (!selectedRepartidorId) return [];
+    return stockItems.filter(s => s.ubicacion === selectedRepartidorId);
+  }, [selectedRepartidorId, stockItems]);
+
+  // 2. Mapeamos y filtramos los productos que tienen stock asignado a este repartidor (cantidad > 0)
+  const productosConStock = useMemo(() => {
+    if (!selectedRepartidorId) return [];
+    
+    // Obtenemos los IDs de productos del catálogo que tienen stock físico con el repartidor
+    const idsConStock = new Set(stockFiltrado.map(s => s.producto_id));
+
+    return productos
+      .filter(p => idsConStock.has(p.id))
+      .map(p => {
+        const unidadesValidas = stockFiltrado.filter(s => s.producto_id === p.id);
+        const cantidadDisponible = unidadesValidas.filter(s => s.estado === 'Disponible').length;
+        const cantidadAConsultar = unidadesValidas.filter(s => s.estado === 'A consultar').length;
+        
+        return {
+          ...p,
+          cantidadDisponible,
+          cantidadAConsultar,
+          cantidadStock: cantidadDisponible + cantidadAConsultar
+        };
+      })
+      .filter(p => p.cantidadStock > 0); // Nos aseguramos de que solo pasen productos con stock positivo
+  }, [selectedRepartidorId, productos, stockFiltrado]);
+
+  // 3. Agrupamos modelos únicos a partir de los productos con stock
   const modelosUnicos = useMemo(() => {
     const map = new Map();
-    productos.forEach(p => {
+    productosConStock.forEach(p => {
       // Formato: MARCA MODELO - 256GB - 8GB
       const display = `${p.marca} ${p.modelo} - ${p.almacenamiento} - ${p.ram}`;
       const existing = map.get(display);
@@ -59,28 +111,74 @@ export default function VentasForm({ productos }: VentasFormProps) {
           display: display,
           marca: p.marca,
           modelo: p.modelo,
+          totalDisponible: p.cantidadDisponible,
+          totalAConsultar: p.cantidadAConsultar,
           totalStock: p.cantidadStock
         });
       } else {
+        existing.totalDisponible += p.cantidadDisponible;
+        existing.totalAConsultar += p.cantidadAConsultar;
         existing.totalStock += p.cantidadStock;
       }
     });
     return Array.from(map.entries());
-  }, [productos]);
+  }, [productosConStock]);
 
-  // 2. Colores disponibles para el modelo seleccionado (ahora usamos el nuevo display como clave)
+  // 4. Colores disponibles para el modelo seleccionado de los productos con stock
   const variantesColor = useMemo(() => {
     if (!selectedModelKey) return [];
-    return productos
+    return productosConStock
       .filter(p => `${p.marca} ${p.modelo} - ${p.almacenamiento} - ${p.ram}` === selectedModelKey)
       .map(p => ({
         color: p.color,
-        hasStock: p.cantidadStock > 0
+        cantidadDisponible: p.cantidadDisponible,
+        cantidadAConsultar: p.cantidadAConsultar,
+        hasStock: p.cantidadDisponible > 0
       }));
-  }, [selectedModelKey, productos]);
+  }, [selectedModelKey, productosConStock]);
+
+  // 5. Zonas únicas configuradas
+  const zonasUnicas = useMemo(() => {
+    const set = new Set<string>();
+    (zonasReparto || []).forEach(z => {
+      if (z.nombre_zona) {
+        set.add(z.nombre_zona);
+      }
+    });
+    return Array.from(set).sort();
+  }, [zonasReparto]);
+
+  // 6. Repartidores válidos según la zona seleccionada (excluyendo los que contengan "Cambaceo")
+  const repartidoresValidos = useMemo(() => {
+    if (!selectedZona) return [];
+    const map = new Map<string, string>();
+    (zonasReparto || [])
+      .filter(z => 
+        z.nombre_zona === selectedZona && 
+        z.repartidor_nombre && 
+        !z.repartidor_nombre.toLowerCase().includes("cambaceo")
+      )
+      .forEach(z => {
+        map.set(z.repartidor_id, z.repartidor_nombre);
+      });
+    return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre }));
+  }, [selectedZona, zonasReparto]);
 
   const handleModelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedModelKey(event.target.value);
+    setSelectedColor("");
+  };
+
+  const handleZonaChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedZona(event.target.value);
+    setSelectedRepartidorId("");
+    setSelectedModelKey("");
+    setSelectedColor("");
+  };
+
+  const handleRepartidorChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedRepartidorId(event.target.value);
+    setSelectedModelKey("");
     setSelectedColor("");
   };
 
@@ -118,6 +216,8 @@ export default function VentasForm({ productos }: VentasFormProps) {
       formRef.current?.reset();
       setSelectedModelKey("");
       setSelectedColor("");
+      setSelectedZona("");
+      setSelectedRepartidorId("");
     } else {
       setStatus({ type: 'error', message: result.error || 'Error al procesar la venta.' });
     }
@@ -187,6 +287,68 @@ export default function VentasForm({ productos }: VentasFormProps) {
           </div>
         </div>
 
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>¿Cuenta activa?</label>
+          <select
+            name="cuenta_activa"
+            className={styles.selectInput}
+            style={{ colorScheme: 'dark' }}
+            required
+            defaultValue="si"
+          >
+            <option value="si" className="bg-slate-950 text-white">Sí</option>
+            <option value="no" className="bg-slate-950 text-white">No</option>
+          </select>
+        </div>
+
+        {/* SELECTOR DE ZONA */}
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>Zona de reparto</label>
+          <select
+            name="zona"
+            value={selectedZona}
+            className={styles.selectInput}
+            style={{ colorScheme: 'dark' }}
+            required
+            onChange={handleZonaChange}
+          >
+            <option value="" className="bg-slate-950 text-slate-500 italic">Seleccione una zona...</option>
+            {zonasUnicas.map((zona) => (
+              <option key={zona} value={zona} className="bg-slate-950 text-white">
+                {zona}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* SELECTOR DE REPARTIDOR */}
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>Repartidor</label>
+          <select
+            name="repartidor_id"
+            value={selectedRepartidorId}
+            className={styles.selectInput}
+            style={{ colorScheme: 'dark' }}
+            required
+            disabled={!selectedZona}
+            onChange={handleRepartidorChange}
+          >
+            <option value="" className="bg-slate-950 text-slate-500 italic">
+              {!selectedZona ? "Primero elija una zona" : "Seleccione un repartidor..."}
+            </option>
+            {repartidoresValidos.map((rep) => (
+              <option key={rep.id} value={rep.id} className="bg-slate-950 text-white">
+                {rep.nombre}
+              </option>
+            ))}
+          </select>
+          <input 
+            type="hidden" 
+            name="repartidor" 
+            value={repartidoresValidos.find(r => r.id === selectedRepartidorId)?.nombre || ""} 
+          />
+        </div>
+
         {/* SELECTOR DE MODELO CON NUEVO FORMATO */}
         <div className={styles.inputGroup}>
           <label className={styles.label}>Modelo de Celular</label>
@@ -195,19 +357,28 @@ export default function VentasForm({ productos }: VentasFormProps) {
             className={styles.selectInput}
             style={{ colorScheme: 'dark' }}
             required
+            disabled={!selectedRepartidorId}
             onChange={handleModelChange}
           >
-            <option value="" className="bg-slate-950 text-slate-500 italic">Seleccione un modelo...</option>
-            {modelosUnicos.map(([key, info]) => (
-              <option 
-                key={key} 
-                value={key} 
-                className="bg-slate-950 text-white"
-                disabled={info.totalStock === 0}
-              >
-                {info.display} {info.totalStock === 0 ? "(Sin stock)" : ""}
-              </option>
-            ))}
+            <option value="" className="bg-slate-950 text-slate-500 italic">
+              {!selectedRepartidorId ? "Primero elija un repartidor..." : "Seleccione un modelo..."}
+            </option>
+            {modelosUnicos.map(([key, info]) => {
+              const isAConsultar = info.totalDisponible === 0 && info.totalAConsultar > 0;
+              return (
+                <option 
+                  key={key} 
+                  value={key} 
+                  className={isAConsultar ? "text-slate-500 bg-slate-950 italic" : "text-white bg-slate-950"}
+                  disabled={isAConsultar}
+                >
+                  {isAConsultar 
+                    ? `${info.display} (A consultar)` 
+                    : `${info.display} (${info.totalDisponible} disponible${info.totalDisponible > 1 ? "s" : ""})`
+                  }
+                </option>
+              );
+            })}
           </select>
         </div>
 
@@ -226,34 +397,24 @@ export default function VentasForm({ productos }: VentasFormProps) {
             <option value="" className="bg-slate-950 text-slate-500 italic">
               {!selectedModelKey ? "Primero elija un modelo" : "Seleccione un color..."}
             </option>
-            {variantesColor.map((v) => (
-              <option 
-                key={v.color} 
-                value={v.color} 
-                className="bg-slate-950 text-white"
-                disabled={!v.hasStock}
-              >
-                {v.color} {!v.hasStock ? "(Sin stock)" : ""}
-              </option>
-            ))}
+            {variantesColor.map((v) => {
+              const isAConsultar = v.cantidadDisponible === 0 && v.cantidadAConsultar > 0;
+              return (
+                <option 
+                  key={v.color} 
+                  value={v.color} 
+                  className={isAConsultar ? "text-slate-500 bg-slate-950 italic" : "text-white bg-slate-950"}
+                  disabled={isAConsultar}
+                >
+                  {isAConsultar ? `${v.color} (A consultar)` : v.color}
+                </option>
+              );
+            })}
           </select>
           <input type="hidden" name="celular" value={selectedModelKey} />
           <input type="hidden" name="color_celular" value={selectedColor} />
         </div>
 
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>¿Cuenta activa?</label>
-          <select
-            name="cuenta_activa"
-            className={styles.selectInput}
-            style={{ colorScheme: 'dark' }}
-            required
-            defaultValue="si"
-          >
-            <option value="si" className="bg-slate-950 text-white">Sí</option>
-            <option value="no" className="bg-slate-950 text-white">No</option>
-          </select>
-        </div>
         <div className={styles.inputGroup}>
           <label className={styles.label}>Fecha de entrega</label>
           <div className={styles.relativeInputContainer}>

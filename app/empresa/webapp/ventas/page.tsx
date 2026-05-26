@@ -29,29 +29,42 @@ export default async function VentasPage() {
     .select("id, marca, modelo, color, almacenamiento, ram")
     .order('marca', { ascending: true });
 
-  // 2. Obtenemos el stock actual para contar disponibilidades
+  // 2. Obtenemos el stock actual para contar disponibilidades e incluir ubicación
   const queryStock = supabase
     .from("stock")
-    .select("producto_id, estado");
+    .select("producto_id, estado, ubicacion");
 
   if (userRole === "Closer") {
-    queryStock.neq("estado", "A consultar").neq("estado", "En envío");
+    queryStock.neq("estado", "En envío");
   }
 
   const { data: stockItems } = await queryStock;
 
-  // Procesamos los productos para incluir la cantidad de stock disponible con tipado explícito
-  const productosConStock = (productos || []).map((p: any) => {
-    // Contamos cuántas unidades de este producto específico están 'Disponible' o 'A consultar'
-    const unidades = (stockItems || []).filter((s: any) => 
-      s.producto_id === p.id && (s.estado === 'Disponible' || s.estado === 'A consultar')
-    ).length;
-    
-    return {
-      ...p,
-      cantidadStock: unidades
-    };
-  });
+  // 3. Obtenemos las zonas de reparto con sus repartidores asociados
+  const { data: zonasRepartoRaw } = await supabase
+    .from("zonas_reparto")
+    .select(`
+      id,
+      nombre_zona,
+      repartidor_id,
+      repartidores (
+        id,
+        nombre,
+        activo
+      )
+    `)
+    .order("nombre_zona", { ascending: true });
+
+  // Filtramos para conservar solo zonas con repartidores activos
+  const zonasReparto = (zonasRepartoRaw || [])
+    .filter((z: any) => z.repartidores && z.repartidores.activo)
+    .map((z: any) => ({
+      id: z.id,
+      nombre_zona: z.nombre_zona,
+      repartidor_id: z.repartidor_id,
+      repartidor_nombre: z.repartidores.nombre,
+      repartidor_activo: z.repartidores.activo
+    }));
 
   return (
     <div className={styles.container}>
@@ -62,8 +75,12 @@ export default async function VentasPage() {
         </Link>
       </header>
 
-      {/* Pasamos los productos procesados al formulario */}
-      <VentasForm productos={productosConStock} />
+      {/* Pasamos los productos procesados y las zonas de reparto al formulario */}
+      <VentasForm 
+        productos={productos || []} 
+        zonasReparto={zonasReparto} 
+        stockItems={stockItems || []} 
+      />
     </div>
   );
 }

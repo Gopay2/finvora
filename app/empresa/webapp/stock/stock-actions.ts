@@ -348,3 +348,33 @@ export async function eliminarStock(imei: string) {
   revalidatePath('/empresa/webapp/stock');
   return { success: true };
 }
+
+/**
+ * Actualiza el repartidor asignado como ubicación física a un equipo individual en stock.
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Developer
+ * @param imei Identificador único de hardware (IMEI) de la unidad en stock
+ * @param nuevaUbicacionId UUID del repartidor o null para desasignar
+ * @returns Objeto indicando el éxito o error de la actualización
+ */
+export async function actualizarUbicacionStock(imei: string, nuevaUbicacionId: string | null) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+    return { error: "No autorizado" };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('stock')
+    .update({ ubicacion: nuevaUbicacionId || null })
+    .eq('imei', imei);
+
+  if (error) {
+    console.error("Error al actualizar repartidor de ubicación:", error);
+    return { error: error.message };
+  }
+
+  revalidatePath('/empresa/webapp/stock');
+  return { success: true };
+}
