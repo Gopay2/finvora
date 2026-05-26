@@ -110,10 +110,19 @@ export default function SalesChart({ sales }: SalesChartProps) {
   const hoveredX = hoveredIndex !== null ? (hoveredIndex / (chartData.length - 1)) * 100 : 0;
   const hoveredY = hoveredData !== null ? 100 - (hoveredData.value / maxVal) * 80 : 0;
 
+  const totalPeriodSales = useMemo(() => {
+    return chartData.reduce((sum, item) => sum + item.value, 0);
+  }, [chartData]);
+
   return (
     <div className="flex flex-col h-full space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h3 className="text-xl font-bold text-white tracking-tight">Ventas</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-xl font-bold text-white tracking-tight">Ventas</h3>
+          <span className="bg-secondary/15 text-secondary border border-secondary/20 px-3 py-0.5 rounded-lg text-sm font-black tracking-normal">
+            {totalPeriodSales}
+          </span>
+        </div>
         <div className="grid grid-cols-4 sm:flex bg-slate-800/50 p-1 rounded-xl border border-slate-700 w-full sm:w-auto">
           {(['diario', 'semanal', 'mensual', 'anual'] as ViewType[]).map((v) => (
             <button

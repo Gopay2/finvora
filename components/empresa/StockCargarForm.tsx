@@ -12,8 +12,14 @@ interface Product {
   almacenamiento: string;
 }
 
+interface Repartidor {
+  id: string;
+  nombre: string;
+}
+
 interface StockCargarFormProps {
   productos: Product[];
+  repartidores: Repartidor[];
 }
 
 const styles = {
@@ -23,7 +29,7 @@ const styles = {
   input: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all",
 };
 
-export default function StockCargarForm({ productos }: StockCargarFormProps) {
+export default function StockCargarForm({ productos, repartidores }: StockCargarFormProps) {
   
   const clientAction = async (formData: FormData) => {
     await cargarStock(formData);
@@ -67,28 +73,21 @@ export default function StockCargarForm({ productos }: StockCargarFormProps) {
         </div>
 
         <div className={styles.inputGroup}>
-          <label className={styles.label}>Ubicación</label>
+          <label className={styles.label}>Ubicación/Repartidor</label>
           <div className="relative">
             <select 
               name="zona" 
               required 
               className={`${styles.input} appearance-none cursor-pointer bg-slate-950`}
               style={{ colorScheme: 'dark' }}
+              defaultValue=""
             >
-              <option value="Repartidor Angel" className="bg-slate-950 text-white">Repartidor Angel</option>
-              <option value="Repartidor Felix" className="bg-slate-950 text-white">Repartidor Felix</option>
-              <option value="Repartidor Eleazar" className="bg-slate-950 text-white">Repartidor Eleazar</option>
-              <option value="Repartidor Humberto" className="bg-slate-950 text-white">Repartidor Humberto</option>
-              <option value="Repartos CT" className="bg-slate-950 text-white">Repartos CT</option>
-              <option value="Local Fusion Tech" className="bg-slate-950 text-white">Local Fusion Tech</option>
-              <option value="Local Rosarito" className="bg-slate-950 text-white">Local Rosarito</option>
-              <option value="Local CyM 1" className="bg-slate-950 text-white">Local CyM 1</option>
-              <option value="Local CyM 2" className="bg-slate-950 text-white">Local CyM 2</option>
-              <option value="Local Olgin" className="bg-slate-950 text-white">Local Olgin</option>
-              <option value="Monterrey" className="bg-slate-950 text-white">Monterrey</option>
-              <option value="Cambaceo Victor" className="bg-slate-950 text-white">Cambaceo Victor</option>
-              <option value="Cambaceo Esteban" className="bg-slate-950 text-white">Cambaceo Esteban</option>
-              <option value="Proveedor Android" className="bg-slate-950 text-white">Proveedor Android</option>
+              <option value="" disabled className="bg-slate-950 text-slate-500 italic">Seleccionar repartidor/sucursal...</option>
+              {repartidores.map(r => (
+                <option key={r.id} value={r.id} className="bg-slate-950 text-white">
+                  {r.nombre}
+                </option>
+              ))}
             </select>
             <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-base">
               expand_more

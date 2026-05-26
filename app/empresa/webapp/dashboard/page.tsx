@@ -16,7 +16,7 @@ const styles = {
   // KPI Cards Grid
   kpiGrid: "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6",
   kpiCard: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-4 sm:p-5 rounded-2xl flex flex-col items-center justify-center space-y-1 hover:border-secondary/30 transition-all",
-  kpiValue: "text-lg sm:text-xl font-bold text-white text-center truncate w-full",
+  kpiValue: "text-xs sm:text-sm md:text-base font-bold text-white text-center break-words line-clamp-2 w-full",
   kpiLabel: "text-[8px] sm:text-[10px] uppercase tracking-widest text-slate-500 font-bold text-center",
 
   // Main Dashboard Layout

@@ -101,17 +101,25 @@ export function useRepartosCalendar() {
   const [selectedRepartidorTab, setSelectedRepartidorTab] = useState<string | null>(null);
   const [timezoneDiffText, setTimezoneDiffText] = useState<string | null>(null);
 
+  // Filtrar repartidores de logística (excluir "local" y "cambaceo" case-insensitive)
+  const repartidoresFiltradosLogistica = useMemo(() => {
+    return (formDataOptions?.repartidores || []).filter(rep => {
+      const name = (rep.nombre || "").toLowerCase();
+      return !name.includes("local") && !name.includes("cambaceo");
+    });
+  }, [formDataOptions?.repartidores]);
+
   // Seleccionar por defecto el primer repartidor al abrir el modal
   useEffect(() => {
-    if (isModalOpen && !selectedRepartidorTab && formDataOptions.repartidores.length > 0) {
-      setSelectedRepartidorTab(formDataOptions.repartidores[0].id);
+    if (isModalOpen && !selectedRepartidorTab && repartidoresFiltradosLogistica.length > 0) {
+      setSelectedRepartidorTab(repartidoresFiltradosLogistica[0].id);
     }
-  }, [isModalOpen, formDataOptions.repartidores, selectedRepartidorTab]);
+  }, [isModalOpen, repartidoresFiltradosLogistica, selectedRepartidorTab]);
 
-  // Calcular diferencia horaria del repartidor seleccionado con la del navegador
+  // Calcular diferencia horaria del repartidor seleccionado con la del navegador y listar sus zonas de reparto
   useEffect(() => {
     if (!selectedRepartidorTab) return;
-    const rep = formDataOptions.repartidores.find(repartidor => repartidor.id === selectedRepartidorTab);
+    const rep = repartidoresFiltradosLogistica.find(repartidor => repartidor.id === selectedRepartidorTab);
     if (!rep) return;
     try {
       const now = new Date();
@@ -121,22 +129,26 @@ export function useRepartosCalendar() {
       const repHour = parseInt(repTimeStr, 10);
       const localHour = parseInt(localTimeStr, 10);
       const diff = localHour - repHour;
-      let cityName = 'CDMX / Mty';
-      if (rep.zona_horaria === 'America/Cancun') cityName = 'Cancún';
-      else if (rep.zona_horaria === 'America/Mexico_City' || rep.zona_horaria === 'America/Monterrey') cityName = 'Monterrey';
-      else if (rep.zona_horaria === 'America/Hermosillo' || rep.zona_horaria === 'America/Mazatlan') cityName = 'Sonora';
-      else if (rep.zona_horaria === 'America/Tijuana') cityName = 'Tijuana';
-      else cityName = rep.zona_horaria.split('/').pop()?.replace('_', ' ') || rep.zona_horaria;
+      let tzCity = 'CDMX / Mty';
+      if (rep.zona_horaria === 'America/Cancun') tzCity = 'Cancún';
+      else if (rep.zona_horaria === 'America/Mexico_City' || rep.zona_horaria === 'America/Monterrey') tzCity = 'Monterrey';
+      else if (rep.zona_horaria === 'America/Hermosillo' || rep.zona_horaria === 'America/Mazatlan') tzCity = 'Sonora';
+      else if (rep.zona_horaria === 'America/Tijuana') tzCity = 'Tijuana';
+      else tzCity = rep.zona_horaria.split('/').pop()?.replace('_', ' ') || rep.zona_horaria;
+
+      // Obtener las zonas de reparto asignadas a este repartidor
+      const driverZones = (formDataOptions?.zonas || []).filter(z => z.repartidor_id === selectedRepartidorTab);
+      const zonesStr = driverZones.map(z => z.nombre_zona).join(', ') || 'Sin Zonas';
 
       if (diff === 0) {
-        setTimezoneDiffText(`Misma zona horaria que tú (${cityName}) | Hora actual: ${repTimeFormatted}`);
+        setTimezoneDiffText(`Zonas: ${zonesStr} | Hora local (${tzCity}): ${repTimeFormatted}`);
       } else {
-        setTimezoneDiffText(`Zona: ${cityName} (Hora actual: ${repTimeFormatted})`);
+        setTimezoneDiffText(`Zona: ${zonesStr} | Hora actual: ${repTimeFormatted}`);
       }
     } catch (e) {
       setTimezoneDiffText(null);
     }
-  }, [selectedRepartidorTab, formDataOptions.repartidores]);
+  }, [selectedRepartidorTab, repartidoresFiltradosLogistica, formDataOptions?.zonas]);
 
   // Estados del Formulario
   const [formRepartidor, setFormRepartidor] = useState('');
@@ -228,7 +240,7 @@ export function useRepartosCalendar() {
       const deliveryHour = parseInt(hoursStr, 10);
       const deliveryMinute = parseInt(minutesStr, 10);
       
-      const rep = formDataOptions.repartidores.find(r => r.id === formRepartidor);
+      const rep = repartidoresFiltradosLogistica.find(r => r.id === formRepartidor);
       const tz = rep?.zona_horaria || 'America/Mexico_City';
       const driverNowString = new Date().toLocaleString('en-US', { timeZone: tz });
       const driverNow = new Date(driverNowString);
@@ -302,6 +314,7 @@ export function useRepartosCalendar() {
     currentDate,
     repartos,
     formDataOptions,
+    repartidoresFiltradosLogistica,
     loading,
     actionLoading,
     selectedDay,

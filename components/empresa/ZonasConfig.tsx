@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition } from "react";
-import { crearZona, eliminarZona } from "@/app/empresa/webapp/repartos/repartos-actions";
+import { crearZona, eliminarZona, editarZona } from "@/app/empresa/webapp/repartos/repartos-actions";
 
 interface Repartidor {
   id: string;
@@ -31,11 +31,28 @@ export default function ZonasConfig({ initialZonas, repartidores }: Props) {
   const [descripcion, setDescripcion] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Estados para el Modal de Confirmación personalizado
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState<string | null>(null);
+
+  const startEditing = (zona: Zona) => {
+    setEditingId(zona.id);
+    setRepartidorId(zona.repartidor_id);
+    setNombreZona(zona.nombre_zona);
+    setDescripcion(zona.descripcion || "");
+    setError(null);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setRepartidorId("");
+    setNombreZona("");
+    setDescripcion("");
+    setError(null);
+  };
 
   // Actualizar lista local cuando cambie la inicial
   React.useEffect(() => {
@@ -49,21 +66,31 @@ export default function ZonasConfig({ initialZonas, repartidores }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await crearZona({
-        repartidor_id: repartidorId,
-        nombre_zona: nombreZona.trim(),
-        descripcion: descripcion.trim() || undefined
-      });
+      let res;
+      if (editingId) {
+        res = await editarZona(editingId, {
+          repartidor_id: repartidorId,
+          nombre_zona: nombreZona.trim(),
+          descripcion: descripcion.trim() || undefined
+        });
+      } else {
+        res = await crearZona({
+          repartidor_id: repartidorId,
+          nombre_zona: nombreZona.trim(),
+          descripcion: descripcion.trim() || undefined
+        });
+      }
 
       if (res.success) {
         setRepartidorId("");
         setNombreZona("");
         setDescripcion("");
+        setEditingId(null);
         startTransition(() => {
           // Gatilla revalidatePath en el servidor
         });
       } else {
-        setError(res.error || "Error al crear zona");
+        setError(res.error || (editingId ? "Error al editar zona" : "Error al crear zona"));
       }
     } catch (err: any) {
       setError(err.message || "Error de red");
@@ -116,8 +143,10 @@ export default function ZonasConfig({ initialZonas, repartidores }: Props) {
         {/* Formulario */}
         <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 md:p-8 rounded-3xl lg:col-span-1 h-fit">
           <h2 className="text-lg font-bold text-white mb-4 ml-1 flex items-center gap-2">
-            <span className="material-symbols-outlined text-secondary text-lg">add_location_alt</span>
-            Nueva Zona de Reparto
+            <span className="material-symbols-outlined text-secondary text-lg">
+              {editingId ? "edit_location_alt" : "add_location_alt"}
+            </span>
+            {editingId ? "Editar Zona de Reparto" : "Nueva Zona de Reparto"}
           </h2>
           <form onSubmit={handleCrear} className="space-y-4">
             {/* Repartidor */}
@@ -132,7 +161,7 @@ export default function ZonasConfig({ initialZonas, repartidores }: Props) {
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary transition-all appearance-none"
                 style={{ colorScheme: 'dark' }}
               >
-                <option value="">Seleccionar Repartidor</option>
+                <option value="">Seleccionar repartidor o local</option>
                 {repartidores.map(r => (
                   <option key={r.id} value={r.id}>
                     {r.nombre}
@@ -170,23 +199,34 @@ export default function ZonasConfig({ initialZonas, repartidores }: Props) {
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading || !repartidorId || !nombreZona.trim()}
-              className="w-full py-3 bg-secondary text-slate-950 font-bold rounded-xl hover:bg-secondary/90 transition-all text-sm cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.15)] disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-lg">save</span>
-                  Confirmar Zona
-                </>
+            <div className="flex gap-3 pt-2">
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={cancelEditing}
+                  className="flex-1 py-3 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold rounded-xl transition-all text-sm cursor-pointer border border-slate-750 text-center"
+                >
+                  Cancelar
+                </button>
               )}
-            </button>
+              <button
+                type="submit"
+                disabled={loading || !repartidorId || !nombreZona.trim()}
+                className="flex-1 py-3 bg-secondary text-slate-950 font-bold rounded-xl hover:bg-secondary/90 transition-all text-sm cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.15)] disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-lg">save</span>
+                    {editingId ? "Guardar" : "Confirmar Zona"}
+                  </>
+                )}
+              </button>
+            </div>
           </form>
         </div>
 
@@ -235,6 +275,14 @@ export default function ZonasConfig({ initialZonas, repartidores }: Props) {
                         </td>
                         <td className="px-6 py-4 text-sm border-b border-slate-800/50 text-center">
                           <div className="flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => startEditing(z)}
+                              className="p-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 hover:border-blue-500/30 transition-all flex items-center justify-center cursor-pointer"
+                              title="Editar Zona"
+                            >
+                              <span className="material-symbols-outlined text-base">edit</span>
+                            </button>
                             <button
                               type="button"
                               onClick={() => requestEliminar(z.id, z.nombre_zona)}

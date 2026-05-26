@@ -4,7 +4,7 @@ import { getUserProfile, isAllowed } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
 import { createClient } from "@/utils/supabase/server";
 import StockStatusSelector from "@/components/empresa/StockStatusSelector";
-import StockZoneSelector from "@/components/empresa/StockZoneSelector";
+import StockUbicacionSelector from "@/components/empresa/StockUbicacionSelector";
 import DownloadExcelButton from "@/components/empresa/DownloadExcelButton";
 import { getVendedores } from "@/app/empresa/webapp/stock/stock-actions";
 import DeleteStockButton from "@/components/empresa/DeleteStockButton";
@@ -40,6 +40,14 @@ export default async function StockPage() {
   const supabase = await createClient();
   const vendedores = await getVendedores();
 
+  // Obtenemos los repartidores registrados para el selector de ubicación física (repartidor)
+  const { data: repartidoresRaw } = await supabase
+    .from("repartidores")
+    .select("id, nombre, activo")
+    .order("nombre", { ascending: true });
+
+  const repartidores = repartidoresRaw || [];
+
   const query = supabase
     .from("stock")
     .select(`
@@ -57,8 +65,10 @@ export default async function StockPage() {
     `)
     .order('fecha_ingreso', { ascending: false });
 
-  if (userRole === "Closer" || userRole === "Repartidor") {
+  if (userRole === "Repartidor") {
     query.neq('estado', 'A consultar').neq('estado', 'En envío');
+  } else if (userRole === "Closer") {
+    query.neq('estado', 'En envío');
   }
 
   const { data: unidades, error } = await query;
@@ -105,7 +115,7 @@ export default async function StockPage() {
               <tr>
                 <th className={styles.th}>IMEI</th>
                 <th className={styles.th}>Producto</th>
-                <th className={styles.th}>Ubicación</th>
+                <th className={styles.th}>Repartidor/Ubicación</th>
                 <th className={styles.th}>Estado</th>
                 <th className={styles.th}>Fecha Ingreso</th>
                 {canEdit && <th className={styles.th}>Acciones</th>}
@@ -131,9 +141,10 @@ export default async function StockPage() {
                       </div>
                     </td>
                     <td className={styles.td}>
-                      <StockZoneSelector
+                      <StockUbicacionSelector
                         imei={item.imei}
-                        zonaActual={item.zona}
+                        ubicacionActual={item.zona}
+                        repartidores={repartidores}
                         disabled={!canEdit}
                       />
                     </td>
@@ -167,7 +178,7 @@ export default async function StockPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={canEdit ? 6 : 5} className="px-6 py-20 text-center text-slate-500 italic">
+                  <td colSpan={canEdit ? 7 : 6} className="px-6 py-20 text-center text-slate-500 italic">
                     No hay unidades cargadas. Agregue en la seccion Stock
                   </td>
                 </tr>

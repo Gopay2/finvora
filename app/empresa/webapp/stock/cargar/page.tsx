@@ -28,6 +28,13 @@ export default async function CargarStockPage() {
     .select("id, marca, modelo, color, almacenamiento")
     .order('marca', { ascending: true });
 
+  // Obtenemos los repartidores activos para asignar la ubicación inicial (zona)
+  const { data: repartidores } = await supabase
+    .from("repartidores")
+    .select("id, nombre")
+    .eq("activo", true)
+    .order("nombre", { ascending: true });
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -42,8 +49,8 @@ export default async function CargarStockPage() {
       </header>
 
       <div className={styles.formCard}>
-        {/* Pasamos la lista de productos al formulario de cliente */}
-        <StockCargarForm productos={productos || []} />
+        {/* Pasamos la lista de productos y repartidores al formulario de cliente */}
+        <StockCargarForm productos={productos || []} repartidores={repartidores || []} />
       </div>
 
       <div className="bg-amber-500/5 border border-amber-500/10 p-6 rounded-2xl flex gap-4 items-start text-amber-400/80">

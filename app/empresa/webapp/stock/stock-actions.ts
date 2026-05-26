@@ -213,7 +213,7 @@ export async function actualizarEstadoStock(imei: string, nuevoEstado: string) {
  * @param nuevaZona Nombre de la nueva ubicación física asignada
  * @returns Objeto indicando el éxito o error del traslado
  */
-export async function actualizarZonaStock(imei: string, nuevaZona: string) {
+export async function actualizarZonaStock(imei: string, nuevaZona: string | null) {
   const { role } = await getUserProfile();
   if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
     return { error: "No autorizado" };
@@ -223,7 +223,7 @@ export async function actualizarZonaStock(imei: string, nuevaZona: string) {
 
   const { error } = await supabase
     .from('stock')
-    .update({ zona: nuevaZona })
+    .update({ zona: nuevaZona || null })
     .eq('imei', imei);
 
   if (error) {
@@ -348,3 +348,5 @@ export async function eliminarStock(imei: string) {
   revalidatePath('/empresa/webapp/stock');
   return { success: true };
 }
+
+

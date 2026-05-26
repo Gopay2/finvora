@@ -30,7 +30,7 @@ export default async function RepartosPage() {
                 title="Configurar Repartidores"
               >
                 <span className="material-symbols-outlined text-lg">badge</span>
-                Repartidores
+                Repartidores y Locales
               </Link>
               <Link 
                 href="/empresa/webapp/repartos/zonas" 

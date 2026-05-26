@@ -124,16 +124,16 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
         <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 md:p-8 rounded-3xl lg:col-span-1 h-fit">
           <h2 className="text-lg font-bold text-white mb-4 ml-1 flex items-center gap-2">
             <span className="material-symbols-outlined text-secondary text-lg">person_add</span>
-            Nuevo Repartidor
+            Nuevo Repartidor o Local
           </h2>
           <form onSubmit={handleCrear} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">
-                Nombre Completo
+                Nombre
               </label>
               <input
                 type="text"
-                placeholder="Ej: Miguel Angel"
+                placeholder="Ej: Repartidor Angel"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 required
@@ -184,7 +184,7 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="text-xl font-bold text-white ml-2 flex items-center gap-2">
               <span className="material-symbols-outlined text-slate-400 text-lg">badge</span>
-              Repartidores Registrados
+              Repartidores y Locales registrados
             </h2>
           </div>
 

@@ -22,7 +22,7 @@ export default async function RepartidoresPage() {
       <header className="flex items-center justify-between gap-4 md:gap-6">
         <div className="space-y-1">
           <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-            Configuración de Repartidores
+            Configuración de Repartidores y Locales
           </h1>
           <p className="text-slate-500 text-sm">Gestiona el personal activo para logística y asignación de zonas</p>
         </div>
