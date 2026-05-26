@@ -68,19 +68,18 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
-      {/* Placeholder 1 */}
-      <div className="group relative bg-slate-900/20 backdrop-blur-xl border border-slate-800/50 p-8 rounded-3xl flex flex-col items-center text-center gap-6 overflow-hidden opacity-60">
-        <div className="w-16 h-16 bg-slate-900/50 rounded-2xl border border-slate-800/50 flex items-center justify-center">
-          <span className="material-symbols-outlined text-3xl text-slate-600">rocket_launch</span>
+      {/* Catálogo Web */}
+      <Link href="/empresa/webapp/catalogo-web" className={styles.card}>
+        <div className={styles.cardGlow} />
+        <div className={styles.iconWrapper}>
+          <span className={styles.icon}>menu_book</span>
         </div>
         <div>
-          <h2 className="text-xl font-bold text-slate-500">Nuevas funciones</h2>
-          <p className="text-sm text-slate-600 leading-relaxed">Más herramientas pronto.</p>
+          <h2 className={styles.cardTitle}>Catálogo Web</h2>
+          <p className={styles.cardDesc}>Gestiona los modelos y variantes de celulares visibles en la web pública.</p>
         </div>
-        <div className="mt-auto w-full py-3 bg-slate-950/30 border border-slate-800/30 rounded-xl text-slate-600 font-semibold cursor-not-allowed">
-          Bloqueado
-        </div>
-      </div>
+        <div className={styles.cardButton}>Acceder</div>
+      </Link>
 
       {/* Placeholder 2 */}
       <div className="group relative bg-slate-900/20 backdrop-blur-xl border border-slate-800/50 p-8 rounded-3xl flex flex-col items-center text-center gap-6 overflow-hidden opacity-60">
