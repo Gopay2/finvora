@@ -27,7 +27,7 @@ interface RepartoZonaInfo {
 interface StockItem {
   producto_id: string;
   estado: string;
-  ubicacion: string | null;
+  zona: string | null;
 }
 
 interface VentasFormProps {
@@ -71,7 +71,7 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
   // 1. Filtrar stockItems según el repartidor seleccionado
   const stockFiltrado = useMemo(() => {
     if (!selectedRepartidorId) return [];
-    return stockItems.filter(s => s.ubicacion === selectedRepartidorId);
+    return stockItems.filter(s => s.zona === selectedRepartidorId);
   }, [selectedRepartidorId, stockItems]);
 
   // 2. Mapeamos y filtramos los productos que tienen stock asignado a este repartidor (cantidad > 0)

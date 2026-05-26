@@ -4,7 +4,6 @@ import { getUserProfile, isAllowed } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
 import { createClient } from "@/utils/supabase/server";
 import StockStatusSelector from "@/components/empresa/StockStatusSelector";
-import StockZoneSelector from "@/components/empresa/StockZoneSelector";
 import StockUbicacionSelector from "@/components/empresa/StockUbicacionSelector";
 import DownloadExcelButton from "@/components/empresa/DownloadExcelButton";
 import { getVendedores } from "@/app/empresa/webapp/stock/stock-actions";
@@ -55,7 +54,6 @@ export default async function StockPage() {
       imei,
       zona,
       estado,
-      ubicacion,
       fecha_ingreso,
       productos (
         marca,
@@ -117,8 +115,7 @@ export default async function StockPage() {
               <tr>
                 <th className={styles.th}>IMEI</th>
                 <th className={styles.th}>Producto</th>
-                <th className={styles.th}>Ubicación</th>
-                <th className={styles.th}>Repartidor</th>
+                <th className={styles.th}>Repartidor/Ubicación</th>
                 <th className={styles.th}>Estado</th>
                 <th className={styles.th}>Fecha Ingreso</th>
                 {canEdit && <th className={styles.th}>Acciones</th>}
@@ -144,16 +141,9 @@ export default async function StockPage() {
                       </div>
                     </td>
                     <td className={styles.td}>
-                      <StockZoneSelector
-                        imei={item.imei}
-                        zonaActual={item.zona}
-                        disabled={!canEdit}
-                      />
-                    </td>
-                    <td className={styles.td}>
                       <StockUbicacionSelector
                         imei={item.imei}
-                        ubicacionActual={item.ubicacion}
+                        ubicacionActual={item.zona}
                         repartidores={repartidores}
                         disabled={!canEdit}
                       />

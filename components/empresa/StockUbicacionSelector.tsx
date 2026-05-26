@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from "react";
-import { actualizarUbicacionStock } from "@/app/empresa/webapp/stock/stock-actions";
+import { actualizarZonaStock } from "@/app/empresa/webapp/stock/stock-actions";
 
 interface RepartidorOption {
   id: string;
@@ -32,7 +32,7 @@ export default function StockUbicacionSelector({
     setLoading(true);
     setError(null);
 
-    const result = await actualizarUbicacionStock(imei, nuevaUbicacion === "" ? null : nuevaUbicacion);
+    const result = await actualizarZonaStock(imei, nuevaUbicacion === "" ? null : nuevaUbicacion);
 
     if (result.success) {
       setUbicacion(nuevaUbicacion);

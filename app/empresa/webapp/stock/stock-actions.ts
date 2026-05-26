@@ -213,7 +213,7 @@ export async function actualizarEstadoStock(imei: string, nuevoEstado: string) {
  * @param nuevaZona Nombre de la nueva ubicación física asignada
  * @returns Objeto indicando el éxito o error del traslado
  */
-export async function actualizarZonaStock(imei: string, nuevaZona: string) {
+export async function actualizarZonaStock(imei: string, nuevaZona: string | null) {
   const { role } = await getUserProfile();
   if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
     return { error: "No autorizado" };
@@ -223,7 +223,7 @@ export async function actualizarZonaStock(imei: string, nuevaZona: string) {
 
   const { error } = await supabase
     .from('stock')
-    .update({ zona: nuevaZona })
+    .update({ zona: nuevaZona || null })
     .eq('imei', imei);
 
   if (error) {
@@ -349,32 +349,4 @@ export async function eliminarStock(imei: string) {
   return { success: true };
 }
 
-/**
- * Actualiza el repartidor asignado como ubicación física a un equipo individual en stock.
- * 
- * @security Permisos requeridos: Admin, Supervisor, Developer
- * @param imei Identificador único de hardware (IMEI) de la unidad en stock
- * @param nuevaUbicacionId UUID del repartidor o null para desasignar
- * @returns Objeto indicando el éxito o error de la actualización
- */
-export async function actualizarUbicacionStock(imei: string, nuevaUbicacionId: string | null) {
-  const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
-    return { error: "No autorizado" };
-  }
 
-  const supabase = await createClient();
-
-  const { error } = await supabase
-    .from('stock')
-    .update({ ubicacion: nuevaUbicacionId || null })
-    .eq('imei', imei);
-
-  if (error) {
-    console.error("Error al actualizar repartidor de ubicación:", error);
-    return { error: error.message };
-  }
-
-  revalidatePath('/empresa/webapp/stock');
-  return { success: true };
-}

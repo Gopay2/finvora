@@ -39,10 +39,12 @@ export default async function DetalleVentasPage() {
     .select(`
       id,
       imei,
-      zona,
       precio_costo,
       fecha_ingreso,
       fecha_venta,
+      repartidor:repartidores!zona (
+        nombre
+      ),
       productos (
         marca,
         modelo,
@@ -119,7 +121,7 @@ export default async function DetalleVentasPage() {
                       </div>
                     </td>
                     <td className={styles.td}>
-                      <span className={styles.zonaBadge}>{venta.zona}</span>
+                      <span className={styles.zonaBadge}>{venta.repartidor?.nombre || 'Sin Asignar'}</span>
                     </td>
                     <td className={styles.td}>
                       <span className="text-secondary font-mono font-bold">

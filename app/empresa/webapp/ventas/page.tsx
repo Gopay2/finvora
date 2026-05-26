@@ -32,7 +32,7 @@ export default async function VentasPage() {
   // 2. Obtenemos el stock actual para contar disponibilidades e incluir ubicación
   const queryStock = supabase
     .from("stock")
-    .select("producto_id, estado, ubicacion");
+    .select("producto_id, estado, zona");
 
   if (userRole === "Closer") {
     queryStock.neq("estado", "En envío");
