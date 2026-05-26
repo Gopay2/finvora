@@ -37,11 +37,11 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navItems: NavItem[] = [
-    { label: "Inicio", href: "#" },
-    { label: "Cómo funciona", href: "#como-funciona" },
-    { label: "Marcas", href: "#marcas" },
-    { label: "Testimonios", href: "#testimonios" },
-    { label: "Preguntas Frecuentes", href: "#preguntas-frecuentes" }
+    { label: "Inicio", href: "/#" },
+    { label: "Cómo funciona", href: "/#como-funciona" },
+    { label: "Marcas", href: "/#marcas" },
+    { label: "Testimonios", href: "/#testimonios" },
+    { label: "Preguntas Frecuentes", href: "/#preguntas-frecuentes" }
   ];
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);

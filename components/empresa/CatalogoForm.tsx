@@ -104,8 +104,117 @@ export default function CatalogoForm({ celular, onSuccess }: CatalogoFormProps) 
     }
   };
 
+// Función auxiliar para recortar márgenes transparentes e inyectar un padding uniforme (Ruta B)
+function procesarImagenTransparente(file: File): Promise<File> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // 1. Crear canvas temporal para leer la información de píxeles
+        const tempCanvas = document.createElement("canvas");
+        const tempCtx = tempCanvas.getContext("2d");
+        if (!tempCtx) {
+          resolve(file); // Fallback en caso de error
+          return;
+        }
+
+        tempCanvas.width = img.width;
+        tempCanvas.height = img.height;
+        tempCtx.drawImage(img, 0, 0);
+
+        const imgData = tempCtx.getImageData(0, 0, img.width, img.height);
+        const { data, width, height } = imgData;
+
+        // Encontrar los bordes reales del contenido no transparente
+        let minX = width;
+        let minY = height;
+        let maxX = 0;
+        let maxY = 0;
+        let foundContent = false;
+
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const alphaIndex = (y * width + x) * 4 + 3;
+            const alpha = data[alphaIndex];
+
+            // Tolerancia de transparencia (alfa > 5 para ignorar ruidos muy tenues)
+            if (alpha > 5) {
+              if (x < minX) minX = x;
+              if (x > maxX) maxX = x;
+              if (y < minY) minY = y;
+              if (y > maxY) maxY = y;
+              foundContent = true;
+            }
+          }
+        }
+
+        // Si la imagen es completamente transparente, no recortar nada
+        if (!foundContent) {
+          resolve(file);
+          return;
+        }
+
+        const cropWidth = (maxX - minX) + 1;
+        const cropHeight = (maxY - minY) + 1;
+
+        // 2. Crear el lienzo final normalizado (Un cuadrado de 800x800 para consistencia absoluta)
+        const finalCanvas = document.createElement("canvas");
+        const finalCtx = finalCanvas.getContext("2d");
+        if (!finalCtx) {
+          resolve(file);
+          return;
+        }
+
+        const targetSize = 800;
+        finalCanvas.width = targetSize;
+        finalCanvas.height = targetSize;
+
+        // Limpiar a transparente
+        finalCtx.clearRect(0, 0, targetSize, targetSize);
+
+        // 3. Escala proporcional respetando un 12% de padding (espacio libre en los bordes)
+        const paddingRatio = 0.12; 
+        const maxDrawSize = targetSize * (1 - paddingRatio * 2); // 608px libres
+
+        const scale = Math.min(maxDrawSize / cropWidth, maxDrawSize / cropHeight);
+        const drawWidth = cropWidth * scale;
+        const drawHeight = cropHeight * scale;
+
+        // Centrado absoluto
+        const drawX = (targetSize - drawWidth) / 2;
+        const drawY = (targetSize - drawHeight) / 2;
+
+        // Dibujar el fragmento recortado del celular en el centro del nuevo lienzo
+        finalCtx.drawImage(
+          img,
+          minX, minY, cropWidth, cropHeight, // Origen: Recorte ceñido al dispositivo
+          drawX, drawY, drawWidth, drawHeight // Destino: Centrado con márgenes proporcionales
+        );
+
+        // 4. Exportar como un nuevo archivo WebP (Soporta transparencia y ahorra hasta un 70% de espacio)
+        finalCanvas.toBlob((blob) => {
+          if (blob) {
+            const optimizedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + "_normalized.webp", {
+              type: "image/webp",
+              lastModified: Date.now()
+            });
+            resolve(optimizedFile);
+          } else {
+            resolve(file);
+          }
+        }, "image/webp", 0.85); // Calidad WebP del 85% (perfecta relación calidad/peso)
+      };
+      img.onerror = () => resolve(file);
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
   // Manejo de subida y previsualización de imágenes
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -115,8 +224,16 @@ export default function CatalogoForm({ celular, onSuccess }: CatalogoFormProps) 
       return;
     }
 
-    setSelectedFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    try {
+      // Normalización inteligente B: Recortar bordes inútiles transparentes y centrar a escala uniforme
+      const processedFile = await procesarImagenTransparente(file);
+      setSelectedFile(processedFile);
+      setImagePreview(URL.createObjectURL(processedFile));
+    } catch (err) {
+      // Fallback a comportamiento estándar si falla
+      setSelectedFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
     setErrorMsg("");
   };
 
