@@ -28,6 +28,7 @@ interface StockItem {
   producto_id: string;
   estado: string;
   zona: string | null;
+  imei?: string;
 }
 
 interface VentasFormProps {
@@ -64,6 +65,7 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [selectedZona, setSelectedZona] = useState<string>("");
   const [selectedRepartidorId, setSelectedRepartidorId] = useState<string>("");
+  const [selectedImei, setSelectedImei] = useState<string>("");
   
   const formRef = useRef<HTMLFormElement>(null);
   const lastPickerOpen = useRef(0);
@@ -137,6 +139,18 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
       }));
   }, [selectedModelKey, productosConStock]);
 
+  // 4.5. IMEIs disponibles para el modelo y color seleccionados del stock del repartidor
+  const imeisDisponibles = useMemo(() => {
+    if (!selectedModelKey || !selectedColor) return [];
+    const matchingProducts = productosConStock.filter(
+      p => `${p.marca} ${p.modelo} - ${p.almacenamiento} - ${p.ram}` === selectedModelKey && p.color === selectedColor
+    );
+    const matchingProductIds = new Set(matchingProducts.map(p => p.id));
+    return stockFiltrado.filter(
+      s => matchingProductIds.has(s.producto_id) && s.estado === 'Disponible' && s.imei
+    );
+  }, [selectedModelKey, selectedColor, productosConStock, stockFiltrado]);
+
   // 5. Zonas únicas configuradas
   const zonasUnicas = useMemo(() => {
     const set = new Set<string>();
@@ -167,6 +181,7 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
   const handleModelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedModelKey(event.target.value);
     setSelectedColor("");
+    setSelectedImei("");
   };
 
   const handleZonaChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -174,12 +189,14 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
     setSelectedRepartidorId("");
     setSelectedModelKey("");
     setSelectedColor("");
+    setSelectedImei("");
   };
 
   const handleRepartidorChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedRepartidorId(event.target.value);
     setSelectedModelKey("");
     setSelectedColor("");
+    setSelectedImei("");
   };
 
   const handleOpenPicker = (event: React.MouseEvent<HTMLInputElement>) => {
@@ -218,6 +235,7 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
       setSelectedColor("");
       setSelectedZona("");
       setSelectedRepartidorId("");
+      setSelectedImei("");
     } else {
       setStatus({ type: 'error', message: result.error || 'Error al procesar la venta.' });
     }
@@ -236,7 +254,7 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
       )}
 
       <div className={styles.formGrid}>
-        <div className={styles.inputGroupFull}>
+        <div className={styles.inputGroup}>
           <label className={styles.label}>Nombre de cliente</label>
           <input type="text" name="nombre_cliente" className={styles.input} required placeholder="Nombre completo" />
         </div>
@@ -392,7 +410,10 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
             style={{ colorScheme: 'dark' }}
             required
             disabled={!selectedModelKey}
-            onChange={(e) => setSelectedColor(e.target.value)}
+            onChange={(e) => {
+              setSelectedColor(e.target.value);
+              setSelectedImei("");
+            }}
           >
             <option value="" className="bg-slate-950 text-slate-500 italic">
               {!selectedModelKey ? "Primero elija un modelo" : "Seleccione un color..."}
@@ -413,6 +434,29 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
           </select>
           <input type="hidden" name="celular" value={selectedModelKey} />
           <input type="hidden" name="color_celular" value={selectedColor} />
+        </div>
+
+        {/* SELECTOR DE IMEI */}
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>IMEI</label>
+          <select
+            name="imei"
+            value={selectedImei}
+            className={styles.selectInput}
+            style={{ colorScheme: 'dark' }}
+            required
+            disabled={!selectedColor}
+            onChange={(e) => setSelectedImei(e.target.value)}
+          >
+            <option value="" className="bg-slate-950 text-slate-500 italic">
+              {!selectedColor ? "Primero elija un color" : "Seleccione un IMEI..."}
+            </option>
+            {imeisDisponibles.map((item) => (
+              <option key={item.imei} value={item.imei} className="bg-slate-950 text-white">
+                {item.imei}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className={styles.inputGroup}>

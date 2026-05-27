@@ -29,10 +29,10 @@ export default async function VentasPage() {
     .select("id, marca, modelo, color, almacenamiento, ram")
     .order('marca', { ascending: true });
 
-  // 2. Obtenemos el stock actual para contar disponibilidades e incluir ubicación
+  // 2. Obtenemos el stock actual para contar disponibilidades, ubicación e IMEI
   const queryStock = supabase
     .from("stock")
-    .select("producto_id, estado, zona");
+    .select("producto_id, estado, zona, imei");
 
   if (userRole === "Closer") {
     queryStock.neq("estado", "En envío");
