@@ -44,12 +44,8 @@ export default function CatalogoVisibilityToggle({ id, initialVisible }: Catalog
           aria-hidden="true"
           className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-slate-950 shadow-lg ring-0 transition duration-200 ease-in-out ${
             visible ? "translate-x-5" : "translate-x-0"
-          } flex items-center justify-center`}
-        >
-          {isPending && (
-            <span className="w-2.5 h-2.5 border-2 border-slate-500 border-t-transparent rounded-full animate-spin"></span>
-          )}
-        </span>
+          }`}
+        />
       </button>
     </div>
   );
