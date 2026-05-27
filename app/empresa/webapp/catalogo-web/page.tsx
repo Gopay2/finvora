@@ -108,7 +108,6 @@ export default async function CatalogoWebPage({ searchParams }: PageProps) {
                 <th className={styles.th}>Colores Disponibles</th>
                 <th className={styles.th}>Almacenamiento</th>
                 <th className={styles.th}>Memoria RAM</th>
-                <th className={styles.th}>Descripción Corta</th>
                 <th className={styles.th}>Visible Web</th>
                 <th className={styles.th}>Acciones</th>
               </tr>
@@ -171,10 +170,7 @@ export default async function CatalogoWebPage({ searchParams }: PageProps) {
                        </div>
                     </td>
 
-                    {/* Descripción */}
-                    <td className={`${styles.td} text-slate-400 text-left max-w-[240px] truncate text-xs`} title={c.descripcion}>
-                      {c.descripcion}
-                    </td>
+
 
                     {/* Switch de Visibilidad */}
                     <td className={styles.td}>
@@ -198,7 +194,7 @@ export default async function CatalogoWebPage({ searchParams }: PageProps) {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-slate-500 italic">
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500 italic">
                     No hay celulares cargados en el catálogo web todavía.
                   </td>
                 </tr>

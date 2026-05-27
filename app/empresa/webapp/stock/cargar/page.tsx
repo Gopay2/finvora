@@ -25,7 +25,7 @@ export default async function CargarStockPage() {
   // Obtenemos los productos para el dropdown del formulario
   const { data: productos } = await supabase
     .from("productos")
-    .select("id, marca, modelo, color, almacenamiento")
+    .select("id, marca, modelo, color, almacenamiento, ram")
     .order('marca', { ascending: true });
 
   // Obtenemos los repartidores activos para asignar la ubicación inicial (zona)
