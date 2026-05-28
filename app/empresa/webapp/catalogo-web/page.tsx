@@ -27,7 +27,7 @@ interface PageProps {
 export default async function CatalogoWebPage({ searchParams }: PageProps) {
   const { role: userRole } = await getUserProfile();
 
-  if (!isAllowed(userRole, ["Developer"])) {
+  if (!isAllowed(userRole, ["Admin", "Supervisor", "Developer"])) {
     return <AccessDenied role={userRole} sectionName="Catálogo Web" />;
   }
 

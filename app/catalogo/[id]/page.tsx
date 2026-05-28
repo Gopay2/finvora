@@ -75,8 +75,35 @@ export default async function DetalleCelularPage({ params }: PageProps) {
 
   const whatsappPhone = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || "521234567890";
 
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": `${celular.marca} ${celular.modelo}`,
+    "image": celular.imagen_url,
+    "description": celular.descripcion,
+    "brand": {
+      "@type": "Brand",
+      "name": celular.marca
+    },
+    "offers": {
+      "@type": "AggregateOffer",
+      "priceCurrency": "MXN",
+      "itemCondition": "https://schema.org/NewCondition",
+      "availability": "https://schema.org/InStock",
+      "seller": {
+        "@type": "Organization",
+        "name": "Finvora",
+        "url": "https://finvora.mx"
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-[family-name:var(--font-outfit)] flex flex-col justify-between overflow-x-hidden w-full">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
       {/* Cabecera unificada */}
       <Header />
 

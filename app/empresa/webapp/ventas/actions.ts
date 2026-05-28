@@ -34,15 +34,7 @@ export async function submitVenta(formData: FormData) {
     ? `${profile.role}: ${capitalize(profile.username)}`
     : user.email;
 
-  // 3. CONFIGURACIÓN DEL WEBHOOK: Cargamos la URL del webhook de Discord desde las variables de entorno
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-
-  if (!webhookUrl) {
-    console.error("DISCORD_WEBHOOK_URL no está configurada en las variables de entorno.");
-    return { success: false, error: "Error de configuración en el servidor." };
-  }
-
-  // 4. EXTRACCIÓN DE DATOS: Obtenemos los campos clave capturados del formulario
+  // 3. EXTRACCIÓN DE DATOS: Obtenemos los campos clave capturados del formulario
   const data = {
     nombre: formData.get("nombre_cliente") as string,
     identificacion: formData.get("identificacion_fisica") as string,
@@ -60,6 +52,19 @@ export async function submitVenta(formData: FormData) {
     hora: formData.get("hora_entrega") as string,
     comentarios: formData.get("comentarios") as string,
   };
+
+  // 4. CONFIGURACIÓN DEL WEBHOOK: Cargamos la URL del webhook de Discord según la zona elegida
+  const zonaNormalizada = (data.zona || "").trim().toLowerCase();
+  let webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+
+  if (zonaNormalizada === "monterrey") {
+    webhookUrl = process.env.DISCORD_WEBHOOK_URL_2 || process.env.DISCORD_WEBHOOK_URL;
+  }
+
+  if (!webhookUrl) {
+    console.error("DISCORD_WEBHOOK_URL no está configurada en las variables de entorno.");
+    return { success: false, error: "Error de configuración en el servidor." };
+  }
 
   // 5. ENLACE DE WHATSAPP: Limpiamos el teléfono (solo dígitos) para habilitar un chat directo con el cliente
   const cleanPhone = data.telefono.replace(/\D/g, '');
