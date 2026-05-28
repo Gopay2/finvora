@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from "react";
-import { crearCelular, editarCelular } from "@/app/empresa/webapp/catalogo-web/catalogo-actions";
+import { crearCelular, editarCelular, getModelosPorMarca, getEspecificacionesPorModelo } from "@/app/empresa/webapp/catalogo-web/catalogo-actions";
 import SubmitButton from "./SubmitButton";
 import { MARCAS, ALMACENAMIENTOS, RAMS } from "@/utils/constants";
 
@@ -25,10 +25,72 @@ interface CatalogoFormProps {
 export default function CatalogoForm({ celular, onSuccess }: CatalogoFormProps) {
   const isEditing = !!celular;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   // Estados del Formulario
   const [marca, setMarca] = useState(celular?.marca || "");
   const [modelo, setModelo] = useState(celular?.modelo || "");
+
+  // Estados para autocompletado híbrido inteligente
+  const [sugerenciasModelos, setSugerenciasModelos] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Cargar modelos del inventario físico cuando la marca cambie
+  useEffect(() => {
+    if (!marca) {
+      setSugerenciasModelos([]);
+      return;
+    }
+
+    async function cargarSugerencias() {
+      try {
+        const modelos = await getModelosPorMarca(marca);
+        setSugerenciasModelos(modelos);
+      } catch (err) {
+        console.error("Error al cargar modelos sugeridos:", err);
+      }
+    }
+    
+    cargarSugerencias();
+  }, [marca]);
+
+  // Cerrar sugerencias al hacer clic fuera del input de Modelo
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Función al seleccionar un modelo sugerido (Autocompletar especificaciones)
+  const handleSelectModelo = async (modeloSeleccionado: string) => {
+    setModelo(modeloSeleccionado);
+    setShowSuggestions(false);
+
+    if (!marca || !modeloSeleccionado) return;
+
+    try {
+      const specs = await getEspecificacionesPorModelo(marca, modeloSeleccionado);
+      if (specs) {
+        if (specs.colores.length > 0) {
+          setColores(specs.colores);
+        }
+        if (specs.almacenamientos.length > 0) {
+          setAlmacenamientos(specs.almacenamientos);
+        }
+        if (specs.rams.length > 0) {
+          setRams(specs.rams);
+        }
+      }
+    } catch (err) {
+      console.error("Error al autocompletar especificaciones:", err);
+    }
+  };
   const [descripcion, setDescripcion] = useState(celular?.descripcion || "");
   const [errorMsg, setErrorMsg] = useState("");
   
@@ -315,6 +377,11 @@ function procesarImagenTransparente(file: File): Promise<File> {
     }
   };
 
+  // Filtrar las sugerencias en base a lo que escribe el usuario
+  const filteredSuggestions = sugerenciasModelos.filter(sug =>
+    sug.toLowerCase().includes(modelo.toLowerCase())
+  );
+
   return (
     <form onSubmit={handleClientAction} className="space-y-6">
       {errorMsg && (
@@ -348,14 +415,35 @@ function procesarImagenTransparente(file: File): Promise<File> {
           {/* Modelo */}
           <div className={styles.inputGroup}>
             <label className={styles.label}>Modelo</label>
-            <input 
-              value={modelo}
-              onChange={(e) => setModelo(e.target.value)}
-              type="text" 
-              placeholder="Ej: iPhone 13 Pro Max" 
-              required 
-              className={styles.input} 
-            />
+            <div className="relative" ref={suggestionsRef}>
+              <input 
+                value={modelo}
+                onChange={(e) => {
+                  setModelo(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                type="text" 
+                placeholder="Ej: iPhone 13 Pro Max" 
+                required 
+                className={styles.input} 
+              />
+              
+              {showSuggestions && marca && filteredSuggestions.length > 0 && (
+                <div className="absolute z-20 w-full mt-2 bg-slate-950/95 border border-slate-800 rounded-xl shadow-xl max-h-48 overflow-y-auto custom-scrollbar glass-effect animate-in fade-in duration-200">
+                  {filteredSuggestions.map((sug) => (
+                    <div 
+                      key={sug}
+                      onClick={() => handleSelectModelo(sug)}
+                      className="px-4 py-3 hover:bg-secondary/10 hover:text-secondary cursor-pointer transition-colors text-sm text-slate-200 border-b border-slate-900/50 last:border-b-0 flex items-center justify-between"
+                    >
+                      <span className="font-medium">{sug}</span>
+                      <span className="material-symbols-outlined text-xs text-slate-500">auto_awesome</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Descripción Comercial */}
@@ -406,6 +494,14 @@ function procesarImagenTransparente(file: File): Promise<File> {
                   </div>
                 </>
               )}
+            </div>
+
+            <div className="mt-2.5 flex items-start gap-2.5 text-xs text-amber-400 bg-amber-500/5 border border-amber-500/10 rounded-xl p-3 select-none">
+              <span className="material-symbols-outlined text-base mt-0.5 shrink-0">warning</span>
+              <div>
+                <strong className="font-semibold block mb-0.5 text-amber-300">Imagen sin fondo requerida</strong>
+                <span>Sube una imagen con fondo transparente (PNG o WebP) para no romper el diseño del catálogo.</span>
+              </div>
             </div>
           </div>
 

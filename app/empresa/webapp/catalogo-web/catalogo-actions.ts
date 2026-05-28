@@ -303,3 +303,104 @@ export async function actualizarVisibilidadCelular(id: string, nuevoEstado: bool
   revalidatePath('/catalogo');
   return { success: true };
 }
+
+/**
+ * Obtiene todos los modelos únicos del inventario general (tabla 'productos')
+ * para una marca determinada.
+ * 
+ * @security Permite a cualquier usuario validado (con rol asignado) ver opciones para poblar el catálogo.
+ * @param marca Nombre de la marca (ej. 'Apple', 'Samsung')
+ */
+export async function getModelosPorMarca(marca: string): Promise<string[]> {
+  const { role } = await getUserProfile();
+  if (role === "Sin rol") {
+    return [];
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('productos')
+    .select('modelo')
+    .eq('marca', marca);
+
+  if (error) {
+    console.error("Error al obtener modelos por marca:", error);
+    return [];
+  }
+
+  // Deduplicación inteligente insensible a mayúsculas/minúsculas y tolerante a espacios
+  const seen = new Set<string>();
+  const modelosUnicos: string[] = [];
+
+  for (const p of (data || [])) {
+    if (!p.modelo) continue;
+    // Normalizar: quitar espacios adelante/atrás y colapsar múltiples espacios internos a uno solo
+    const clean = p.modelo.trim().replace(/\s+/g, ' ');
+    const lowercaseKey = clean.toLowerCase();
+    
+    if (!seen.has(lowercaseKey)) {
+      seen.add(lowercaseKey);
+      modelosUnicos.push(clean); // Mantenemos el formato original legible de la primera aparición
+    }
+  }
+
+  return modelosUnicos.sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Obtiene todas las variantes únicas de especificaciones (colores, almacenamientos y rams)
+ * para una marca y modelo específicos desde la tabla de inventario general 'productos'.
+ * 
+ * @security Permites a cualquier administrador/supervisor de catálogo obtener variantes de forma predictiva.
+ * @param marca Marca del celular
+ * @param modelo Modelo del celular
+ */
+export async function getEspecificacionesPorModelo(
+  marca: string,
+  modelo: string
+): Promise<{ colores: string[]; almacenamientos: string[]; rams: string[] } | null> {
+  const { role } = await getUserProfile();
+  if (role === "Sin rol") {
+    return null;
+  }
+
+  const cleanInputModelo = modelo.trim().toLowerCase().replace(/\s+/g, ' ');
+
+  const supabase = await createClient();
+  // Consultamos todos los productos de la marca para realizar un filtrado elástico e inteligente en memoria
+  const { data, error } = await supabase
+    .from('productos')
+    .select('modelo, color, almacenamiento, ram')
+    .eq('marca', marca);
+
+  if (error) {
+    console.error("Error al obtener especificaciones por modelo:", error);
+    return null;
+  }
+
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  // Filtrar en memoria usando nombres normalizados para capturar variantes con espacios o diferencias de mayúsculas
+  const variantesFiltradas = data.filter((p: { modelo: string }) => {
+    if (!p.modelo) return false;
+    const cleanDbModelo = p.modelo.trim().toLowerCase().replace(/\s+/g, ' ');
+    return cleanDbModelo === cleanInputModelo;
+  });
+
+  if (variantesFiltradas.length === 0) {
+    return null;
+  }
+
+  // Agrupar variantes de forma única y filtrar nulos/vacíos
+  const colores = Array.from(new Set(variantesFiltradas.map((p: { color: string | null }) => p.color?.trim()).filter(Boolean))) as string[];
+  const almacenamientos = Array.from(new Set(variantesFiltradas.map((p: { almacenamiento: string | null }) => p.almacenamiento?.trim()).filter(Boolean))) as string[];
+  const rams = Array.from(new Set(variantesFiltradas.map((p: { ram: string | null }) => p.ram?.trim()).filter(Boolean))) as string[];
+
+  return {
+    colores,
+    almacenamientos,
+    rams
+  };
+}

@@ -78,7 +78,7 @@ export default function WebAppPage() {
           <h2 className={styles.cardTitle}>Catálogo Web</h2>
           <p className={styles.cardDesc}>Gestiona los modelos y variantes de celulares visibles en la web pública.</p>
         </div>
-        <div className={styles.cardButton}>¡Proximamente!</div>
+        <div className={styles.cardButton}>Acceder</div>
       </Link>
 
       {/* Placeholder 2 */}

@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 
 /**
  * Interface representing a brand to display
@@ -61,15 +62,24 @@ export default function BrandsSection() {
             <p className="text-on-surface-variant mb-8 text-lg max-w-2xl">
               Obtén tu crédito Finvora hoy mismo y accede a más de 20 modelos disponibles de las marcas que más te gustan. El proceso es 100% digital y seguro.
             </p>
-            <a 
-              className="bg-secondary text-on-secondary-fixed px-8 py-3 rounded-md font-bold hover:scale-105 transition-all inline-flex items-center gap-2"
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <span className="material-symbols-outlined text-xl" aria-hidden="true">bolt</span>
-              Iniciar mi solicitud ahora
-            </a>
+            <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+              <a 
+                className="bg-secondary text-on-secondary-fixed px-8 py-3 rounded-md font-bold hover:scale-105 transition-all inline-flex items-center justify-center gap-2"
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span className="material-symbols-outlined text-xl" aria-hidden="true">bolt</span>
+                Iniciar mi solicitud ahora
+              </a>
+              <Link 
+                className="border border-secondary/30 text-secondary hover:bg-secondary/5 px-8 py-3 rounded-md font-bold hover:scale-105 transition-all inline-flex items-center justify-center gap-2"
+                href="/catalogo"
+              >
+                <span className="material-symbols-outlined text-xl" aria-hidden="true">phone_iphone</span>
+                Ver catálogo de equipos
+              </Link>
+            </div>
           </div>
         </article>
       </div>
