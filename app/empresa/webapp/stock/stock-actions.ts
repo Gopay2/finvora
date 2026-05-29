@@ -349,4 +349,33 @@ export async function eliminarStock(imei: string) {
   return { success: true };
 }
 
+/**
+ * Recupera las marcas únicas (distintas) del catálogo de productos en orden alfabético.
+ * 
+ * @security Bloquea a usuarios con rol 'Sin rol'
+ * @returns Arreglo de cadenas con las marcas únicas
+ */
+export async function getDistinctBrands(): Promise<string[]> {
+  const { role } = await getUserProfile();
+  if (role === "Sin rol") {
+    return [];
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('productos')
+    .select('marca')
+    .order('marca', { ascending: true });
+
+  if (error) {
+    console.error("Error al obtener marcas:", error);
+    return [];
+  }
+  
+  if (!data) return [];
+  // Retornamos marcas únicas limpiando duplicados y filtrando nulos/vacíos
+  const marcas = data.map((p: any) => p.marca).filter(Boolean);
+  return Array.from(new Set(marcas));
+}
+
 
