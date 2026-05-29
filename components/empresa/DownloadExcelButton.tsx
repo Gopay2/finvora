@@ -5,13 +5,19 @@ import * as XLSX from "xlsx";
 
 type DownloadPreset = 'stock' | 'ventas';
 
+interface RepartidorOption {
+  id: string;
+  nombre: string;
+}
+
 interface DownloadExcelButtonProps {
   data: any[];
   type: DownloadPreset;
+  repartidores?: RepartidorOption[];
 }
 
-export default function DownloadExcelButton({ data, type }: DownloadExcelButtonProps) {
-  
+export default function DownloadExcelButton({ data, type, repartidores }: DownloadExcelButtonProps) {
+
   const downloadExcel = () => {
     if (!data || data.length === 0) return;
 
@@ -23,33 +29,40 @@ export default function DownloadExcelButton({ data, type }: DownloadExcelButtonP
     if (type === 'stock') {
       fileNamePrefix = "Stock";
       sheetName = "Stock";
-      worksheetData = data.map(item => ({
-        "IMEI": item.imei,
-        "Marca": item.productos?.marca || "N/A",
-        "Modelo": item.productos?.modelo || "N/A",
-        "Color": item.productos?.color || "N/A",
-        "RAM": item.productos?.ram || "N/A",
-        "Almacenamiento": item.productos?.almacenamiento || "N/A",
-        "Ubicación": item.zona,
-        "Estado": item.estado,
-        "Fecha de Ingreso": new Date(item.fecha_ingreso).toLocaleDateString('es-AR')
-      }));
+      worksheetData = data.map(stockItem => {
+        // Mapear el UUID zona al nombre del repartidor
+        const nombreUbicacion = repartidores 
+          ? (repartidores.find(repartidor => repartidor.id === stockItem.zona)?.nombre || "Sin Asignar")
+          : (stockItem.zona || "Sin Asignar");
+          
+        return {
+          "IMEI": stockItem.imei,
+          "Marca": stockItem.productos?.marca || "N/A",
+          "Modelo": stockItem.productos?.modelo || "N/A",
+          "Color": stockItem.productos?.color || "N/A",
+          "RAM": stockItem.productos?.ram || "N/A",
+          "Almacenamiento": stockItem.productos?.almacenamiento || "N/A",
+          "Ubicación": nombreUbicacion,
+          "Estado": stockItem.estado,
+          "Fecha de Ingreso": new Date(stockItem.fecha_ingreso).toLocaleDateString('es-AR')
+        };
+      });
     } 
     else if (type === 'ventas') {
       fileNamePrefix = "Ventas";
       sheetName = "Ventas";
-      worksheetData = data.map(item => ({
-        "IMEI": item.imei,
-        "Marca": item.productos?.marca || "N/A",
-        "Modelo": item.productos?.modelo || "N/A",
-        "Color": item.productos?.color || "N/A",
-        "RAM": item.productos?.ram || "N/A",
-        "Almacenamiento": item.productos?.almacenamiento || "N/A",
-        "Ubicación": item.zona,
-        "Vendedor": item.vendedor?.username || "Desconocido",
-        "Precio Costo": item.precio_costo,
-        "Fecha Ingreso": new Date(item.fecha_ingreso).toLocaleDateString('es-AR'),
-        "Fecha Venta": new Date(item.fecha_venta).toLocaleDateString('es-AR') + " " + new Date(item.fecha_venta).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+      worksheetData = data.map(ventaItem => ({
+        "IMEI": ventaItem.imei,
+        "Marca": ventaItem.productos?.marca || "N/A",
+        "Modelo": ventaItem.productos?.modelo || "N/A",
+        "Color": ventaItem.productos?.color || "N/A",
+        "RAM": ventaItem.productos?.ram || "N/A",
+        "Almacenamiento": ventaItem.productos?.almacenamiento || "N/A",
+        "Ubicación": ventaItem.repartidor?.nombre || "Sin Asignar",
+        "Vendedor": ventaItem.vendedor?.username || "Desconocido",
+        "Precio Costo": ventaItem.precio_costo,
+        "Fecha Ingreso": new Date(ventaItem.fecha_ingreso).toLocaleDateString('es-AR'),
+        "Fecha Venta": new Date(ventaItem.fecha_venta).toLocaleDateString('es-AR') + " " + new Date(ventaItem.fecha_venta).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
       }));
     }
 
@@ -70,10 +83,10 @@ export default function DownloadExcelButton({ data, type }: DownloadExcelButtonP
   return (
     <button 
       onClick={downloadExcel}
-      className="flex items-center justify-center px-4 py-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl hover:bg-slate-700 hover:text-white transition-all cursor-pointer"
+      className="flex items-center justify-center px-3 md:px-4 py-2 md:py-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl hover:bg-slate-700 hover:text-white transition-all cursor-pointer"
       title={titles[type]}
     >
-      <span className="material-symbols-outlined text-xl">download</span>
+      <span className="material-symbols-outlined text-base md:text-xl">download</span>
     </button>
   );
 }
