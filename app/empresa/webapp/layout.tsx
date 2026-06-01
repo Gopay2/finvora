@@ -50,7 +50,7 @@ export default async function WebAppLayout({
 
   const userRole = profile?.role || "Sin rol";
   const username = profile?.username;
-  const isHighPrivilege = userRole === "Admin" || userRole === "Developer";
+  const isHighPrivilege = userRole === "Admin" || userRole === "Developer" || userRole === "Supervisor";
 
   // Mostramos el modal si no hay username definido
   const showOnboarding = !username;

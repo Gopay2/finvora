@@ -41,7 +41,7 @@ export default async function PerfilPage() {
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider border ${
-                  (profile?.role === "Admin" || profile?.role === "Developer") ? "bg-secondary/10 text-secondary border-secondary/20" : "bg-slate-800 text-slate-400 border-slate-700"
+                  (profile?.role === "Admin" || profile?.role === "Developer" || profile?.role === "Supervisor") ? "bg-secondary/10 text-secondary border-secondary/20" : "bg-slate-800 text-slate-400 border-slate-700"
                 }`}>
                   {profile?.role}
                 </span>
