@@ -12,7 +12,7 @@ const styles = {
   header: "flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6",
   titleGroup: "space-y-1",
   title: "text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent",
-  actions: "flex items-center justify-center md:justify-end gap-4 md:gap-3",
+  actions: "flex items-center justify-end gap-3",
   btnHome: "flex items-center justify-center px-3 md:px-4 py-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl hover:bg-slate-700 hover:text-white transition-all cursor-pointer",
   tableWrapper: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl",
   table: "w-full text-center border-collapse",
@@ -20,8 +20,8 @@ const styles = {
   td: "px-6 py-4 text-sm text-slate-300 border-b border-slate-800/50 text-center",
   tr: "hover:bg-slate-800/20 transition-colors",
   imeiBadge: "font-mono bg-slate-950 px-2 py-1 rounded border border-slate-800 text-secondary text-xs",
-  zonaBadge: "px-2 py-1 rounded-lg text-[10px] font-bold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20",
-  userBadge: "inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-800 text-slate-400 text-[10px] font-medium border border-slate-700",
+  zonaBadge: "inline-block px-2 py-1 rounded-lg text-[10px] font-bold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20 whitespace-nowrap",
+  userBadge: "inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-800 text-slate-400 text-[10px] font-medium border border-slate-700 whitespace-nowrap",
 };
 
 export default async function DetalleVentasPage() {
@@ -89,8 +89,8 @@ export default async function DetalleVentasPage() {
               <tr>
                 <th className={styles.th}>IMEI</th>
                 <th className={styles.th}>Producto</th>
-                <th className={styles.th}>Vendedor</th>
-                <th className={styles.th}>Ubicación</th>
+                <th className={`${styles.th} w-24 md:w-28 whitespace-nowrap`}>Vendedor</th>
+                <th className={`${styles.th} w-44 md:w-52 whitespace-nowrap`}>Ubicación</th>
                 <th className={styles.th}>Precio Costo</th>
                 <th className={styles.th}>Fecha Venta</th>
               </tr>

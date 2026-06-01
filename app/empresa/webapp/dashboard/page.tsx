@@ -110,7 +110,7 @@ const PerformancePieChart = ({ topSales, totalSales }: { topSales: number, total
 export default async function DashboardPage() {
   const { role: userRole } = await getUserProfile();
 
-  if (!isAllowed(userRole, ["Admin", "Developer"])) {
+  if (!isAllowed(userRole, ["Admin", "Developer", "Supervisor"])) {
     return <AccessDenied role={userRole} sectionName="Dashboard" />;
   }
 
