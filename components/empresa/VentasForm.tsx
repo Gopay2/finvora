@@ -162,15 +162,14 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
     return Array.from(set).sort();
   }, [zonasReparto]);
 
-  // 6. Repartidores válidos según la zona seleccionada (excluyendo los que contengan "Cambaceo")
+  // 6. Repartidores válidos según la zona seleccionada
   const repartidoresValidos = useMemo(() => {
     if (!selectedZona) return [];
     const map = new Map<string, string>();
     (zonasReparto || [])
       .filter(z => 
         z.nombre_zona === selectedZona && 
-        z.repartidor_nombre && 
-        !z.repartidor_nombre.toLowerCase().includes("cambaceo")
+        z.repartidor_nombre
       )
       .forEach(z => {
         map.set(z.repartidor_id, z.repartidor_nombre);
