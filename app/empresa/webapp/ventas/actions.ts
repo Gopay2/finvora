@@ -53,11 +53,16 @@ export async function submitVenta(formData: FormData) {
     comentarios: formData.get("comentarios") as string,
   };
 
-  // 4. CONFIGURACIÓN DEL WEBHOOK: Cargamos la URL del webhook de Discord según la zona elegida
+  // 4. CONFIGURACIÓN DEL WEBHOOK: Cargamos la URL del webhook de Discord según la zona elegida o el repartidor
   const zonaNormalizada = (data.zona || "").trim().toLowerCase();
+  const repartidorNormalizado = (data.repartidor || "").trim().toLowerCase();
   let webhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
-  if (zonaNormalizada === "monterrey") {
+  if (repartidorNormalizado.includes("cambaceo victor") && process.env.DISCORD_WEBHOOK_URL_3) {
+    webhookUrl = process.env.DISCORD_WEBHOOK_URL_3;
+  } else if (repartidorNormalizado.includes("cambaceo kevin") && process.env.DISCORD_WEBHOOK_URL_4) {
+    webhookUrl = process.env.DISCORD_WEBHOOK_URL_4;
+  } else if (zonaNormalizada === "monterrey") {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_2 || process.env.DISCORD_WEBHOOK_URL;
   }
 
@@ -105,7 +110,10 @@ export async function submitVenta(formData: FormData) {
   };
 
   // Mención opcional a un rol específico de Discord (ej. Coordinadores o Closers) si está configurado
-  const roleId = process.env.DISCORD_ROLE_ID;
+  const isCambaceo = repartidorNormalizado.includes("cambaceo victor") || repartidorNormalizado.includes("cambaceo kevin");
+  const roleId = (isCambaceo && process.env.DISCORD_ROLE_ID_2) 
+    ? process.env.DISCORD_ROLE_ID_2 
+    : process.env.DISCORD_ROLE_ID;
   const content = roleId ? `🛎️ <@&${roleId}>` : undefined;
 
   // 8. ENVÍO DEL MENSAJE: Realizamos la llamada HTTP POST al Webhook
