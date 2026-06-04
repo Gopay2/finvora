@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { getUserProfile, isAllowed } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
-import VentasForm from "@/components/empresa/VentasForm";
+import VentasFormSelector from "@/components/empresa/VentasFormSelector";
 import { createClient } from "@/utils/supabase/server";
 
 export const revalidate = 0;
@@ -17,7 +17,7 @@ const styles = {
 export default async function VentasPage() {
   const { role: userRole } = await getUserProfile();
 
-  if (!isAllowed(userRole, ["Admin", "Closer", "Supervisor", "Developer"])) {
+  if (!isAllowed(userRole, ["Admin", "Closer", "Cambaceador", "Supervisor", "Developer"])) {
     return <AccessDenied role={userRole} sectionName="Formulario de Ventas" />;
   }
 
@@ -34,7 +34,7 @@ export default async function VentasPage() {
     .from("stock")
     .select("producto_id, estado, zona, imei");
 
-  if (userRole === "Closer") {
+  if (userRole === "Closer" || userRole === "Cambaceador") {
     queryStock.neq("estado", "En envío");
   }
 
@@ -75,11 +75,12 @@ export default async function VentasPage() {
         </Link>
       </header>
 
-      {/* Pasamos los productos procesados y las zonas de reparto al formulario */}
-      <VentasForm 
-        productos={productos || []} 
-        zonasReparto={zonasReparto} 
-        stockItems={stockItems || []} 
+      {/* Pasamos los datos al selector de formulario */}
+      <VentasFormSelector
+        productos={productos || []}
+        zonasReparto={zonasReparto}
+        stockItems={stockItems || []}
+        userRole={userRole}
       />
     </div>
   );

@@ -13,7 +13,7 @@ export default function HeaderActions() {
 
   return (
     <div className="flex items-center gap-3">
-      <form action={logout}>
+      <form action={logout} suppressHydrationWarning>
         <button className="px-6 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-sm font-medium transition-all flex items-center gap-2 cursor-pointer">
           <span className="material-symbols-outlined text-sm">logout</span>
           <span className="hidden md:inline">Cerrar Sesión</span>

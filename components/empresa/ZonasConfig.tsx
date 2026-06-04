@@ -247,10 +247,10 @@ export default function ZonasConfig({ initialZonas, repartidores }: Props) {
                     <th className="px-6 py-4 text-slate-500 text-[10px] uppercase font-bold border-b border-slate-800 tracking-widest text-center">
                       Zona / Ref.
                     </th>
-                    <th className="px-6 py-4 text-slate-500 text-[10px] uppercase font-bold border-b border-slate-800 tracking-widest text-center">
+                    <th className="px-6 py-4 text-slate-500 text-[10px] uppercase font-bold border-b border-slate-800 tracking-widest text-center min-w-[200px] md:min-w-0">
                       Detalles / Descripción
                     </th>
-                    <th className="px-6 py-4 text-slate-500 text-[10px] uppercase font-bold border-b border-slate-800 tracking-widest text-center">
+                    <th className="px-6 py-4 text-slate-500 text-[10px] uppercase font-bold border-b border-slate-800 tracking-widest text-center min-w-[180px] md:min-w-0">
                       Repartidor Responsable
                     </th>
                     <th className="px-6 py-4 text-slate-500 text-[10px] uppercase font-bold border-b border-slate-800 tracking-widest text-center">
@@ -265,11 +265,11 @@ export default function ZonasConfig({ initialZonas, repartidores }: Props) {
                         <td className="px-6 py-4 text-sm font-bold text-white border-b border-slate-800/50 text-center">
                           {z.nombre_zona}
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-400 border-b border-slate-800/50 text-center italic">
+                        <td className="px-6 py-4 text-sm text-slate-400 border-b border-slate-800/50 text-center italic min-w-[200px] md:min-w-0 whitespace-nowrap md:whitespace-normal">
                           {z.descripcion || "Sin descripción"}
                         </td>
-                        <td className="px-6 py-4 text-sm border-b border-slate-800/50 text-center">
-                          <span className="px-2.5 py-1 rounded-lg text-xs font-bold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        <td className="px-6 py-4 text-sm border-b border-slate-800/50 text-center min-w-[180px] md:min-w-0">
+                          <span className="px-2.5 py-1 rounded-lg text-xs font-bold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20 whitespace-nowrap">
                             {z.repartidores?.nombre || "No asignado"}
                           </span>
                         </td>

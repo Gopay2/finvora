@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useMemo } from "react";
-import { submitVenta } from "@/app/empresa/webapp/ventas/actions";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { submitVentaCambaceo } from "@/app/empresa/webapp/ventas/actions";
 
 interface Producto {
   id: string;
@@ -10,10 +10,6 @@ interface Producto {
   almacenamiento: string;
   ram: string;
   color: string;
-}
-
-interface ProductoConStock extends Producto {
-  cantidadStock: number;
 }
 
 interface RepartoZonaInfo {
@@ -26,12 +22,13 @@ interface RepartoZonaInfo {
 
 interface StockItem {
   producto_id: string;
+  disabled_estado?: string;
   estado: string;
   zona: string | null;
   imei?: string;
 }
 
-interface VentasFormProps {
+interface VentasCambaceadorFormProps {
   productos: Producto[];
   zonasReparto: RepartoZonaInfo[];
   stockItems: StockItem[];
@@ -45,7 +42,6 @@ const styles = {
   input: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed",
   selectInput: "w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed appearance-none cursor-pointer",
   engancheInput: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed pl-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-  pickerInput: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed pl-10 [color-scheme:dark] cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden",
   textarea: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed min-h-[100px] resize-none",
   button: "w-full bg-secondary text-slate-950 font-bold py-4 rounded-xl hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/20 cursor-pointer flex items-center justify-center gap-2",
   buttonDisabled: "w-full bg-secondary text-slate-950 font-bold py-4 rounded-xl hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/20 cursor-not-allowed flex items-center justify-center gap-2 opacity-70",
@@ -53,34 +49,54 @@ const styles = {
   statusError: "p-4 rounded-xl text-sm font-medium flex items-center gap-3 animate-peek bg-red-500/10 text-red-400 border border-red-500/20",
   formGrid: "grid grid-cols-1 md:grid-cols-2 gap-6",
   relativeInputContainer: "relative flex items-center",
-  enganchePrefix: "absolute left-4 text-slate-400 pointer-events-none",
-  pickerIcon: "absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base"
+  enganchePrefix: "absolute left-4 text-slate-400 pointer-events-none"
 };
 
-export default function VentasForm({ productos, zonasReparto, stockItems }: VentasFormProps) {
+export default function VentasCambaceadorForm({ productos, zonasReparto, stockItems }: VentasCambaceadorFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
-  
+
+  const [selectedCambaceadorId, setSelectedCambaceadorId] = useState<string>("");
   const [selectedModelKey, setSelectedModelKey] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
-  const [selectedZona, setSelectedZona] = useState<string>("");
-  const [selectedRepartidorId, setSelectedRepartidorId] = useState<string>("");
   const [selectedImei, setSelectedImei] = useState<string>("");
-  
+  const [selectedFileName, setSelectedFileName] = useState<string>("");
+
   const formRef = useRef<HTMLFormElement>(null);
-  const lastPickerOpen = useRef(0);
 
-  // 1. Filtrar stockItems según el repartidor seleccionado
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFileName(file.name);
+    } else {
+      setSelectedFileName("");
+    }
+  };
+
+  // 1. Obtener la lista única de Cambaceadores (repartidores activos que contengan "cambaceo")
+  const cambaceadoresList = useMemo(() => {
+    const map = new Map<string, string>();
+    (zonasReparto || []).forEach(z => {
+      if (z.repartidor_id && z.repartidor_nombre && z.repartidor_activo) {
+        if (z.repartidor_nombre.toLowerCase().includes("cambaceo")) {
+          map.set(z.repartidor_id, z.repartidor_nombre);
+        }
+      }
+    });
+    return Array.from(map.entries())
+      .map(([id, nombre]) => ({ id, nombre }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [zonasReparto]);
+
+  // 2. Filtrar stockItems según el cambaceador seleccionado
   const stockFiltrado = useMemo(() => {
-    if (!selectedRepartidorId) return [];
-    return stockItems.filter(s => s.zona === selectedRepartidorId);
-  }, [selectedRepartidorId, stockItems]);
+    if (!selectedCambaceadorId) return [];
+    return stockItems.filter(s => s.zona === selectedCambaceadorId);
+  }, [selectedCambaceadorId, stockItems]);
 
-  // 2. Mapeamos y filtramos los productos que tienen stock asignado a este repartidor (cantidad > 0)
+  // 3. Mapeamos y filtramos los productos con stock para este cambaceador
   const productosConStock = useMemo(() => {
-    if (!selectedRepartidorId) return [];
-    
-    // Obtenemos los IDs de productos del catálogo que tienen stock físico con el repartidor
+    if (!selectedCambaceadorId) return [];
     const idsConStock = new Set(stockFiltrado.map(s => s.producto_id));
 
     return productos
@@ -89,7 +105,7 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
         const unidadesValidas = stockFiltrado.filter(s => s.producto_id === p.id);
         const cantidadDisponible = unidadesValidas.filter(s => s.estado === 'Disponible').length;
         const cantidadAConsultar = unidadesValidas.filter(s => s.estado === 'A consultar').length;
-        
+
         return {
           ...p,
           cantidadDisponible,
@@ -97,17 +113,16 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
           cantidadStock: cantidadDisponible + cantidadAConsultar
         };
       })
-      .filter(p => p.cantidadStock > 0); // Nos aseguramos de que solo pasen productos con stock positivo
-  }, [selectedRepartidorId, productos, stockFiltrado]);
+      .filter(p => p.cantidadStock > 0);
+  }, [selectedCambaceadorId, productos, stockFiltrado]);
 
-  // 3. Agrupamos modelos únicos a partir de los productos con stock
+  // 4. Agrupamos modelos únicos con stock
   const modelosUnicos = useMemo(() => {
     const map = new Map();
     productosConStock.forEach(p => {
-      // Formato: MARCA MODELO - 256GB - 8GB
       const display = `${p.marca} ${p.modelo} - ${p.almacenamiento} - ${p.ram}`;
       const existing = map.get(display);
-      
+
       if (!existing) {
         map.set(display, {
           display: display,
@@ -126,7 +141,7 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
     return Array.from(map.entries());
   }, [productosConStock]);
 
-  // 4. Colores disponibles para el modelo seleccionado de los productos con stock
+  // 5. Colores disponibles para el modelo seleccionado
   const variantesColor = useMemo(() => {
     if (!selectedModelKey) return [];
     return productosConStock
@@ -139,7 +154,7 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
       }));
   }, [selectedModelKey, productosConStock]);
 
-  // 4.5. IMEIs disponibles para el modelo y color seleccionados del stock del repartidor
+  // 6. IMEIs disponibles para modelo y color seleccionados
   const imeisDisponibles = useMemo(() => {
     if (!selectedModelKey || !selectedColor) return [];
     const matchingProducts = productosConStock.filter(
@@ -151,66 +166,17 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
     );
   }, [selectedModelKey, selectedColor, productosConStock, stockFiltrado]);
 
-  // 5. Zonas únicas configuradas
-  const zonasUnicas = useMemo(() => {
-    const set = new Set<string>();
-    (zonasReparto || []).forEach(z => {
-      if (z.nombre_zona) {
-        set.add(z.nombre_zona);
-      }
-    });
-    return Array.from(set).sort();
-  }, [zonasReparto]);
-
-  // 6. Repartidores válidos según la zona seleccionada (excluyendo cambaceadores)
-  const repartidoresValidos = useMemo(() => {
-    if (!selectedZona) return [];
-    const map = new Map<string, string>();
-    (zonasReparto || [])
-      .filter(z => 
-        z.nombre_zona === selectedZona && 
-        z.repartidor_nombre &&
-        !z.repartidor_nombre.toLowerCase().includes("cambaceo")
-      )
-      .forEach(z => {
-        map.set(z.repartidor_id, z.repartidor_nombre);
-      });
-    return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre }));
-  }, [selectedZona, zonasReparto]);
+  const handleCambaceadorChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedCambaceadorId(event.target.value);
+    setSelectedModelKey("");
+    setSelectedColor("");
+    setSelectedImei("");
+  };
 
   const handleModelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedModelKey(event.target.value);
     setSelectedColor("");
     setSelectedImei("");
-  };
-
-  const handleZonaChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedZona(event.target.value);
-    setSelectedRepartidorId("");
-    setSelectedModelKey("");
-    setSelectedColor("");
-    setSelectedImei("");
-  };
-
-  const handleRepartidorChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedRepartidorId(event.target.value);
-    setSelectedModelKey("");
-    setSelectedColor("");
-    setSelectedImei("");
-  };
-
-  const handleOpenPicker = (event: React.MouseEvent<HTMLInputElement>) => {
-    const now = Date.now();
-    if (now - lastPickerOpen.current < 500) return;
-
-    if ('showPicker' in HTMLInputElement.prototype) {
-      try {
-        lastPickerOpen.current = now;
-        (event.currentTarget as any).showPicker();
-      } catch (err) {
-        lastPickerOpen.current = 0;
-      }
-    }
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -220,22 +186,22 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
 
     const formData = new FormData(event.currentTarget);
     const baseInfo = modelosUnicos.find(([key]) => key === selectedModelKey)?.[1];
-    
+
     if (baseInfo) {
       formData.set("celular", `${baseInfo.marca} ${baseInfo.modelo}`);
     }
     formData.set("color_celular", selectedColor);
 
-    const result = await submitVenta(formData);
+    const result = await submitVentaCambaceo(formData);
 
     if (result.success) {
-      setStatus({ type: 'success', message: '¡Venta registrada y enviada a Discord!' });
+      setStatus({ type: 'success', message: '¡Venta de Cambaceo registrada y enviada a Discord!' });
       formRef.current?.reset();
+      setSelectedCambaceadorId("");
       setSelectedModelKey("");
       setSelectedColor("");
-      setSelectedZona("");
-      setSelectedRepartidorId("");
       setSelectedImei("");
+      setSelectedFileName("");
     } else {
       setStatus({ type: 'error', message: result.error || 'Error al procesar la venta.' });
     }
@@ -253,136 +219,36 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
         </div>
       )}
 
+
+
       <div className={styles.formGrid}>
-        <div className={styles.inputGroupFull}>
-          <label className={styles.label}>Nombre de cliente</label>
-          <input type="text" name="nombre_cliente" className={styles.input} required placeholder="Nombre completo" />
-        </div>
-
+        {/* SELECTOR DE CAMBACEADOR */}
         <div className={styles.inputGroup}>
-          <label className={styles.label}>¿Cuenta con Identificación?</label>
-          <select
-            name="identificacion_fisica"
-            className={styles.selectInput}
-            style={{ colorScheme: 'dark' }}
-            required
-          >
-            <option value="Si" className="bg-slate-950 text-white">Sí cuenta con INE/Residencia</option>
-            <option value="No" className="bg-slate-950 text-white">No cuenta con INE/Residencia</option>
-          </select>
-        </div>
-
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>CURP</label>
-          <input
-            type="text"
-            name="curp"
-            className={styles.input}
-            required
-            placeholder="Ingrese los 18 caracteres de la CURP"
-          />
-        </div>
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Número de teléfono</label>
-          <input type="tel" name="telefono" className={styles.input} required placeholder="Ej: 5212345678900" />
-        </div>
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Dirección</label>
-          <input type="text" name="direccion" className={styles.input} required placeholder="Enlace Google Maps" />
-        </div>
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Enganche</label>
-          <div className={styles.relativeInputContainer}>
-            <span className={styles.enganchePrefix}>$</span>
-            <input
-              type="number"
-              name="enganche"
-              className={styles.engancheInput}
-              required
-              min="0"
-              placeholder="0.00"
-            />
-          </div>
-        </div>
-
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>¿Cuenta activa?</label>
-          <select
-            name="cuenta_activa"
-            className={styles.selectInput}
-            style={{ colorScheme: 'dark' }}
-            required
-            defaultValue="si"
-          >
-            <option value="si" className="bg-slate-950 text-white">Sí</option>
-            <option value="no" className="bg-slate-950 text-white">No</option>
-          </select>
-        </div>
-
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>¿Cliente con historial?</label>
-          <select
-            name="cliente_historial"
-            className={styles.selectInput}
-            style={{ colorScheme: 'dark' }}
-            required
-            defaultValue=""
-          >
-            <option value="" disabled className="bg-slate-950 text-slate-500 italic">Seleccione...</option>
-            <option value="Si" className="bg-slate-950 text-white">Sí</option>
-            <option value="No" className="bg-slate-950 text-white">No</option>
-          </select>
-        </div>
-
-        {/* SELECTOR DE ZONA */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Zona de reparto</label>
-          <select
-            name="zona"
-            value={selectedZona}
-            className={styles.selectInput}
-            style={{ colorScheme: 'dark' }}
-            required
-            onChange={handleZonaChange}
-          >
-            <option value="" className="bg-slate-950 text-slate-500 italic">Seleccione una zona...</option>
-            {zonasUnicas.map((zona) => (
-              <option key={zona} value={zona} className="bg-slate-950 text-white">
-                {zona}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* SELECTOR DE REPARTIDOR */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Repartidor</label>
+          <label className={styles.label}>Cambaceador</label>
           <select
             name="repartidor_id"
-            value={selectedRepartidorId}
+            value={selectedCambaceadorId}
             className={styles.selectInput}
             style={{ colorScheme: 'dark' }}
             required
-            disabled={!selectedZona}
-            onChange={handleRepartidorChange}
+            onChange={handleCambaceadorChange}
           >
-            <option value="" className="bg-slate-950 text-slate-500 italic">
-              {!selectedZona ? "Primero elija una zona" : "Seleccione un repartidor..."}
-            </option>
-            {repartidoresValidos.map((rep) => (
-              <option key={rep.id} value={rep.id} className="bg-slate-950 text-white">
-                {rep.nombre}
+            <option value="" className="bg-slate-950 text-slate-500 italic">Seleccione su nombre...</option>
+            {cambaceadoresList.map((camb) => (
+              <option key={camb.id} value={camb.id} className="bg-slate-950 text-white">
+                {camb.nombre}
               </option>
             ))}
           </select>
           <input 
             type="hidden" 
             name="repartidor" 
-            value={repartidoresValidos.find(r => r.id === selectedRepartidorId)?.nombre || ""} 
+            value={cambaceadoresList.find(c => c.id === selectedCambaceadorId)?.nombre || ""} 
           />
         </div>
 
-        {/* SELECTOR DE MODELO CON NUEVO FORMATO */}
+
+        {/* SELECTOR DE MODELO */}
         <div className={styles.inputGroup}>
           <label className={styles.label}>Modelo de Celular</label>
           <select
@@ -390,11 +256,11 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
             className={styles.selectInput}
             style={{ colorScheme: 'dark' }}
             required
-            disabled={!selectedRepartidorId}
+            disabled={!selectedCambaceadorId}
             onChange={handleModelChange}
           >
             <option value="" className="bg-slate-950 text-slate-500 italic">
-              {!selectedRepartidorId ? "Primero elija un repartidor..." : "Seleccione un modelo..."}
+              {!selectedCambaceadorId ? "Primero elija su nombre..." : "Seleccione un modelo..."}
             </option>
             {modelosUnicos.map(([key, info]) => {
               const isAConsultar = info.totalDisponible === 0 && info.totalAConsultar > 0;
@@ -474,39 +340,68 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
           </select>
         </div>
 
+        {/* ENGANCHE CLIENTE */}
         <div className={styles.inputGroup}>
-          <label className={styles.label}>Fecha de entrega</label>
+          <label className={styles.label}>Enganche cliente</label>
           <div className={styles.relativeInputContainer}>
-            <span className={styles.pickerIcon}>calendar_today</span>
+            <span className={styles.enganchePrefix}>$</span>
             <input
-              type="date"
-              name="fecha_entrega"
-              className={styles.pickerInput}
+              type="number"
+              name="enganche_cliente"
+              className={styles.engancheInput}
               required
-              onClick={handleOpenPicker}
-            />
-          </div>
-        </div>
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Hora de entrega</label>
-          <div className={styles.relativeInputContainer}>
-            <span className={styles.pickerIcon}>schedule</span>
-            <input
-              type="time"
-              name="hora_entrega"
-              className={styles.pickerInput}
-              required
-              onClick={handleOpenPicker}
+              min="0"
+              placeholder="0.00"
             />
           </div>
         </div>
 
+        {/* ENGANCHE PLATAFORMA */}
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>Enganche plataforma</label>
+          <div className={styles.relativeInputContainer}>
+            <span className={styles.enganchePrefix}>$</span>
+            <input
+              type="number"
+              name="enganche_plataforma"
+              className={styles.engancheInput}
+              required
+              min="0"
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+
+        {/* DOCUMENTO / FOTO (Opcional) */}
+        <div className={styles.inputGroupFull}>
+          <label className={styles.label}>Documento / Foto (Opcional)</label>
+          <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-secondary/40 rounded-xl p-6 bg-slate-950/20 transition-all group cursor-pointer">
+            <input
+              type="file"
+              name="documento"
+              accept="image/*,.pdf"
+              onChange={handleFileChange}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            />
+            <div className="text-center space-y-1">
+              <span className="material-symbols-outlined text-slate-500 group-hover:text-secondary text-3xl transition-colors">
+                cloud_upload
+              </span>
+              <p className="text-xs text-slate-300 font-medium">
+                {selectedFileName ? selectedFileName : "Selecciona una imagen o PDF"}
+              </p>
+              <p className="text-[10px] text-slate-500">Formatos permitidos: PNG, JPG, WEBP, PDF (Máx. 8MB)</p>
+            </div>
+          </div>
+        </div>
+
+        {/* COMENTARIOS (Opcional) */}
         <div className={styles.inputGroupFull}>
           <label className={styles.label}>Comentarios (Opcional)</label>
           <textarea
             name="comentarios"
             className={styles.textarea}
-            placeholder="Notas adicionales sobre la venta o entrega..."
+            placeholder="Notas adicionales sobre la venta..."
           />
         </div>
       </div>
