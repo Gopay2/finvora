@@ -64,7 +64,7 @@ export default async function CatalogoWebPage({ searchParams }: PageProps) {
         </div>
         <Link href="/empresa/webapp" className="text-slate-500 hover:text-slate-300 flex items-center gap-2 text-sm transition-colors">
           <span className="material-symbols-outlined text-base">arrow_back</span>
-          Volver al Inicio
+          Volver
         </Link>
       </header>
 

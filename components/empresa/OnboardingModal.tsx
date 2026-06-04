@@ -56,9 +56,9 @@ export default function OnboardingModal({ isOpen }: OnboardingModalProps) {
               <input
                 id="username"
                 type="text"
-                placeholder="tu_usuario"
+                placeholder="Ej. Juan Carlos"
                 value={username}
-                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ""))}
+                onChange={(e) => setUsername(e.target.value)}
                 required
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary transition-all"
                 disabled={isPending}
@@ -74,7 +74,7 @@ export default function OnboardingModal({ isOpen }: OnboardingModalProps) {
 
           <button
             type="submit"
-            disabled={isPending || username.length < 3}
+            disabled={isPending || username.trim().length < 3}
             className="w-full py-4 bg-secondary text-slate-950 font-bold rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
           >
             {isPending ? (

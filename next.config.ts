@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
   
   // Permite acceso desde la red local para desarrollo en dispositivos físicos
   allowedDevOrigins: ['192.168.1.5', 'localhost:3000'],
+
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
   
   // Configuración de cabeceras HTTP de seguridad
   async headers() {
