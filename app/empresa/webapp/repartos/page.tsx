@@ -10,7 +10,7 @@ export default async function RepartosPage() {
   const { role: userRole } = await getUserProfile();
   const canEdit = isAllowed(userRole, ["Admin", "Supervisor", "Developer"]);
 
-  if (!isAllowed(userRole, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer"])) {
+  if (!isAllowed(userRole, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser"])) {
     return <AccessDenied role={userRole} sectionName="Logística y Repartos" />;
   }
 

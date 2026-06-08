@@ -17,7 +17,7 @@ const styles = {
 export default async function VentasPage() {
   const { role: userRole } = await getUserProfile();
 
-  if (!isAllowed(userRole, ["Admin", "Closer", "Cambaceador", "Supervisor", "Developer"])) {
+  if (!isAllowed(userRole, ["Admin", "Closer", "Cambaceador", "Supervisor", "Developer", "CambaCloser"])) {
     return <AccessDenied role={userRole} sectionName="Formulario de Ventas" />;
   }
 
@@ -34,7 +34,7 @@ export default async function VentasPage() {
     .from("stock")
     .select("producto_id, estado, zona, imei");
 
-  if (userRole === "Closer" || userRole === "Cambaceador") {
+  if (userRole === "Closer" || userRole === "Cambaceador" || userRole === "CambaCloser") {
     queryStock.neq("estado", "En envío");
   }
 

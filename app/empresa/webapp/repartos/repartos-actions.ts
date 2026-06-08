@@ -16,7 +16,7 @@ import { getUserProfile, isAllowed } from "@/utils/auth-check";
  */
 export async function getRepartosMes(year: number, month: number) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer"])) {
+  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser"])) {
     return { success: false, error: "No autorizado" };
   }
 
@@ -79,7 +79,7 @@ export async function getRepartosMes(year: number, month: number) {
  */
 export async function getLogisticsFormData() {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer"])) {
+  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser"])) {
     return { success: false, error: "No autorizado" };
   }
 
@@ -250,7 +250,7 @@ export async function eliminarReparto(repartoId: string) {
  */
 export async function getRepartidoresList() {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer"])) {
+  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser"])) {
     return { success: false, error: "No autorizado" };
   }
 
@@ -371,7 +371,7 @@ export async function eliminarRepartidor(repartidorId: string) {
  */
 export async function getZonasList() {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer"])) {
+  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser"])) {
     return { success: false, error: "No autorizado" };
   }
 
