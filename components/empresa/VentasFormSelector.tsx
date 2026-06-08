@@ -39,7 +39,7 @@ export default function VentasFormSelector({ productos, zonasReparto, stockItems
   // Inicializamos en verdadero si el rol del usuario es "Cambaceador" por defecto
   const [showCambaceo, setShowCambaceo] = useState(userRole === "Cambaceador");
 
-  const isSuperUser = ["Admin", "Supervisor", "Developer"].includes(userRole);
+  const isSuperUser = ["Admin", "Supervisor", "Developer", "CambaCloser"].includes(userRole);
 
   return (
     <div className="space-y-6">

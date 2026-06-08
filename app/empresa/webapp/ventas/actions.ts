@@ -49,6 +49,7 @@ export async function submitVenta(formData: FormData) {
     cliente_historial: formData.get("cliente_historial") as string,
     zona: formData.get("zona") as string,
     repartidor: formData.get("repartidor") as string,
+    especificarLocal: formData.get("especificar_local") as string,
     fecha: formData.get("fecha_entrega") as string,
     hora: formData.get("hora_entrega") as string,
     comentarios: formData.get("comentarios") as string,
@@ -59,7 +60,9 @@ export async function submitVenta(formData: FormData) {
   const repartidorNormalizado = (data.repartidor || "").trim().toLowerCase();
   let webhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
-  if (repartidorNormalizado.includes("cambaceo victor") && process.env.DISCORD_WEBHOOK_URL_3) {
+  if (repartidorNormalizado.includes("ct") && process.env.DISCORD_WEBHOOK_URL_6) {
+    webhookUrl = process.env.DISCORD_WEBHOOK_URL_6;
+  } else if (repartidorNormalizado.includes("cambaceo victor") && process.env.DISCORD_WEBHOOK_URL_3) {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_3;
   } else if (repartidorNormalizado.includes("cambaceo kevin") && process.env.DISCORD_WEBHOOK_URL_4) {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_4;
@@ -88,14 +91,21 @@ export async function submitVenta(formData: FormData) {
     { name: "📍 Dirección", value: data.direccion, inline: false },
     { name: "📍 Zona de Reparto", value: data.zona || "No especificada", inline: false },
     { name: "🛵 Repartidor Asignado", value: data.repartidor || "No asignado", inline: false },
+  ];
+
+  if (data.repartidor === "Local CT" && data.especificarLocal) {
+    fields.push({ name: "🏪 Local Especificado", value: data.especificarLocal, inline: false });
+  }
+
+  fields.push(
     { name: "📱 Equipo", value: `**${data.celular}** (${data.color})`, inline: false },
     { name: "🆔 IMEI", value: data.imei ? `\`${data.imei}\`` : "No especificado", inline: false },
     { name: "💰 Enganche", value: `**$${data.enganche}**`, inline: false },
     { name: "✅ Cuenta Activa", value: data.cuenta.toUpperCase(), inline: false },
     { name: "📜 ¿Cliente con historial?", value: data.cliente_historial ? data.cliente_historial.toUpperCase() : "NO ESPECIFICADO", inline: false },
     { name: "📅 Fecha de Entrega", value: data.fecha, inline: false },
-    { name: "⏰ Hora de Entrega", value: data.hora, inline: false },
-  ];
+    { name: "⏰ Hora de Entrega", value: data.hora, inline: false }
+  );
 
   // Agregamos el campo de comentarios de forma condicional si no está vacío
   if (data.comentarios && data.comentarios.trim() !== "") {
@@ -115,7 +125,8 @@ export async function submitVenta(formData: FormData) {
 
   // Mención opcional a un rol específico de Discord (ej. Coordinadores o Closers) si está configurado
   const isCambaceo = repartidorNormalizado.includes("cambaceo victor") || repartidorNormalizado.includes("cambaceo kevin") || repartidorNormalizado.includes("cambaceo angel");
-  const roleId = (isCambaceo && process.env.DISCORD_ROLE_ID_2)
+  const isCT = repartidorNormalizado.includes("ct");
+  const roleId = ((isCambaceo || isCT) && process.env.DISCORD_ROLE_ID_2)
     ? process.env.DISCORD_ROLE_ID_2
     : process.env.DISCORD_ROLE_ID;
   const content = roleId ? `🛎️ <@&${roleId}>` : undefined;

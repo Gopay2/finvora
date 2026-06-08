@@ -178,6 +178,10 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
     return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre }));
   }, [selectedZona, zonasReparto]);
 
+  const selectedRepartidorName = useMemo(() => {
+    return repartidoresValidos.find(r => r.id === selectedRepartidorId)?.nombre || "";
+  }, [selectedRepartidorId, repartidoresValidos]);
+
   const handleModelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedModelKey(event.target.value);
     setSelectedColor("");
@@ -381,6 +385,28 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
             value={repartidoresValidos.find(r => r.id === selectedRepartidorId)?.nombre || ""} 
           />
         </div>
+
+        {/* ESPECIFICAR LOCAL (Solo si se selecciona "Local CT") */}
+        {selectedRepartidorName === "Local CT" && (
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Especificar local</label>
+            <select
+              name="especificar_local"
+              className={styles.selectInput}
+              style={{ colorScheme: 'dark' }}
+              required
+            >
+              <option value="" className="bg-slate-950 text-slate-500 italic">Seleccione un local...</option>
+              <option value="Península" className="bg-slate-950 text-white">Península</option>
+              <option value="Landmark" className="bg-slate-950 text-white">Landmark</option>
+              <option value="Río" className="bg-slate-950 text-white">Río</option>
+              <option value="Tecnología" className="bg-slate-950 text-white">Tecnología</option>
+              <option value="Brisas" className="bg-slate-950 text-white">Brisas</option>
+              <option value="Carpas carrusel" className="bg-slate-950 text-white">Carpas carrusel</option>
+              <option value="Plaza carrusel" className="bg-slate-950 text-white">Plaza carrusel</option>
+            </select>
+          </div>
+        )}
 
         {/* SELECTOR DE MODELO CON NUEVO FORMATO */}
         <div className={styles.inputGroup}>
