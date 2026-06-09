@@ -372,15 +372,16 @@ export default function VentasCambaceadorForm({ productos, zonasReparto, stockIt
           </div>
         </div>
 
-        {/* DOCUMENTO / FOTO (Opcional) */}
+        {/* DOCUMENTO / FOTO (Obligatorio) */}
         <div className={styles.inputGroupFull}>
-          <label className={styles.label}>Documento / Foto (Opcional)</label>
+          <label className={styles.label}>Documento / Foto</label>
           <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-secondary/40 rounded-xl p-6 bg-slate-950/20 transition-all group cursor-pointer">
             <input
               type="file"
               name="documento"
               accept="image/*,.pdf"
               onChange={handleFileChange}
+              required
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             />
             <div className="text-center space-y-1">
