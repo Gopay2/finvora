@@ -3,7 +3,7 @@
 import React from "react";
 import * as XLSX from "xlsx";
 
-type DownloadPreset = 'stock' | 'ventas';
+type DownloadPreset = 'stock' | 'ventas' | 'comprobantes';
 
 interface RepartidorOption {
   id: string;
@@ -65,6 +65,39 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
         "Fecha Venta": new Date(ventaItem.fecha_venta).toLocaleDateString('es-AR') + " " + new Date(ventaItem.fecha_venta).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
       }));
     }
+    else if (type === 'comprobantes') {
+      fileNamePrefix = "Comprobantes";
+      sheetName = "Comprobantes";
+      
+      const formatTijuanaDate = (dateStr: string) => {
+        try {
+          return new Intl.DateTimeFormat('es-MX', {
+            timeZone: 'America/Tijuana',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          }).format(new Date(dateStr));
+        } catch (e) {
+          return dateStr;
+        }
+      };
+
+      worksheetData = data.map(item => ({
+        "Fecha (Tijuana)": formatTijuanaDate(item.created_at),
+        "Vendedor": item.vendedor?.username || "Desconocido",
+        "Rol Vendedor": item.vendedor?.role || "",
+        "Repartidor": item.repartidor?.username || "Desconocido",
+        "Rol Repartidor": item.repartidor?.role || "",
+        "Monto Enganche": item.monto_enganche,
+        "Cargado Por": item.creador?.username || "Desconocido",
+        "Rol Creador": item.creador?.role || "",
+        "URL Comprobante": item.comprobante_url
+      }));
+    }
 
     // Proceso de generación de Excel
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
@@ -77,7 +110,8 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
 
   const titles = {
     stock: "Descargar Stock en Excel",
-    ventas: "Descargar Historial de Ventas"
+    ventas: "Descargar Historial de Ventas",
+    comprobantes: "Descargar Comprobantes en Excel"
   };
 
   return (

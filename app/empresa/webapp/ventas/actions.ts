@@ -68,6 +68,8 @@ export async function submitVenta(formData: FormData) {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_4;
   } else if (repartidorNormalizado.includes("cambaceo angel") && process.env.DISCORD_WEBHOOK_URL_5) {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_5;
+  } else if (repartidorNormalizado.includes("cambaceo brenda") && process.env.DISCORD_WEBHOOK_URL_7) {
+    webhookUrl = process.env.DISCORD_WEBHOOK_URL_7;
   } else if (zonaNormalizada === "monterrey") {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_2 || process.env.DISCORD_WEBHOOK_URL;
   }
@@ -124,7 +126,11 @@ export async function submitVenta(formData: FormData) {
   };
 
   // Mención opcional a un rol específico de Discord (ej. Coordinadores o Closers) si está configurado
-  const isCambaceo = repartidorNormalizado.includes("cambaceo victor") || repartidorNormalizado.includes("cambaceo kevin") || repartidorNormalizado.includes("cambaceo angel");
+  const isCambaceo = 
+    repartidorNormalizado.includes("cambaceo victor") || 
+    repartidorNormalizado.includes("cambaceo kevin") || 
+    repartidorNormalizado.includes("cambaceo angel") ||
+    repartidorNormalizado.includes("cambaceo brenda");
   const isCT = repartidorNormalizado.includes("ct");
   const roleId = ((isCambaceo || isCT) && process.env.DISCORD_ROLE_ID_2)
     ? process.env.DISCORD_ROLE_ID_2
@@ -192,6 +198,11 @@ export async function submitVentaCambaceo(formData: FormData) {
   };
 
   const file = formData.get("documento") as File | null;
+  const hasFile = file && file.size > 0;
+
+  if (!hasFile) {
+    return { success: false, error: "El documento o foto del comprobante es obligatorio." };
+  }
 
   // 3. CONFIGURACIÓN DEL WEBHOOK (URLs 3, 4 y 5 de Cambaceo con fallback)
   const repartidorNormalizado = (data.repartidor || "").trim().toLowerCase();
@@ -203,6 +214,8 @@ export async function submitVentaCambaceo(formData: FormData) {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_4;
   } else if (repartidorNormalizado.includes("cambaceo angel") && process.env.DISCORD_WEBHOOK_URL_5) {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_5;
+  } else if (repartidorNormalizado.includes("cambaceo brenda") && process.env.DISCORD_WEBHOOK_URL_7) {
+    webhookUrl = process.env.DISCORD_WEBHOOK_URL_7;
   }
 
   if (!webhookUrl) {
@@ -235,7 +248,6 @@ export async function submitVentaCambaceo(formData: FormData) {
     timestamp: new Date().toISOString(),
   };
 
-  const hasFile = file && file.size > 0;
   const isImage = hasFile && file.type.startsWith("image/");
 
   const extension = file && file.name ? file.name.split('.').pop() || 'png' : 'png';
