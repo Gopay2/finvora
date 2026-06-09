@@ -222,9 +222,9 @@ export default function VentasCambaceadorForm({ productos, zonasReparto, stockIt
 
 
       <div className={styles.formGrid}>
-        {/* SELECTOR DE CAMBACEADOR */}
+        {/* SELECTOR DE UBICACION */}
         <div className={styles.inputGroup}>
-          <label className={styles.label}>Cambaceador</label>
+          <label className={styles.label}>Ubicación</label>
           <select
             name="repartidor_id"
             value={selectedCambaceadorId}
@@ -233,7 +233,7 @@ export default function VentasCambaceadorForm({ productos, zonasReparto, stockIt
             required
             onChange={handleCambaceadorChange}
           >
-            <option value="" className="bg-slate-950 text-slate-500 italic">Seleccione su nombre...</option>
+            <option value="" className="bg-slate-950 text-slate-500 italic">Seleccione la ubicación...</option>
             {cambaceadoresList.map((camb) => (
               <option key={camb.id} value={camb.id} className="bg-slate-950 text-white">
                 {camb.nombre}
@@ -260,7 +260,7 @@ export default function VentasCambaceadorForm({ productos, zonasReparto, stockIt
             onChange={handleModelChange}
           >
             <option value="" className="bg-slate-950 text-slate-500 italic">
-              {!selectedCambaceadorId ? "Primero elija su nombre..." : "Seleccione un modelo..."}
+              {!selectedCambaceadorId ? "Primero elija la ubicación..." : "Seleccione un modelo..."}
             </option>
             {modelosUnicos.map(([key, info]) => {
               const isAConsultar = info.totalDisponible === 0 && info.totalAConsultar > 0;

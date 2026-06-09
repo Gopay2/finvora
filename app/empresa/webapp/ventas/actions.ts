@@ -168,6 +168,18 @@ export async function submitVentaCambaceo(formData: FormData) {
     return { success: false, error: "No autorizado. Debes iniciar sesión." };
   }
 
+  // 1.2 OBTENER INFORMACIÓN DE PERFIL: Recuperamos el nombre de usuario y rol del vendedor
+  const { data: profile } = await supabase
+    .from("perfiles")
+    .select("role, username")
+    .eq("id", user.id)
+    .single();
+
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const userDisplayName = profile?.username
+    ? `${profile.role}: ${capitalize(profile.username)}`
+    : user.email;
+
   // 2. EXTRACCIÓN DE DATOS SIMPLIFICADOS
   const data = {
     enganche_cliente: formData.get("enganche_cliente") as string,
@@ -198,9 +210,10 @@ export async function submitVentaCambaceo(formData: FormData) {
     return { success: false, error: "Error de configuración en el servidor." };
   }
 
-  // 5. ESTRUCTURA DEL EMBED SIMPLIFICADO: El Cambaceador figura como Vendedor
+  // 5. ESTRUCTURA DEL EMBED SIMPLIFICADO: El usuario autenticado figura como Vendedor
   const fields = [
-    { name: "👤 Vendedor", value: `**${data.repartidor}**`, inline: false },
+    { name: "👤 Vendedor", value: `**${userDisplayName}**`, inline: false },
+    { name: "📍 Ubicación", value: `**${data.repartidor || "No especificada"}**`, inline: false },
     { name: "📱 Equipo", value: `**${data.celular}** (${data.color})`, inline: false },
     { name: "🆔 IMEI", value: data.imei ? `\`${data.imei}\`` : "No especificado", inline: false },
     { name: "💰 Enganche Cliente", value: `**$${data.enganche_cliente}**`, inline: false },
