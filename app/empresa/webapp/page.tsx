@@ -96,7 +96,7 @@ export default function WebAppPage() {
           <h2 className={styles.cardTitle}>Comprobantes</h2>
           <p className={styles.cardDesc}>Registra y descarga los comprobantes de los clientes.</p>
         </div>
-        <div className={styles.cardButton}>¡Proximamente!</div>
+        <div className={styles.cardButton}>Acceder</div>
       </Link>
 
       {/* Próxima Sección 1 */}

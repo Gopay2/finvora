@@ -31,10 +31,10 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
       sheetName = "Stock";
       worksheetData = data.map(stockItem => {
         // Mapear el UUID zona al nombre del repartidor
-        const nombreUbicacion = repartidores 
+        const nombreUbicacion = repartidores
           ? (repartidores.find(repartidor => repartidor.id === stockItem.zona)?.nombre || "Sin Asignar")
           : (stockItem.zona || "Sin Asignar");
-          
+
         return {
           "IMEI": stockItem.imei,
           "Marca": stockItem.productos?.marca || "N/A",
@@ -47,7 +47,7 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
           "Fecha de Ingreso": new Date(stockItem.fecha_ingreso).toLocaleDateString('es-AR')
         };
       });
-    } 
+    }
     else if (type === 'ventas') {
       fileNamePrefix = "Ventas";
       sheetName = "Ventas";
@@ -68,7 +68,7 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
     else if (type === 'comprobantes') {
       fileNamePrefix = "Comprobantes";
       sheetName = "Comprobantes";
-      
+
       const formatTijuanaDate = (dateStr: string) => {
         try {
           return new Intl.DateTimeFormat('es-MX', {
@@ -114,10 +114,16 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
     comprobantes: "Descargar Comprobantes en Excel"
   };
 
+  const isDisabled = !data || data.length === 0;
+
   return (
-    <button 
+    <button
       onClick={downloadExcel}
-      className="flex items-center justify-center px-3 md:px-4 py-2 md:py-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl hover:bg-slate-700 hover:text-white transition-all cursor-pointer"
+      disabled={isDisabled}
+      className={`flex items-center justify-center px-3 md:px-4 py-2 md:py-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl transition-all ${isDisabled
+          ? "opacity-40 cursor-not-allowed"
+          : "hover:bg-slate-700 hover:text-white cursor-pointer"
+        }`}
       title={titles[type]}
     >
       <span className="material-symbols-outlined text-base md:text-xl">download</span>

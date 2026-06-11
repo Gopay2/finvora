@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { submitComprobante, ComprobanteRecord } from "./comprobantes-actions";
+import { submitComprobante, getComprobantes, eliminarComprobante, ComprobanteRecord } from "./comprobantes-actions";
 import DownloadExcelButton from "@/components/empresa/DownloadExcelButton";
+import JSZip from "jszip";
 
 interface OptionItem {
   id: string;
@@ -33,13 +34,13 @@ const styles = {
   statusError: "p-4 rounded-xl text-sm font-medium flex items-center gap-3 bg-red-500/10 text-red-400 border border-red-500/20",
   tableContainer: "bg-slate-900/30 backdrop-blur-xl border border-slate-800/80 rounded-3xl overflow-hidden shadow-2xl mt-8",
   tableWrapper: "overflow-x-auto",
-  table: "w-full border-collapse text-left text-sm",
+  table: "w-full border-collapse text-center text-sm",
   thead: "bg-slate-950 border-b border-slate-800 text-slate-400 font-semibold uppercase text-xs tracking-wider",
-  th: "px-6 py-4",
+  th: "px-6 py-4 text-center",
   tr: "border-b border-slate-800/50 hover:bg-slate-900/20 transition-colors",
-  td: "px-6 py-4 text-slate-300 font-medium",
+  td: "px-6 py-4 text-slate-300 font-medium text-center",
   badge: "px-2 py-1 rounded bg-slate-800 text-xs text-slate-400 font-bold border border-slate-700",
-  linkBtn: "text-secondary hover:underline flex items-center gap-1 cursor-pointer font-bold"
+  linkBtn: "text-secondary hover:underline inline-flex items-center gap-1 cursor-pointer font-bold"
 };
 
 export default function ComprobantesClientPage({
@@ -56,6 +57,17 @@ export default function ComprobantesClientPage({
   // Estados para filtros
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  
+  // Estado local para la lista de comprobantes
+  const [list, setList] = useState<ComprobanteRecord[]>(comprobantesList);
+  
+  useEffect(() => {
+    setList(comprobantesList);
+  }, [comprobantesList]);
+
+  // Estados para eliminación de comprobantes
+  const [deletingItem, setDeletingItem] = useState<ComprobanteRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Estados para descarga masiva de archivos
   const [isDownloading, setIsDownloading] = useState(false);
@@ -122,6 +134,15 @@ export default function ComprobantesClientPage({
       setSelectedFileName("");
       setVendedorSearch("");
       setSelectedVendedor(null);
+      
+      // Obtener la lista actualizada de forma instantánea sin refrescar página completa
+      if (showTable) {
+        const listRes = await getComprobantes();
+        if (listRes.success && listRes.data) {
+          setList(listRes.data);
+        }
+      }
+      
       router.refresh();
     } else {
       setStatus({ type: 'error', message: res.error || 'Error al procesar el comprobante.' });
@@ -129,9 +150,28 @@ export default function ComprobantesClientPage({
     setIsSubmitting(false);
   };
 
+  const handleDelete = async () => {
+    if (!deletingItem) return;
+    setIsDeleting(true);
+    setStatus(null);
+
+    const res = await eliminarComprobante(deletingItem.id);
+    if (res.success) {
+      setStatus({ type: 'success', message: '¡Comprobante eliminado exitosamente!' });
+      // Remover de la lista local
+      setList(prev => prev.filter(item => item.id !== deletingItem.id));
+      router.refresh();
+    } else {
+      setStatus({ type: 'error', message: res.error || 'Error al eliminar el comprobante.' });
+    }
+
+    setIsDeleting(false);
+    setDeletingItem(null);
+  };
+
   // Filtrado en memoria por rango de fechas (comparando en la zona horaria de Tijuana YYYY-MM-DD)
   const filteredList = useMemo(() => {
-    return comprobantesList.filter((item) => {
+    return list.filter((item) => {
       const tijuanaDateStr = new Intl.DateTimeFormat('fr-CA', {
         timeZone: 'America/Tijuana',
         year: 'numeric',
@@ -143,12 +183,13 @@ export default function ComprobantesClientPage({
       if (dateTo && tijuanaDateStr > dateTo) return false;
       return true;
     });
-  }, [comprobantesList, dateFrom, dateTo]);
+  }, [list, dateFrom, dateTo]);
 
-  // Descarga en lote secuencial de archivos con delay
+  // Descarga en lote empaquetada en un solo archivo ZIP para soportar dispositivos móviles
   const handleDownloadAllFiles = async () => {
     if (filteredList.length === 0) return;
     setIsDownloading(true);
+    const zip = new JSZip();
 
     for (let i = 0; i < filteredList.length; i++) {
       const item = filteredList[i];
@@ -158,12 +199,7 @@ export default function ComprobantesClientPage({
       try {
         const response = await fetch(url);
         const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
 
-        const a = document.createElement('a');
-        a.href = blobUrl;
-
-        // Nombre de archivo con formato legible
         const ext = url.split('.').pop()?.split('?')[0] || 'bin';
         const vendorName = item.vendedor?.username || 'vendedor';
         const formattedDate = new Intl.DateTimeFormat('es-MX', {
@@ -176,17 +212,27 @@ export default function ComprobantesClientPage({
           hour12: false
         }).format(new Date(item.created_at)).replace(/[/:\s,]/g, '_');
 
-        a.download = `Comprobante_${vendorName}_${formattedDate}.${ext}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(blobUrl);
-
-        // Esperar 400ms para evitar bloqueos del navegador de múltiples descargas concurrentes
-        await new Promise(resolve => setTimeout(resolve, 400));
+        const fileName = `Comprobante_${vendorName}_${formattedDate}.${ext}`;
+        zip.file(fileName, blob);
       } catch (err) {
-        console.error("Error al descargar comprobante en lote:", url, err);
+        console.error("Error al agregar archivo al ZIP:", url, err);
       }
+    }
+
+    setDownloadProgress("Generando archivo ZIP...");
+    try {
+      const zipContent = await zip.generateAsync({ type: "blob" });
+      const blobUrl = URL.createObjectURL(zipContent);
+
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `Comprobantes_Finvora_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("Error al generar o descargar el ZIP:", err);
     }
 
     setIsDownloading(false);
@@ -396,11 +442,11 @@ export default function ComprobantesClientPage({
           {/* Header con botón para Excel y descarga masiva */}
           <div className="bg-slate-950 p-6 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-100">Registro Histórico (Últimos 2 Meses)</h3>
+              <h3 className="text-lg font-bold text-slate-100">Registro Histórico</h3>
               <p className="text-xs text-slate-400 mt-1">Lista detallada de comprobantes cargados.</p>
             </div>
             
-            <div className="flex flex-wrap items-center gap-3 self-start md:self-center">
+            <div className="flex flex-wrap justify-center items-center gap-3 self-center">
               <DownloadExcelButton data={filteredList} type="comprobantes" />
               
               <button
@@ -421,41 +467,61 @@ export default function ComprobantesClientPage({
 
           {/* Filtros de Fecha */}
           <div className="bg-slate-900/50 p-6 border-b border-slate-800/60 flex flex-wrap items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 max-sm:w-full">
               <span className="material-symbols-outlined text-slate-400 text-sm">calendar_month</span>
-              <span className="text-slate-300 font-medium text-xs">Filtrar por fecha (Tijuana):</span>
+              <span className="text-slate-300 font-medium text-xs">Filtrar por fecha:</span>
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-400">Desde:</label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                onClick={(e) => {
-                  try {
-                    e.currentTarget.showPicker();
-                  } catch (err) {}
-                }}
-                className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-secondary transition-all cursor-pointer"
-                style={{ colorScheme: 'dark' }}
-                suppressHydrationWarning
-              />
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <label className="text-xs text-slate-400 min-w-[45px] sm:min-w-0">Desde:</label>
+              <div className="relative flex items-center flex-1 sm:flex-initial">
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  onKeyDown={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    try {
+                      e.currentTarget.showPicker();
+                    } catch (err) {}
+                  }}
+                  className={`w-full sm:w-[130px] bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-center focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
+                    dateFrom ? "text-slate-200" : "text-transparent"
+                  }`}
+                  style={{ colorScheme: 'dark' }}
+                  suppressHydrationWarning
+                />
+                {!dateFrom && (
+                  <span className="absolute inset-0 flex items-center justify-center text-xs text-slate-500 pointer-events-none">
+                    dd/mm/aaaa
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-400">Hasta:</label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                onClick={(e) => {
-                  try {
-                    e.currentTarget.showPicker();
-                  } catch (err) {}
-                }}
-                className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-secondary transition-all cursor-pointer"
-                style={{ colorScheme: 'dark' }}
-                suppressHydrationWarning
-              />
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <label className="text-xs text-slate-400 min-w-[45px] sm:min-w-0">Hasta:</label>
+              <div className="relative flex items-center flex-1 sm:flex-initial">
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  onKeyDown={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    try {
+                      e.currentTarget.showPicker();
+                    } catch (err) {}
+                  }}
+                  className={`w-full sm:w-[130px] bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-center focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
+                    dateTo ? "text-slate-200" : "text-transparent"
+                  }`}
+                  style={{ colorScheme: 'dark' }}
+                  suppressHydrationWarning
+                />
+                {!dateTo && (
+                  <span className="absolute inset-0 flex items-center justify-center text-xs text-slate-500 pointer-events-none">
+                    dd/mm/aaaa
+                  </span>
+                )}
+              </div>
             </div>
             {(dateFrom || dateTo) && (
               <button
@@ -481,12 +547,12 @@ export default function ComprobantesClientPage({
             <table className={styles.table}>
               <thead className={styles.thead}>
                 <tr>
-                  <th className={styles.th}>Fecha (Tijuana)</th>
+                  <th className={styles.th}>Fecha</th>
                   <th className={styles.th}>Vendedor</th>
                   <th className={styles.th}>Repartidor</th>
-                  <th className={styles.th}>Monto</th>
-                  <th className={styles.th}>Cargado Por</th>
+                  <th className={styles.th}>Enganche</th>
                   <th className={styles.th}>Comprobante</th>
+                  <th className={styles.th}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -504,7 +570,7 @@ export default function ComprobantesClientPage({
                       </td>
                       <td className={styles.td}>
                         {item.vendedor ? (
-                          <div className="flex flex-col">
+                          <div className="flex flex-col items-center">
                             <span className="text-slate-100 font-bold">{item.vendedor.username.charAt(0).toUpperCase() + item.vendedor.username.slice(1)}</span>
                             <span className="text-[10px] text-slate-500">{item.vendedor.role}</span>
                           </div>
@@ -514,7 +580,7 @@ export default function ComprobantesClientPage({
                       </td>
                       <td className={styles.td}>
                         {item.repartidor ? (
-                          <div className="flex flex-col">
+                          <div className="flex flex-col items-center">
                             <span className="text-slate-100 font-bold">{item.repartidor.username.charAt(0).toUpperCase() + item.repartidor.username.slice(1)}</span>
                             <span className="text-[10px] text-slate-500">{item.repartidor.role}</span>
                           </div>
@@ -524,15 +590,6 @@ export default function ComprobantesClientPage({
                       </td>
                       <td className={styles.td}>
                         <span className="text-secondary font-bold">{formatCurrency(item.monto_enganche)}</span>
-                      </td>
-                      <td className={styles.td}>
-                        {item.creador ? (
-                          <span className="text-slate-400 text-xs">
-                            {item.creador.username.charAt(0).toUpperCase() + item.creador.username.slice(1)} ({item.creador.role})
-                          </span>
-                        ) : (
-                          <span className="text-slate-500">-</span>
-                        )}
                       </td>
                       <td className={styles.td}>
                         <a
@@ -545,11 +602,77 @@ export default function ComprobantesClientPage({
                           Ver archivo
                         </a>
                       </td>
+                      <td className={styles.td}>
+                        <div className="flex items-center justify-center">
+                          <button
+                            type="button"
+                            onClick={() => setDeletingItem(item)}
+                            className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:border-red-500/30 transition-all flex items-center justify-center cursor-pointer animate-in duration-200"
+                            title="Eliminar Comprobante"
+                          >
+                            <span className="material-symbols-outlined text-base">delete</span>
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Eliminación de Comprobante Premium */}
+      {deletingItem && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          {/* Backdrop con Blur y oscurecimiento suave */}
+          <div 
+            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity animate-in fade-in duration-300"
+            onClick={() => setDeletingItem(null)}
+          />
+          {/* Modal Content */}
+          <div className="relative bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95 duration-200 text-center space-y-6">
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+              <span className="material-symbols-outlined text-2xl">warning</span>
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-lg font-bold text-white">¿Eliminar Comprobante?</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                ¿Estás seguro de que deseas eliminar este comprobante?<br/>
+                Monto: <strong className="text-secondary">{formatCurrency(deletingItem.monto_enganche)}</strong><br/>
+                Vendedor: <strong className="text-white">{deletingItem.vendedor?.username || "Desconocido"}</strong><br/>
+                Repartidor: <strong className="text-white">{deletingItem.repartidor?.username || "Desconocido"}</strong><br/>
+                Esta acción es irreversible, eliminará el registro de la base de datos y el archivo correspondiente de storage.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingItem(null)}
+                disabled={isDeleting}
+                className="flex-1 py-3 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold rounded-xl transition-all text-xs cursor-pointer border border-slate-700 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-all text-xs cursor-pointer shadow-[0_0_15px_rgba(239,68,68,0.2)] disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  "Eliminar"
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
