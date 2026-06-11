@@ -19,7 +19,7 @@ export default async function ComprobantesPage() {
   const { role: userRole } = await getUserProfile();
 
   // 1. Control de acceso a la sección
-  if (!isAllowed(userRole, ["Developer"])) {
+  if (!isAllowed(userRole, ["Developer", "Admin", "Supervisor", "Repartidor"])) {
     return <AccessDenied role={userRole} sectionName="Comprobantes" />;
   }
 

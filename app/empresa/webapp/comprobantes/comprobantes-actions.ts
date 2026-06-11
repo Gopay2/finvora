@@ -33,7 +33,7 @@ export interface ComprobanteRecord {
 export async function submitComprobante(formData: FormData) {
   const { id: currentUserId, role: userRole } = await getUserProfile();
 
-  if (!currentUserId || !isAllowed(userRole, ["Developer"])) {
+  if (!currentUserId || !isAllowed(userRole, ["Developer", "Admin", "Supervisor", "Repartidor"])) {
     return { success: false, error: "No autorizado. No tienes los permisos necesarios." };
   }
 
@@ -162,4 +162,67 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
   }));
 
   return { success: true, data: formattedData };
+}
+
+/**
+ * Server Action para eliminar un comprobante de la base de datos y su archivo de storage.
+ * Accesible únicamente por roles superiores: Admin, Supervisor, Developer.
+ */
+export async function eliminarComprobante(id: string): Promise<{ success: boolean; error?: string }> {
+  const { role: userRole } = await getUserProfile();
+
+  if (!isAllowed(userRole, ["Admin", "Supervisor", "Developer"])) {
+    return { success: false, error: "No autorizado. No tienes permisos para eliminar registros." };
+  }
+
+  const supabase = await createClient();
+
+  // 1. Obtener la URL del comprobante para poder borrar el archivo de storage
+  const { data: item, error: fetchError } = await supabase
+    .from('comprobantes')
+    .select('comprobante_url')
+    .eq('id', id)
+    .single();
+
+  if (fetchError || !item) {
+    console.error("Error al buscar el comprobante:", fetchError);
+    return { success: false, error: "No se encontró el registro a eliminar." };
+  }
+
+  const comprobanteUrl = item.comprobante_url;
+
+  // 2. Eliminar el registro de la base de datos
+  const { data: deletedRows, error: deleteError } = await supabase
+    .from('comprobantes')
+    .delete()
+    .eq('id', id)
+    .select();
+
+  if (deleteError) {
+    console.error("Error al eliminar el comprobante de la DB:", deleteError);
+    return { success: false, error: `Error en la base de datos: ${deleteError.message}` };
+  }
+
+  if (!deletedRows || deletedRows.length === 0) {
+    console.warn("No se eliminó ninguna fila. RLS podría estar bloqueando el DELETE.");
+    return {
+      success: false,
+      error: "No se pudo eliminar el registro. Row Level Security (RLS) bloqueó la operación o no tienes permisos de eliminación en Supabase para la tabla 'comprobantes'."
+    };
+  }
+
+  // 3. Eliminar el archivo de Supabase Storage
+  try {
+    const searchString = "/storage/v1/object/public/comprobantes/";
+    const index = comprobanteUrl.indexOf(searchString);
+    if (index !== -1) {
+      const filePath = comprobanteUrl.substring(index + searchString.length);
+      await supabase.storage.from('comprobantes').remove([filePath]);
+    }
+  } catch (cleanupError) {
+    console.error("Error al limpiar archivo de storage tras eliminación:", cleanupError);
+  }
+
+  revalidatePath('/empresa/webapp/comprobantes');
+  return { success: true };
 }
