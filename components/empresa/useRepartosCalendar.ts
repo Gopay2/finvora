@@ -102,11 +102,11 @@ export function useRepartosCalendar(userRole?: string) {
   const [selectedRepartidorTab, setSelectedRepartidorTab] = useState<string | null>(null);
   const [timezoneDiffText, setTimezoneDiffText] = useState<string | null>(null);
 
-  // Filtrar repartidores de logística (excluir "local" y "cambaceo" case-insensitive)
+  // Filtrar repartidores de logística (excluir "local", "cambaceo" y "humberto" case-insensitive)
   const repartidoresFiltradosLogistica = useMemo(() => {
     return (formDataOptions?.repartidores || []).filter(rep => {
       const name = (rep.nombre || "").toLowerCase();
-      return !name.includes("local") && !name.includes("cambaceo");
+      return !name.includes("local") && !name.includes("cambaceo") && !name.includes("humberto");
     });
   }, [formDataOptions?.repartidores]);
 
