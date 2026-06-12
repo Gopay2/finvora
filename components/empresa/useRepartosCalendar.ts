@@ -65,6 +65,7 @@ export interface Vendedor {
 export interface StockItem {
   imei: string;
   producto_id: string;
+  zona?: string | null;
   productos?: {
     marca: string;
     modelo: string;
@@ -207,6 +208,19 @@ export function useRepartosCalendar(userRole?: string) {
     cargarOpcionesForm();
   }, []);
 
+  useEffect(() => {
+    if (formRepartidor) {
+      const match = formDataOptions.zonas.find(z => z.repartidor_id === formRepartidor);
+      setFormZona(match ? match.id : '');
+    } else {
+      setFormZona('');
+    }
+  }, [formRepartidor, formDataOptions.zonas]);
+
+  useEffect(() => {
+    console.log("LOGISTICS CALENDAR STOCK:", formDataOptions.stock);
+  }, [formDataOptions.stock]);
+
   const today = new Date();
   const isToday = (d: number) => {
     return today.getDate() === d && today.getMonth() === month && today.getFullYear() === year;
@@ -248,7 +262,7 @@ export function useRepartosCalendar(userRole?: string) {
       
       const deliveryDate = new Date(year, month, selectedDay || 1, deliveryHour, deliveryMinute);
 
-      const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor';
+      const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor' || userRole === 'Repartidor';
       if (!isPrivileged && deliveryDate < minAllowedTime) {
         setFormError("La fecha y hora del reparto debe ser al menos 1 hora en el futuro respecto a la hora actual del repartidor, para permitir que tenga tiempo de llegar.");
         setActionLoading(false);
