@@ -41,14 +41,14 @@ const styles = {
   
   // Modal layout
   modalBackdrop: "fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4",
-  modalContainer: "w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col max-h-[90vh] my-auto",
-  modalHeader: "flex items-center justify-between border-b border-slate-800 pb-4 shrink-0",
+  modalContainer: "w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-8 shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col max-h-[80dvh] md:max-h-[90vh] my-auto",
+  modalHeader: "flex items-center justify-between border-b border-slate-800 pb-3 md:pb-4 shrink-0",
   modalTitle: "text-xl md:text-2xl font-bold text-white",
   modalSubtitle: "text-slate-500 text-xs mt-1",
   modalCloseBtn: "w-10 h-10 flex items-center justify-center rounded-xl bg-slate-950/50 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800 hover:border-slate-700 transition-all cursor-pointer",
   
   // Tabs
-  tabsContainer: "flex flex-col gap-2 border-b border-slate-800/80 pb-4 pt-3 shrink-0",
+  tabsContainer: "flex flex-col gap-2 border-b border-slate-800/80 pb-3 pt-2 md:pb-4 md:pt-3 shrink-0",
   tabsList: "flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1",
   tabBtn: "px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 border cursor-pointer",
   tabBtnActive: "bg-secondary/10 border-secondary text-secondary shadow-[0_0_15px_rgba(16,185,129,0.08)] font-extrabold",
@@ -60,9 +60,9 @@ const styles = {
   noDriversWarning: "p-4 bg-slate-950/30 border border-slate-800 text-slate-500 text-xs rounded-2xl text-center my-3 shrink-0",
   
   // List details
-  repartosList: "flex-1 overflow-y-auto py-4 space-y-2 pr-1 custom-scrollbar min-h-0 my-2",
-  timeRow: "flex gap-4 items-stretch group/row min-h-12",
-  timeColumn: "w-20 flex flex-col items-center justify-center shrink-0 border-r border-slate-800 pr-3 relative",
+  repartosList: "flex-1 overflow-y-auto py-2 md:py-4 space-y-2 pr-1 custom-scrollbar min-h-0 my-2",
+  timeRow: "flex gap-2 md:gap-4 items-stretch group/row min-h-12",
+  timeColumn: "w-14 md:w-20 flex flex-col items-center justify-center shrink-0 border-r border-slate-800 pr-2 md:pr-3 relative",
   timeText: "text-xs font-black text-slate-300 font-mono tracking-tight",
   periodText: "text-[9px] text-slate-600 uppercase tracking-widest font-semibold",
   lineTop: "absolute right-[-1px] top-1/2 bottom-0 w-[2px] bg-slate-800 group-last/row:hidden",
@@ -73,17 +73,17 @@ const styles = {
   contentCol: "flex-1 pb-2",
   
   // Reparto Card
-  card: "relative bg-slate-950/40 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-slate-700 transition-all shadow-inner group overflow-hidden",
+  card: "relative bg-slate-950/40 border border-slate-800 rounded-2xl p-3 md:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 hover:border-slate-700 transition-all shadow-inner group overflow-hidden pr-10 md:pr-4",
   cardActiveStrip: "absolute left-0 top-0 bottom-0 w-1 bg-secondary shadow-[0_0_10px_rgba(16,185,129,0.5)]",
-  cardContent: "space-y-2 flex-1 min-w-0 pl-2",
-  cardBadgeRow: "flex flex-wrap items-center gap-2",
-  cardZoneBadge: "px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-md bg-emerald-500/10 text-secondary border border-emerald-500/20",
-  cardTitle: "text-white font-bold text-base truncate",
-  cardSpecs: "text-xs font-normal text-slate-500 ml-2",
-  cardDetails: "flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400",
-  cardDetailItem: "flex items-center gap-1.5",
+  cardContent: "space-y-1.5 md:space-y-2 flex-1 min-w-0 pl-1 md:pl-2",
+  cardBadgeRow: "flex flex-wrap items-center gap-1.5",
+  cardZoneBadge: "px-2 py-0.5 text-[9px] md:text-[10px] md:px-2.5 font-bold uppercase rounded-md bg-emerald-500/10 text-secondary border border-emerald-500/20",
+  cardTitle: "text-white font-bold text-sm md:text-base truncate",
+  cardSpecs: "text-[10px] md:text-xs font-normal text-slate-500 ml-1.5",
+  cardDetails: "flex flex-wrap gap-x-3 gap-y-0.5 md:gap-x-4 md:gap-y-1 text-[11px] md:text-xs text-slate-400",
+  cardDetailItem: "flex items-center gap-1 md:gap-1.5",
   cardDetailVal: "text-slate-200",
-  cardDeleteBtn: "p-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:border-red-500/30 transition-all flex items-center justify-center cursor-pointer md:self-center self-end disabled:opacity-50",
+  cardDeleteBtn: "absolute top-3 right-3 md:relative md:top-auto md:right-auto p-1.5 md:p-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:border-red-500/30 transition-all flex items-center justify-center cursor-pointer md:self-center disabled:opacity-50",
   
   // Empty slot
   emptySlotBtn: "w-full text-left py-2.5 px-4 rounded-xl border border-dashed transition-all flex items-center justify-between group/btn",
@@ -95,7 +95,7 @@ const styles = {
   emptyListIcon: "material-symbols-outlined text-4xl mb-2 opacity-50",
   
   // Footer
-  footer: "flex items-center justify-end gap-3 border-t border-slate-800 pt-4 shrink-0",
+  footer: "flex items-center justify-end gap-3 border-t border-slate-800 pt-3 md:pt-4 shrink-0",
   footerCloseBtn: "px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-semibold text-sm transition-all cursor-pointer border border-slate-700",
   footerCreateBtn: "px-5 py-2.5 bg-secondary text-slate-950 font-bold rounded-xl hover:bg-secondary/90 transition-all text-sm cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.2)] disabled:opacity-50 disabled:cursor-not-allowed",
   
@@ -168,6 +168,19 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
     handleCrearReparto,
     handleEliminarReparto,
   } = useRepartosCalendar(userRole);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isModalOpen]);
+
+  const canCreateOrDelete = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor' || userRole === 'Repartidor';
 
   return (
     <div className={styles.wrapper}>
@@ -423,7 +436,7 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                       const driverNow = new Date(driverNowString);
                       const minAllowed = new Date(driverNow.getTime() + 60 * 60 * 1000);
                       const slotDate = new Date(year, month, selectedDay || 1, hour, 0);
-                      const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor';
+                      const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor' || userRole === 'Repartidor';
                       const isPastOrUnavailable = !isPrivileged && (slotDate < minAllowed);
                       
                       // Buscar repartos para esta hora asignados a este repartidor específico
@@ -472,13 +485,12 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                                     <div className={styles.cardContent}>
                                       <div className={styles.cardBadgeRow}>
                                         <span className={styles.cardZoneBadge}>
-                                          📍 {rep.zonas_reparto?.nombre_zona || 'Sin Zona'} ({rep.zonas_reparto?.descripcion || 'Sin descripción'})
+                                          📍 {rep.zonas_reparto?.nombre_zona || 'Sin Zona'}
                                         </span>
                                       </div>
                                       
                                       <h4 className={styles.cardTitle}>
-                                        {rep.productos?.marca} {rep.productos?.modelo} 
-                                        <span className={styles.cardSpecs}>({rep.productos?.color} - {rep.productos?.almacenamiento})</span>
+                                        {rep.productos?.marca} {rep.productos?.modelo}
                                       </h4>
                                       
                                       <div className={styles.cardDetails}>
@@ -504,14 +516,16 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                                       </div>
                                     </div>
                                     
-                                    <button
-                                      onClick={() => handleEliminarReparto(rep.id)}
-                                      disabled={actionLoading}
-                                      className={styles.cardDeleteBtn}
-                                      title="Eliminar Reparto"
-                                    >
-                                      <span className="material-symbols-outlined text-lg">delete</span>
-                                    </button>
+                                    {canCreateOrDelete && (
+                                      <button
+                                        onClick={() => handleEliminarReparto(rep.id)}
+                                        disabled={actionLoading}
+                                        className={styles.cardDeleteBtn}
+                                        title="Eliminar Reparto"
+                                      >
+                                        <span className="material-symbols-outlined text-lg">delete</span>
+                                      </button>
+                                    )}
                                   </div>
                                 ))}
                               </div>
@@ -519,22 +533,26 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                               /* Slot Vacío */
                               <button
                                 onClick={() => {
-                                  if (isPastOrUnavailable) return;
+                                  if (!canCreateOrDelete || isPastOrUnavailable) return;
                                   setFormHorario(formattedHour);
                                   setFormRepartidor(selectedRepartidorTab || '');
                                   setIsFormOpen(true);
                                   setFormError(null);
                                 }}
-                                disabled={isPastOrUnavailable}
+                                disabled={!canCreateOrDelete || isPastOrUnavailable}
                                 className={`
                                   ${styles.emptySlotBtn}
-                                  ${isPastOrUnavailable ? styles.emptySlotDisabled : styles.emptySlotActive}
+                                  ${(!canCreateOrDelete || isPastOrUnavailable) ? styles.emptySlotDisabled : styles.emptySlotActive}
                                 `}
                               >
                                 <span className={styles.emptySlotText}>
-                                  {isPastOrUnavailable ? 'Horario no disponible (Pasado / Límite)' : 'Sin repartos programados'}
+                                  {!canCreateOrDelete
+                                    ? 'Sin repartos programados'
+                                    : isPastOrUnavailable
+                                      ? 'Horario no disponible (Pasado / Límite)'
+                                      : 'Sin repartos programados'}
                                 </span>
-                                {!isPastOrUnavailable && (
+                                {canCreateOrDelete && !isPastOrUnavailable && (
                                   <span className={styles.emptySlotIcon}>
                                     add_circle
                                   </span>
@@ -565,17 +583,19 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                   >
                     Cerrar
                   </button>
-                  <button 
-                    onClick={() => {
-                      setFormRepartidor(selectedRepartidorTab || '');
-                      setIsFormOpen(true);
-                      setFormError(null);
-                    }}
-                    disabled={!selectedRepartidorTab}
-                    className={styles.footerCreateBtn}
-                  >
-                    + Agendar Reparto
-                  </button>
+                   {canCreateOrDelete && (
+                     <button 
+                       onClick={() => {
+                         setFormRepartidor(selectedRepartidorTab || '');
+                         setIsFormOpen(true);
+                         setFormError(null);
+                       }}
+                       disabled={!selectedRepartidorTab}
+                       className={styles.footerCreateBtn}
+                     >
+                       + Agendar Reparto
+                     </button>
+                   )}
                 </div>
               </>
             )}
@@ -593,6 +613,28 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                   )}
 
                   <div className={styles.formGrid}>
+                    {/* Repartidor */}
+                    <div className={styles.formField}>
+                      <label className={styles.formLabel}>Repartidor</label>
+                      <select
+                         value={formRepartidor}
+                         onChange={(e) => {
+                           setFormRepartidor(e.target.value);
+                           setFormStockImei(''); // Resetear stock cuando cambia repartidor
+                         }}
+                         required
+                         className={styles.formInput}
+                         style={{ colorScheme: 'dark' }}
+                       >
+                        <option value="">Seleccionar Repartidor</option>
+                        {repartidoresFiltradosLogistica.map(repartidor => (
+                          <option key={repartidor.id} value={repartidor.id}>
+                            {repartidor.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                     {/* Vendedor */}
                     <div className={styles.formField}>
                       <label className={styles.formLabel}>Vendedor</label>
@@ -624,59 +666,21 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                          value={formStockImei}
                          onChange={(e) => setFormStockImei(e.target.value)}
                          required
-                         className={styles.formInput}
-                         style={{ colorScheme: 'dark' }}
-                       >
-                        <option value="">Seleccionar de Stock</option>
-                        {formDataOptions.stock.map(stock => (
-                          <option key={stock.imei} value={stock.imei}>
-                            {stock.productos?.marca} {stock.productos?.modelo} ({stock.productos?.color}, {stock.productos?.almacenamiento}) - IMEI: {stock.imei}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Repartidor */}
-                    <div className={styles.formField}>
-                      <label className={styles.formLabel}>Repartidor</label>
-                      <select
-                         value={formRepartidor}
-                         onChange={(e) => {
-                           setFormRepartidor(e.target.value);
-                           setFormZona(''); // Resetear zona cuando cambia repartidor
-                         }}
-                         required
-                         className={styles.formInput}
-                         style={{ colorScheme: 'dark' }}
-                       >
-                        <option value="">Seleccionar Repartidor</option>
-                        {repartidoresFiltradosLogistica.map(repartidor => (
-                          <option key={repartidor.id} value={repartidor.id}>
-                            {repartidor.nombre}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Zonas dinámicas según repartidor */}
-                    <div className={styles.formField}>
-                      <label className={styles.formLabel}>Zona asignada</label>
-                      <select
-                         value={formZona}
-                         onChange={(e) => setFormZona(e.target.value)}
-                         required
                          disabled={!formRepartidor}
                          className={styles.formInput}
                          style={{ colorScheme: 'dark' }}
                        >
                         <option value="">
-                          {!formRepartidor ? 'Elige un repartidor primero' : 'Seleccionar Zona'}
+                          {!formRepartidor ? 'Elige un repartidor primero' : 'Seleccionar de Stock'}
                         </option>
-                        {zonasFiltradas.map(zona => (
-                          <option key={zona.id} value={zona.id}>
-                            {zona.nombre_zona} ({zona.descripcion || 'Sin descripción'})
-                          </option>
-                        ))}
+                        {formDataOptions.stock
+                          .filter(stock => stock.zona === formRepartidor)
+                          .map(stock => (
+                            <option key={stock.imei} value={stock.imei}>
+                              {stock.productos?.marca} {stock.productos?.modelo} ({stock.productos?.color}, {stock.productos?.almacenamiento}) - IMEI: {stock.imei}
+                            </option>
+                          ))
+                        }
                       </select>
                     </div>
                   </div>
@@ -701,7 +705,7 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                         const driverNow = new Date(driverNowString);
                         const minAllowed = new Date(driverNow.getTime() + 60 * 60 * 1000);
                         const slotDate = new Date(year, month, selectedDay || 1, hour, 0);
-                        const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor';
+                        const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor' || userRole === 'Repartidor';
                         const isPastOrUnavailable = !isPrivileged && (slotDate < minAllowed);
                         return (
                           <option 

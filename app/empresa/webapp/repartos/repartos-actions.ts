@@ -126,6 +126,7 @@ export async function getLogisticsFormData() {
     .select(`
       imei,
       producto_id,
+      zona,
       productos (
         marca,
         modelo,
@@ -179,7 +180,7 @@ export async function crearReparto(formData: {
   notas?: string;
 }) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer", "Repartidor"])) {
     return { success: false, error: "No autorizado" };
   }
 
@@ -217,7 +218,7 @@ export async function crearReparto(formData: {
  */
 export async function eliminarReparto(repartoId: string) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer", "Repartidor"])) {
     return { success: false, error: "No autorizado" };
   }
 
