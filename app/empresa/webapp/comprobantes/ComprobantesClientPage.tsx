@@ -8,19 +8,47 @@ import JSZip from "jszip";
 
 interface OptionItem {
   id: string;
+  repartidorId?: string;
   display: string;
+}
+
+interface Producto {
+  id: string;
+  marca: string;
+  modelo: string;
+  almacenamiento: string;
+  ram: string;
+  color: string;
+}
+
+interface StockItem {
+  producto_id: string;
+  estado: string;
+  zona: string | null;
+  imei?: string;
+}
+
+interface ModeloAgrupado {
+  display: string;
+  marca: string;
+  modelo: string;
+  totalDisponible: number;
+  totalAConsultar: number;
+  totalStock: number;
 }
 
 interface ComprobantesClientPageProps {
   vendedores: OptionItem[];
   repartidores: OptionItem[];
+  productos: Producto[];
+  stockItems: StockItem[];
   comprobantesList: ComprobanteRecord[];
   showTable: boolean;
 }
 
 const styles = {
   formCard: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl space-y-6",
-  formGrid: "grid grid-cols-1 md:grid-cols-2 gap-6",
+  formGrid: "grid grid-cols-1 md:grid-cols-3 gap-6",
   inputGroup: "space-y-2",
   inputGroupFull: "space-y-2 md:col-span-2",
   label: "text-sm font-medium text-slate-300 ml-1",
@@ -33,19 +61,55 @@ const styles = {
   statusSuccess: "p-4 rounded-xl text-sm font-medium flex items-center gap-3 bg-green-500/10 text-green-400 border border-green-500/20",
   statusError: "p-4 rounded-xl text-sm font-medium flex items-center gap-3 bg-red-500/10 text-red-400 border border-red-500/20",
   tableContainer: "bg-slate-900/30 backdrop-blur-xl border border-slate-800/80 rounded-3xl overflow-hidden shadow-2xl mt-8",
-  tableWrapper: "overflow-x-auto",
+  tableWrapper: "overflow-x-auto custom-scrollbar",
   table: "w-full border-collapse text-center text-sm",
   thead: "bg-slate-950 border-b border-slate-800 text-slate-400 font-semibold uppercase text-xs tracking-wider",
   th: "px-6 py-4 text-center",
   tr: "border-b border-slate-800/50 hover:bg-slate-900/20 transition-colors",
   td: "px-6 py-4 text-slate-300 font-medium text-center",
   badge: "px-2 py-1 rounded bg-slate-800 text-xs text-slate-400 font-bold border border-slate-700",
-  linkBtn: "text-secondary hover:underline inline-flex items-center gap-1 cursor-pointer font-bold"
+  linkBtn: "text-secondary hover:underline inline-flex items-center gap-1 cursor-pointer font-bold",
+  autocompleteInput: "w-full bg-slate-950 border border-slate-800 rounded-xl pl-4 pr-10 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all",
+  suggestionsContainer: "absolute z-20 w-full mt-2 bg-slate-950/95 border border-slate-800 rounded-xl shadow-xl max-h-48 overflow-y-auto custom-scrollbar glass-effect animate-in fade-in duration-200",
+  dateInput: "w-full sm:w-[130px] bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-center focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+};
+
+const handleNumericInput = (event: React.FormEvent<HTMLInputElement>) => {
+  const input = event.currentTarget;
+  let value = input.value;
+
+  // 1. Reemplazar caracteres no permitidos (solo permitir números, punto y coma)
+  value = value.replace(/[^0-9.,]/g, '');
+
+  // 2. Eliminar cualquier punto o coma al inicio
+  value = value.replace(/^[.,]+/g, '');
+
+  // 3. No permitir más de un separador decimal (punto o coma)
+  const firstSeparatorIndex = value.search(/[.,]/);
+  if (firstSeparatorIndex !== -1) {
+    const beforeSeparator = value.substring(0, firstSeparatorIndex + 1);
+    const afterSeparator = value.substring(firstSeparatorIndex + 1).replace(/[.,]/g, '');
+    value = beforeSeparator + afterSeparator;
+  }
+
+  input.value = value;
+};
+
+const handleNumericBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+  const input = event.currentTarget;
+  let value = input.value;
+
+  // Quitar cualquier punto o coma al final del texto al perder el foco
+  value = value.replace(/[.,]+$/, '');
+
+  input.value = value;
 };
 
 export default function ComprobantesClientPage({
   vendedores,
   repartidores,
+  productos,
+  stockItems,
   comprobantesList,
   showTable
 }: ComprobantesClientPageProps) {
@@ -53,6 +117,12 @@ export default function ComprobantesClientPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState("");
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  
+  // Estados para el flujo de selección de equipo (replica cambaceo)
+  const [selectedRepartidorId, setSelectedRepartidorId] = useState<string>("");
+  const [selectedModelKey, setSelectedModelKey] = useState<string>("");
+  const [selectedColor, setSelectedColor] = useState<string>("");
+  const [selectedImei, setSelectedImei] = useState<string>("");
   
   // Estados para filtros
   const [dateFrom, setDateFrom] = useState("");
@@ -98,15 +168,80 @@ export default function ComprobantesClientPage({
 
   const filteredVendedores = useMemo(() => {
     if (!vendedorSearch) return vendedores;
-    return vendedores.filter((v) =>
-      v.display.toLowerCase().includes(vendedorSearch.toLowerCase())
+    return vendedores.filter((vendedorOption) =>
+      vendedorOption.display.toLowerCase().includes(vendedorSearch.toLowerCase())
     );
   }, [vendedores, vendedorSearch]);
   
   const formRef = useRef<HTMLFormElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  // Obtener el repartidorId original para filtrar stock según la ubicación seleccionada
+  const selectedRepartidorOriginalId = useMemo(() => {
+    if (!selectedRepartidorId) return "";
+    const found = repartidores.find(repartidorOption => repartidorOption.id === selectedRepartidorId);
+    return found?.repartidorId || "";
+  }, [selectedRepartidorId, repartidores]);
+
+  // Filtrar stock por el repartidorId original (misma lógica de cambaceo: stockItem.zona === repartidorId)
+  const stockFiltrado = useMemo(() => {
+    if (!selectedRepartidorOriginalId) return [];
+    return stockItems.filter(stockItem => stockItem.zona === selectedRepartidorOriginalId);
+  }, [selectedRepartidorOriginalId, stockItems]);
+
+  // Productos con stock disponible en esta ubicación
+  const productosConStock = useMemo(() => {
+    if (!selectedRepartidorOriginalId) return [];
+    const idsConStock = new Set(stockFiltrado.map(stockItem => stockItem.producto_id));
+    return productos
+      .filter(producto => idsConStock.has(producto.id))
+      .map(producto => {
+        const unidadesValidas = stockFiltrado.filter(stockItem => stockItem.producto_id === producto.id);
+        const cantidadDisponible = unidadesValidas.filter(stockItem => stockItem.estado === 'Disponible').length;
+        const cantidadAConsultar = unidadesValidas.filter(stockItem => stockItem.estado === 'A consultar').length;
+        return { ...producto, cantidadDisponible, cantidadAConsultar, cantidadStock: cantidadDisponible + cantidadAConsultar };
+      })
+      .filter(producto => producto.cantidadStock > 0);
+  }, [selectedRepartidorOriginalId, productos, stockFiltrado]);
+
+  // Modelos únicos agrupados
+  const modelosUnicos = useMemo(() => {
+    const map = new Map<string, ModeloAgrupado>();
+    productosConStock.forEach(producto => {
+      const display = `${producto.marca} ${producto.modelo} - ${producto.almacenamiento} - ${producto.ram}`;
+      const existing = map.get(display);
+      if (!existing) {
+        map.set(display, { display, marca: producto.marca, modelo: producto.modelo, totalDisponible: producto.cantidadDisponible, totalAConsultar: producto.cantidadAConsultar, totalStock: producto.cantidadStock });
+      } else {
+        existing.totalDisponible += producto.cantidadDisponible;
+        existing.totalAConsultar += producto.cantidadAConsultar;
+        existing.totalStock += producto.cantidadStock;
+      }
+    });
+    return Array.from(map.entries());
+  }, [productosConStock]);
+
+  // Colores disponibles para el modelo seleccionado
+  const variantesColor = useMemo(() => {
+    if (!selectedModelKey) return [];
+    return productosConStock
+      .filter(producto => `${producto.marca} ${producto.modelo} - ${producto.almacenamiento} - ${producto.ram}` === selectedModelKey)
+      .map(producto => ({ color: producto.color, cantidadDisponible: producto.cantidadDisponible, cantidadAConsultar: producto.cantidadAConsultar, hasStock: producto.cantidadDisponible > 0 }));
+  }, [selectedModelKey, productosConStock]);
+
+  // IMEIs disponibles para modelo y color seleccionados
+  const imeisDisponibles = useMemo(() => {
+    if (!selectedModelKey || !selectedColor) return [];
+    const matchingProducts = productosConStock.filter(
+      producto => `${producto.marca} ${producto.modelo} - ${producto.almacenamiento} - ${producto.ram}` === selectedModelKey && producto.color === selectedColor
+    );
+    const matchingProductIds = new Set(matchingProducts.map(producto => producto.id));
+    return stockFiltrado.filter(
+      stockItem => matchingProductIds.has(stockItem.producto_id) && stockItem.estado === 'Disponible' && stockItem.imei
+    );
+  }, [selectedModelKey, selectedColor, productosConStock, stockFiltrado]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (file) {
       setSelectedFileName(file.name);
     } else {
@@ -114,8 +249,8 @@ export default function ComprobantesClientPage({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setIsSubmitting(true);
     setStatus(null);
 
@@ -125,27 +260,31 @@ export default function ComprobantesClientPage({
       return;
     }
 
-    const formData = new FormData(e.currentTarget);
-    const res = await submitComprobante(formData);
+    const formData = new FormData(event.currentTarget);
+    const submitResponse = await submitComprobante(formData);
 
-    if (res.success) {
+    if (submitResponse.success) {
       setStatus({ type: 'success', message: '¡Comprobante registrado y cargado exitosamente!' });
       formRef.current?.reset();
       setSelectedFileName("");
       setVendedorSearch("");
       setSelectedVendedor(null);
+      setSelectedRepartidorId("");
+      setSelectedModelKey("");
+      setSelectedColor("");
+      setSelectedImei("");
       
       // Obtener la lista actualizada de forma instantánea sin refrescar página completa
       if (showTable) {
-        const listRes = await getComprobantes();
-        if (listRes.success && listRes.data) {
-          setList(listRes.data);
+        const listResponse = await getComprobantes();
+        if (listResponse.success && listResponse.data) {
+          setList(listResponse.data);
         }
       }
       
       router.refresh();
     } else {
-      setStatus({ type: 'error', message: res.error || 'Error al procesar el comprobante.' });
+      setStatus({ type: 'error', message: submitResponse.error || 'Error al procesar el comprobante.' });
     }
     setIsSubmitting(false);
   };
@@ -267,7 +406,7 @@ export default function ComprobantesClientPage({
     <div className="space-y-8">
       <form ref={formRef} className={styles.formCard} onSubmit={handleSubmit} suppressHydrationWarning>
         <div className="border-b border-slate-800 pb-4">
-          <h3 className="text-lg font-bold text-slate-100">Formulario de Comprobante</h3>
+          <h3 className="text-lg font-bold text-slate-100">Formulario de Comprobantes</h3>
           <p className="text-xs text-slate-400 mt-1">Completa los datos para registrar la entrega y el comprobante.</p>
         </div>
 
@@ -305,7 +444,7 @@ export default function ComprobantesClientPage({
                     setShowVendedorSuggestions(false);
                   }, 200);
                 }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-4 pr-10 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all"
+                className={styles.autocompleteInput}
                 required
                 spellCheck={false}
                 autoComplete="off"
@@ -333,7 +472,7 @@ export default function ComprobantesClientPage({
               )}
               
               {showVendedorSuggestions && filteredVendedores.length > 0 && (
-                <div className="absolute z-20 w-full mt-2 bg-slate-950/95 border border-slate-800 rounded-xl shadow-xl max-h-48 overflow-y-auto custom-scrollbar glass-effect animate-in fade-in duration-200">
+                <div className={styles.suggestionsContainer}>
                   {filteredVendedores.map((v) => (
                     <div
                       key={v.id}
@@ -356,16 +495,22 @@ export default function ComprobantesClientPage({
 
           {/* SELECTOR DE REPARTIDOR */}
           <div className={styles.inputGroup}>
-            <label className={styles.label}>Repartidor</label>
+            <label className={styles.label}>Repartidor/Ubicación</label>
             <select
               name="repartidor_id"
               className={styles.selectInput}
               style={{ colorScheme: 'dark' }}
               required
-              defaultValue=""
+              value={selectedRepartidorId}
+              onChange={(e) => {
+                setSelectedRepartidorId(e.target.value);
+                setSelectedModelKey("");
+                setSelectedColor("");
+                setSelectedImei("");
+              }}
               suppressHydrationWarning
             >
-              <option value="" disabled className="bg-slate-950 text-slate-500 italic">Seleccione el repartidor...</option>
+              <option value="" disabled className="bg-slate-950 text-slate-500 italic">Seleccione el repartidor/ubicación...</option>
               {repartidores.map((r) => (
                 <option key={r.id} value={r.id} className="bg-slate-950 text-white">
                   {r.display}
@@ -374,19 +519,163 @@ export default function ComprobantesClientPage({
             </select>
           </div>
 
-          {/* MONTO ENGANCHE */}
+          {/* SELECTOR DE MODELO DE CELULAR */}
           <div className={styles.inputGroup}>
-            <label className={styles.label}>Enganche</label>
+            <label className={styles.label}>Modelo de Celular</label>
+            <select
+              className={styles.selectInput}
+              style={{ colorScheme: 'dark' }}
+              required
+              disabled={!selectedRepartidorId}
+              value={selectedModelKey}
+              onChange={(e) => {
+                setSelectedModelKey(e.target.value);
+                setSelectedColor("");
+                setSelectedImei("");
+              }}
+              suppressHydrationWarning
+            >
+              <option value="" className="bg-slate-950 text-slate-500 italic">
+                {!selectedRepartidorId ? "Primero elija ubicación" : "Seleccione un modelo..."}
+              </option>
+              {modelosUnicos.map(([key, info]) => {
+                const isAConsultar = info.totalDisponible === 0 && info.totalAConsultar > 0;
+                return (
+                  <option
+                    key={key}
+                    value={key}
+                    className={isAConsultar ? "text-slate-500 bg-slate-950 italic" : "text-white bg-slate-950"}
+                    disabled={isAConsultar}
+                  >
+                    {isAConsultar
+                      ? `${info.display} (A consultar)`
+                      : `${info.display} (${info.totalDisponible} disponible${info.totalDisponible > 1 ? "s" : ""})`
+                    }
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          {/* SELECTOR DE COLOR */}
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Color</label>
+            <select
+              className={styles.selectInput}
+              style={{ colorScheme: 'dark' }}
+              required
+              disabled={!selectedModelKey}
+              value={selectedColor}
+              onChange={(e) => {
+                setSelectedColor(e.target.value);
+                setSelectedImei("");
+              }}
+              suppressHydrationWarning
+            >
+              <option value="" className="bg-slate-950 text-slate-500 italic">
+                {!selectedModelKey ? "Primero elija un modelo" : "Seleccione un color..."}
+              </option>
+              {variantesColor.map((v) => {
+                const isAConsultar = v.cantidadDisponible === 0 && v.cantidadAConsultar > 0;
+                return (
+                  <option
+                    key={v.color}
+                    value={v.color}
+                    className={isAConsultar ? "text-slate-500 bg-slate-950 italic" : "text-white bg-slate-950"}
+                    disabled={isAConsultar}
+                  >
+                    {isAConsultar ? `${v.color} (A consultar)` : v.color}
+                  </option>
+                );
+              })}
+            </select>
+            {/* Hidden inputs para enviar datos finales al server action */}
+            <input type="hidden" name="celular" value={selectedModelKey} />
+            <input type="hidden" name="color_celular" value={selectedColor} />
+          </div>
+
+          {/* SELECTOR DE IMEI */}
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>IMEI</label>
+            <select
+              name="imei"
+              className={styles.selectInput}
+              style={{ colorScheme: 'dark' }}
+              required
+              disabled={!selectedColor}
+              value={selectedImei}
+              onChange={(e) => setSelectedImei(e.target.value)}
+              suppressHydrationWarning
+            >
+              <option value="" className="bg-slate-950 text-slate-500 italic">
+                {!selectedColor ? "Primero elija un color" : "Seleccione un IMEI..."}
+              </option>
+              {imeisDisponibles.map((item) => (
+                <option key={item.imei} value={item.imei} className="bg-slate-950 text-white">
+                  {item.imei}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* PRECIO DE COMPRA */}
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Precio de Compra</label>
             <div className={styles.relativeInputContainer}>
               <span className={styles.prefix}>$</span>
               <input
-                type="number"
-                name="monto_enganche"
+                type="text"
+                name="precio_compra"
                 className={styles.input}
                 required
-                min="0"
-                step="0.01"
                 placeholder="0.00"
+                inputMode="decimal"
+                pattern="^[0-9]+([.,][0-9]+)?$"
+                title="Ingrese un número válido (ej. 100 o 100.50)"
+                onInput={handleNumericInput}
+                onBlur={handleNumericBlur}
+                suppressHydrationWarning
+              />
+            </div>
+          </div>
+
+          {/* PAGO INICIAL */}
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Pago Inicial</label>
+            <div className={styles.relativeInputContainer}>
+              <span className={styles.prefix}>$</span>
+              <input
+                type="text"
+                name="pago_inicial"
+                className={styles.input}
+                required
+                placeholder="0.00"
+                inputMode="decimal"
+                pattern="^[0-9]+([.,][0-9]+)?$"
+                title="Ingrese un número válido (ej. 100 o 100.50)"
+                onInput={handleNumericInput}
+                onBlur={handleNumericBlur}
+                suppressHydrationWarning
+              />
+            </div>
+          </div>
+
+          {/* PAGO RECIBIDO */}
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Pago Recibido</label>
+            <div className={styles.relativeInputContainer}>
+              <span className={styles.prefix}>$</span>
+              <input
+                type="text"
+                name="pago_recibido"
+                className={styles.input}
+                required
+                placeholder="0.00"
+                inputMode="decimal"
+                pattern="^[0-9]+([.,][0-9]+)?$"
+                title="Ingrese un número válido (ej. 100 o 100.50)"
+                onInput={handleNumericInput}
+                onBlur={handleNumericBlur}
                 suppressHydrationWarning
               />
             </div>
@@ -405,11 +694,14 @@ export default function ComprobantesClientPage({
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 suppressHydrationWarning
               />
-              <div className="flex items-center gap-2 text-center">
-                <span className="material-symbols-outlined text-slate-500 group-hover:text-secondary text-xl transition-colors">
+              <div className="flex items-center gap-2 text-center max-w-full px-2">
+                <span className="material-symbols-outlined text-slate-500 group-hover:text-secondary text-xl transition-colors shrink-0">
                   cloud_upload
                 </span>
-                <p className="text-xs text-slate-300 font-medium">
+                <p 
+                  className="text-xs text-slate-300 font-medium truncate max-w-[150px] sm:max-w-[220px] md:max-w-[160px] lg:max-w-[240px]"
+                  title={selectedFileName || "Subir comprobante"}
+                >
                   {selectedFileName ? selectedFileName : "Subir comprobante"}
                 </p>
               </div>
@@ -484,7 +776,7 @@ export default function ComprobantesClientPage({
                       e.currentTarget.showPicker();
                     } catch (err) {}
                   }}
-                  className={`w-full sm:w-[130px] bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-center focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
+                  className={`${styles.dateInput} ${
                     dateFrom ? "text-slate-200" : "text-transparent"
                   }`}
                   style={{ colorScheme: 'dark' }}
@@ -510,7 +802,7 @@ export default function ComprobantesClientPage({
                       e.currentTarget.showPicker();
                     } catch (err) {}
                   }}
-                  className={`w-full sm:w-[130px] bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-center focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
+                  className={`${styles.dateInput} ${
                     dateTo ? "text-slate-200" : "text-transparent"
                   }`}
                   style={{ colorScheme: 'dark' }}
@@ -538,7 +830,7 @@ export default function ComprobantesClientPage({
             {isDownloading && (
               <div className="text-xs text-secondary font-semibold animate-pulse ml-auto flex items-center gap-2">
                 <span className="animate-spin h-3.5 w-3.5 border-2 border-secondary border-t-transparent rounded-full" />
-                {downloadProgress} (Permite descargas múltiples en tu navegador)
+                {downloadProgress}
               </div>
             )}
           </div>
@@ -549,8 +841,9 @@ export default function ComprobantesClientPage({
                 <tr>
                   <th className={styles.th}>Fecha</th>
                   <th className={styles.th}>Vendedor</th>
-                  <th className={styles.th}>Repartidor</th>
-                  <th className={styles.th}>Enganche</th>
+                  <th className={styles.th}>Repartidor/Ubicación</th>
+                  <th className={styles.th}>Equipo</th>
+                  <th className={styles.th}>Pago Recibido</th>
                   <th className={styles.th}>Comprobante</th>
                   <th className={styles.th}>Acciones</th>
                 </tr>
@@ -558,7 +851,7 @@ export default function ComprobantesClientPage({
               <tbody>
                 {filteredList.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500 italic">
+                    <td colSpan={7} className="px-6 py-12 text-center text-slate-500 italic">
                       No hay comprobantes que coincidan con los filtros aplicados.
                     </td>
                   </tr>
@@ -581,15 +874,24 @@ export default function ComprobantesClientPage({
                       <td className={styles.td}>
                         {item.repartidor ? (
                           <div className="flex flex-col items-center">
-                            <span className="text-slate-100 font-bold">{item.repartidor.username.charAt(0).toUpperCase() + item.repartidor.username.slice(1)}</span>
-                            <span className="text-[10px] text-slate-500">{item.repartidor.role}</span>
+                            <span className="text-slate-100 font-bold">{item.repartidor.nombre}</span>
                           </div>
                         ) : (
                           <span className="text-slate-500">Desconocido</span>
                         )}
                       </td>
                       <td className={styles.td}>
-                        <span className="text-secondary font-bold">{formatCurrency(item.monto_enganche)}</span>
+                        {item.celular ? (
+                          <div className="flex flex-col items-center">
+                            <span className="text-slate-100 text-xs font-bold">{item.celular}</span>
+                            {item.color_celular && <span className="text-[10px] text-slate-500">{item.color_celular}</span>}
+                          </div>
+                        ) : (
+                          <span className="text-slate-600 text-xs">—</span>
+                        )}
+                      </td>
+                      <td className={styles.td}>
+                        <span className="text-slate-300">{formatCurrency(item.pago_recibido)}</span>
                       </td>
                       <td className={styles.td}>
                         <a
@@ -597,9 +899,9 @@ export default function ComprobantesClientPage({
                           target="_blank"
                           rel="noopener noreferrer"
                           className={styles.linkBtn}
+                          title="Ver archivo"
                         >
-                          <span className="material-symbols-outlined text-sm">open_in_new</span>
-                          Ver archivo
+                          <span className="material-symbols-outlined text-lg">open_in_new</span>
                         </a>
                       </td>
                       <td className={styles.td}>
@@ -641,9 +943,13 @@ export default function ComprobantesClientPage({
               <h3 className="text-lg font-bold text-white">¿Eliminar Comprobante?</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
                 ¿Estás seguro de que deseas eliminar este comprobante?<br/>
-                Monto: <strong className="text-secondary">{formatCurrency(deletingItem.monto_enganche)}</strong><br/>
+                Precio Compra: <strong className="text-slate-300">{formatCurrency(deletingItem.precio_compra)}</strong> | 
+                Pago Inicial: <strong className="text-slate-300">{formatCurrency(deletingItem.pago_inicial)}</strong> | 
+                Pago Recibido: <strong className="text-secondary">{formatCurrency(deletingItem.pago_recibido)}</strong><br/>
                 Vendedor: <strong className="text-white">{deletingItem.vendedor?.username || "Desconocido"}</strong><br/>
-                Repartidor: <strong className="text-white">{deletingItem.repartidor?.username || "Desconocido"}</strong><br/>
+                Repartidor/Ubicación: <strong className="text-white">{deletingItem.repartidor?.nombre || "Desconocido"}</strong><br/>
+                {deletingItem.celular && <>Equipo: <strong className="text-white">{deletingItem.celular}</strong> {deletingItem.color_celular && <span className="text-slate-500">({deletingItem.color_celular})</span>}<br/></>}
+                {deletingItem.imei && <>IMEI: <strong className="text-secondary">{deletingItem.imei}</strong><br/></>}
                 Esta acción es irreversible, eliminará el registro de la base de datos y el archivo correspondiente de storage.
               </p>
             </div>

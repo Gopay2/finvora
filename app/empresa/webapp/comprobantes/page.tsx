@@ -9,17 +9,37 @@ import { getComprobantes } from "./comprobantes-actions";
 export const revalidate = 0;
 
 const styles = {
-  container: "max-w-4xl mx-auto space-y-8",
+  container: "max-w-6xl mx-auto space-y-8",
   header: "flex items-center justify-between",
   title: "text-xl md:text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent",
   btnHome: "flex items-center justify-center px-4 py-2 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl hover:bg-slate-700 hover:text-white transition-all cursor-pointer",
 };
 
+interface PerfilRawItem {
+  id: string;
+  username: string | null;
+  role: string | null;
+}
+
+interface ZonaRepartoRawItem {
+  id: string;
+  repartidores: {
+    id: string;
+    nombre: string | null;
+    activo: boolean | null;
+    perfil_id: string | null;
+  } | null;
+}
+
+const cleanString = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+const capitalize = (strToCapitalize: string) => strToCapitalize.charAt(0).toUpperCase() + strToCapitalize.slice(1);
+
 export default async function ComprobantesPage() {
   const { role: userRole } = await getUserProfile();
 
   // 1. Control de acceso a la sección
-  if (!isAllowed(userRole, ["Developer", "Admin", "Supervisor", "Repartidor"])) {
+  if (!isAllowed(userRole, ["Developer", "Admin", "Supervisor", "Repartidor", "Cambaceador", "CambaCloser"])) {
     return <AccessDenied role={userRole} sectionName="Comprobantes" />;
   }
 
@@ -31,24 +51,55 @@ export default async function ComprobantesPage() {
     .select("id, username, role")
     .order("username", { ascending: true });
 
-  // 3. Obtener lista de Repartidores (rol Repartidor)
-  const { data: repartidoresRaw } = await supabase
-    .from("perfiles")
-    .select("id, username, role")
-    .eq("role", "Repartidor")
-    .order("username", { ascending: true });
+  // 3. Obtener catálogo de productos y stock (misma consulta que ventas/cambaceo)
+  const { data: productos } = await supabase
+    .from("productos")
+    .select("id, marca, modelo, color, almacenamiento, ram")
+    .order('marca', { ascending: true });
 
-  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const { data: stockItems } = await supabase
+    .from("stock")
+    .select("producto_id, estado, zona, imei");
 
-  const vendedores = (vendedoresRaw || []).map((v: any) => ({
-    id: v.id,
-    display: `${v.role || "Sin rol"}: ${v.username ? capitalize(v.username) : "Sin nombre"}`
+  // 4. Obtener lista de repartidores/ubicaciones asociados al formulario de cambaceo
+  const { data: zonasRepartoRaw } = await supabase
+    .from("zonas_reparto")
+    .select(`
+      id,
+      repartidores (
+        id,
+        nombre,
+        activo,
+        perfil_id
+      )
+    `);
+
+  const uniqueRepartidoresMap = new Map<string, string>();
+  ((zonasRepartoRaw as unknown as ZonaRepartoRawItem[]) || []).forEach((zonaReparto) => {
+    if (zonaReparto.repartidores && zonaReparto.repartidores.activo && zonaReparto.repartidores.nombre) {
+      const nombreNorm = zonaReparto.repartidores.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (
+        nombreNorm.includes("cambaceo") ||
+        nombreNorm.includes("felix") ||
+        nombreNorm.includes("alezkar")
+      ) {
+        uniqueRepartidoresMap.set(zonaReparto.repartidores.id, zonaReparto.repartidores.nombre);
+      }
+    }
+  });
+
+  const vendedores = ((vendedoresRaw as unknown as PerfilRawItem[]) || []).map((vendedorPerfil) => ({
+    id: vendedorPerfil.id,
+    display: `${vendedorPerfil.role || "Sin rol"}: ${vendedorPerfil.username ? capitalize(vendedorPerfil.username) : "Sin nombre"}`
   }));
 
-  const repartidores = (repartidoresRaw || []).map((r: any) => ({
-    id: r.id,
-    display: `${r.role}: ${r.username ? capitalize(r.username) : "Sin nombre"}`
-  }));
+  const repartidores = Array.from(uniqueRepartidoresMap.entries())
+    .map(([repId, nombre]) => ({
+      id: repId, // Usamos directamente el ID original de la tabla repartidores
+      repartidorId: repId,
+      display: nombre
+    }))
+    .sort((repartidorA, repartidorB) => repartidorA.display.localeCompare(repartidorB.display));
 
   // 4. Obtener registros históricos si corresponde a roles superiores
   const showTable = isAllowed(userRole, ["Admin", "Supervisor", "Developer"]);
@@ -73,6 +124,8 @@ export default async function ComprobantesPage() {
       <ComprobantesClientPage
         vendedores={vendedores}
         repartidores={repartidores}
+        productos={productos || []}
+        stockItems={stockItems || []}
         comprobantesList={comprobantesList}
         showTable={showTable}
       />

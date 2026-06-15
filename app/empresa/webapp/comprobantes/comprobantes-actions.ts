@@ -6,7 +6,12 @@ import { revalidatePath } from "next/cache";
 
 export interface ComprobanteRecord {
   id: string;
-  monto_enganche: number;
+  precio_compra: number;
+  pago_inicial: number;
+  pago_recibido: number;
+  celular: string | null;
+  color_celular: string | null;
+  imei: string | null;
   comprobante_url: string;
   created_at: string;
   vendedor: {
@@ -16,14 +21,39 @@ export interface ComprobanteRecord {
   } | null;
   repartidor: {
     id: string;
-    username: string;
-    role: string;
+    nombre: string;
   } | null;
   creador: {
     id: string;
     username: string;
     role: string;
   } | null;
+}
+
+interface PerfilSubQuery {
+  id: string;
+  username: string;
+  role: string;
+}
+
+interface RepartidorSubQuery {
+  id: string;
+  nombre: string;
+}
+
+interface ComprobanteRawResponse {
+  id: string;
+  precio_compra: string | number;
+  pago_inicial: string | number;
+  pago_recibido: string | number;
+  celular: string | null;
+  color_celular: string | null;
+  imei: string | null;
+  comprobante_url: string;
+  created_at: string;
+  vendedor: PerfilSubQuery | PerfilSubQuery[] | null;
+  repartidor: RepartidorSubQuery | RepartidorSubQuery[] | null;
+  creador: PerfilSubQuery | PerfilSubQuery[] | null;
 }
 
 /**
@@ -33,22 +63,36 @@ export interface ComprobanteRecord {
 export async function submitComprobante(formData: FormData) {
   const { id: currentUserId, role: userRole } = await getUserProfile();
 
-  if (!currentUserId || !isAllowed(userRole, ["Developer", "Admin", "Supervisor", "Repartidor"])) {
+  if (!currentUserId || !isAllowed(userRole, ["Developer", "Admin", "Supervisor", "Repartidor", "Cambaceador", "CambaCloser"])) {
     return { success: false, error: "No autorizado. No tienes los permisos necesarios." };
   }
 
   const vendedorId = formData.get("vendedor_id") as string;
   const repartidorId = formData.get("repartidor_id") as string;
-  const montoRaw = formData.get("monto_enganche") as string;
+  const precioCompraRaw = formData.get("precio_compra") as string;
+  const pagoInicialRaw = formData.get("pago_inicial") as string;
+  const pagoRecibidoRaw = formData.get("pago_recibido") as string;
+  const celular = formData.get("celular") as string;
+  const colorCelular = formData.get("color_celular") as string;
+  const imei = formData.get("imei") as string;
   const file = formData.get("comprobante") as File | null;
 
-  if (!vendedorId || !repartidorId || !montoRaw || !file || file.size === 0) {
+  if (!vendedorId || !repartidorId || !precioCompraRaw || !pagoInicialRaw || !pagoRecibidoRaw || !file || file.size === 0) {
     return { success: false, error: "Todos los campos son obligatorios, incluyendo el comprobante." };
   }
 
-  const monto = parseFloat(montoRaw);
-  if (isNaN(monto) || monto < 0) {
-    return { success: false, error: "El monto del enganche debe ser un número válido mayor o igual a cero." };
+  const precioCompra = parseFloat(precioCompraRaw.replace(',', '.'));
+  const pagoInicial = parseFloat(pagoInicialRaw.replace(',', '.'));
+  const pagoRecibido = parseFloat(pagoRecibidoRaw.replace(',', '.'));
+
+  if (isNaN(precioCompra) || precioCompra < 0) {
+    return { success: false, error: "El precio de compra debe ser un número válido mayor o igual a cero." };
+  }
+  if (isNaN(pagoInicial) || pagoInicial < 0) {
+    return { success: false, error: "El pago inicial debe ser un número válido mayor o igual a cero." };
+  }
+  if (isNaN(pagoRecibido) || pagoRecibido < 0) {
+    return { success: false, error: "El pago recibido debe ser un número válido mayor o igual a cero." };
   }
 
   const supabase = await createClient();
@@ -89,7 +133,12 @@ export async function submitComprobante(formData: FormData) {
     .insert([{
       vendedor_id: vendedorId,
       repartidor_id: repartidorId,
-      monto_enganche: monto,
+      precio_compra: precioCompra,
+      pago_inicial: pagoInicial,
+      pago_recibido: pagoRecibido,
+      celular: celular || null,
+      color_celular: colorCelular || null,
+      imei: imei || null,
       comprobante_url: comprobanteUrl,
       creado_por: currentUserId
     }]);
@@ -108,6 +157,86 @@ export async function submitComprobante(formData: FormData) {
       console.error("Error al limpiar archivo de storage tras fallo en DB:", cleanupError);
     }
     return { success: false, error: `Error en la base de datos: ${error.message}` };
+  }
+
+  // 3. Enviar notificación a Discord (Webhook 8 con rol de Cambaceo ID 2)
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL_8;
+  const roleId = process.env.DISCORD_ROLE_ID_2;
+
+  if (webhookUrl) {
+    // Obtener nombres para el embed de Discord
+    const { data: vendedorPerfil } = await supabase
+      .from("perfiles")
+      .select("username, role")
+      .eq("id", vendedorId)
+      .single();
+
+    let repartidorName = "Desconocido";
+    const { data: repartidorLogistics } = await supabase
+      .from("repartidores")
+      .select("nombre")
+      .eq("id", repartidorId)
+      .maybeSingle();
+
+    if (repartidorLogistics) {
+      repartidorName = repartidorLogistics.nombre;
+    }
+
+    const { username: currentUsername } = await getUserProfile();
+
+    const vendedorName = vendedorPerfil?.username 
+      ? `${vendedorPerfil.role}: ${vendedorPerfil.username.charAt(0).toUpperCase() + vendedorPerfil.username.slice(1)}` 
+      : "Desconocido";
+
+    const creatorName = currentUsername 
+      ? `${userRole}: ${currentUsername.charAt(0).toUpperCase() + currentUsername.slice(1)}` 
+      : "Desconocido";
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://finvora.mx';
+    const fields = [
+      { name: "👤 Vendedor", value: `**${vendedorName}**`, inline: false },
+      { name: "👤 Repartidor/Cambaceador", value: `**${repartidorName}**`, inline: false },
+      { name: "💵 Pago Recibido", value: `**$${pagoRecibido.toFixed(2)}**`, inline: true },
+    ];
+
+    if (celular) {
+      const cleanCelular = celular.replace(/ - \d+GB.*$/, ""); // limpia almacenamiento/ram del display key para el titulo
+      fields.push({ name: "📱 Equipo", value: `**${cleanCelular}** ${colorCelular ? `(${colorCelular})` : ""}`, inline: false });
+    }
+    if (imei) {
+      fields.push({ name: "🆔 IMEI", value: `\`${imei}\``, inline: false });
+    }
+
+    fields.push(
+      { name: "📄 Archivo Comprobante", value: `[Ver Comprobante](${comprobanteUrl})`, inline: false }
+    );
+
+    const embed = {
+      title: "NUEVA VENTA REGISTRADA 🧾",
+      description: `Se ha registrado en Finvora un nuevo comprobante.`,
+      color: 0x10b981, // Verde esmeralda para el comprobante
+      fields: fields,
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      const discordResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: "Finvora Comprobantes",
+          avatar_url: `${siteUrl}/brands/finvoralogo.webp`,
+          content: roleId ? `🛎️ <@&${roleId}>` : undefined,
+          embeds: [embed]
+        }),
+      });
+
+      if (!discordResponse.ok) {
+        console.error(`Error de Discord API al notificar comprobante: status ${discordResponse.status}`);
+      }
+    } catch (discordError) {
+      console.error("Error enviando notificación de comprobante a Discord:", discordError);
+    }
   }
 
   revalidatePath('/empresa/webapp/comprobantes');
@@ -135,11 +264,16 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
     .from('comprobantes')
     .select(`
       id,
-      monto_enganche,
+      precio_compra,
+      pago_inicial,
+      pago_recibido,
+      celular,
+      color_celular,
+      imei,
       comprobante_url,
       created_at,
       vendedor:perfiles!vendedor_id (id, username, role),
-      repartidor:perfiles!repartidor_id (id, username, role),
+      repartidor:repartidores!repartidor_id (id, nombre),
       creador:perfiles!creado_por (id, username, role)
     `)
     .gte('created_at', twoMonthsAgo.toISOString())
@@ -151,14 +285,19 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
   }
 
   // Mapeamos los datos de tipado para evitar problemas con arrays y devolver un esquema seguro
-  const formattedData: ComprobanteRecord[] = (data || []).map((item: any) => ({
-    id: item.id,
-    monto_enganche: Number(item.monto_enganche),
-    comprobante_url: item.comprobante_url,
-    created_at: item.created_at,
-    vendedor: Array.isArray(item.vendedor) ? item.vendedor[0] : item.vendedor,
-    repartidor: Array.isArray(item.repartidor) ? item.repartidor[0] : item.repartidor,
-    creador: Array.isArray(item.creador) ? item.creador[0] : item.creador,
+  const formattedData: ComprobanteRecord[] = ((data as unknown as ComprobanteRawResponse[]) || []).map((comprobanteRaw: ComprobanteRawResponse) => ({
+    id: comprobanteRaw.id,
+    precio_compra: Number(comprobanteRaw.precio_compra),
+    pago_inicial: Number(comprobanteRaw.pago_inicial),
+    pago_recibido: Number(comprobanteRaw.pago_recibido),
+    celular: comprobanteRaw.celular || null,
+    color_celular: comprobanteRaw.color_celular || null,
+    imei: comprobanteRaw.imei || null,
+    comprobante_url: comprobanteRaw.comprobante_url,
+    created_at: comprobanteRaw.created_at,
+    vendedor: Array.isArray(comprobanteRaw.vendedor) ? comprobanteRaw.vendedor[0] : (comprobanteRaw.vendedor as PerfilSubQuery | null),
+    repartidor: Array.isArray(comprobanteRaw.repartidor) ? comprobanteRaw.repartidor[0] : (comprobanteRaw.repartidor as RepartidorSubQuery | null),
+    creador: Array.isArray(comprobanteRaw.creador) ? comprobanteRaw.creador[0] : (comprobanteRaw.creador as PerfilSubQuery | null),
   }));
 
   return { success: true, data: formattedData };
@@ -178,18 +317,18 @@ export async function eliminarComprobante(id: string): Promise<{ success: boolea
   const supabase = await createClient();
 
   // 1. Obtener la URL del comprobante para poder borrar el archivo de storage
-  const { data: item, error: fetchError } = await supabase
+  const { data: comprobanteItem, error: fetchError } = await supabase
     .from('comprobantes')
     .select('comprobante_url')
     .eq('id', id)
     .single();
 
-  if (fetchError || !item) {
+  if (fetchError || !comprobanteItem) {
     console.error("Error al buscar el comprobante:", fetchError);
     return { success: false, error: "No se encontró el registro a eliminar." };
   }
 
-  const comprobanteUrl = item.comprobante_url;
+  const comprobanteUrl = comprobanteItem.comprobante_url;
 
   // 2. Eliminar el registro de la base de datos
   const { data: deletedRows, error: deleteError } = await supabase
