@@ -420,6 +420,20 @@ export default function ComprobantesClientPage({
         )}
 
         <div className={styles.formGrid}>
+          {/* NOMBRE DEL CLIENTE */}
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Nombre del Cliente</label>
+            <input
+              type="text"
+              name="nombre_cliente"
+              placeholder="Escribe el nombre del cliente..."
+              className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all"
+              required
+              autoComplete="off"
+              suppressHydrationWarning
+            />
+          </div>
+
           {/* SELECTOR DE VENDEDOR AUTOCOMPLETE */}
           <div className={styles.inputGroup}>
             <label className={styles.label}>Vendedor</label>
@@ -518,6 +532,7 @@ export default function ComprobantesClientPage({
               ))}
             </select>
           </div>
+
 
           {/* SELECTOR DE MODELO DE CELULAR */}
           <div className={styles.inputGroup}>
@@ -682,7 +697,8 @@ export default function ComprobantesClientPage({
           </div>
 
           {/* DOCUMENTO / FOTO */}
-          <div className={styles.inputGroup}>
+          {/* DOCUMENTO / FOTO */}
+          <div className="space-y-2 md:col-span-3">
             <label className={styles.label}>Comprobante (Imagen o PDF)</label>
             <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-secondary/40 rounded-xl p-3 bg-slate-950/20 transition-all group cursor-pointer h-[46px] select-none">
               <input
@@ -706,6 +722,19 @@ export default function ComprobantesClientPage({
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* COMENTARIOS */}
+          <div className="space-y-2 md:col-span-3">
+            <label className={styles.label}>Comentarios (Opcional)</label>
+            <textarea
+              name="comentarios"
+              placeholder="Escribe comentarios o notas adicionales..."
+              className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all resize-none"
+              rows={2}
+              autoComplete="off"
+              suppressHydrationWarning
+            />
           </div>
         </div>
 
@@ -840,6 +869,7 @@ export default function ComprobantesClientPage({
               <thead className={styles.thead}>
                 <tr>
                   <th className={styles.th}>Fecha</th>
+                  <th className={styles.th}>Cliente</th>
                   <th className={styles.th}>Vendedor</th>
                   <th className={styles.th}>Repartidor/Ubicación</th>
                   <th className={styles.th}>Equipo</th>
@@ -851,7 +881,7 @@ export default function ComprobantesClientPage({
               <tbody>
                 {filteredList.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-slate-500 italic">
+                    <td colSpan={8} className="px-6 py-12 text-center text-slate-500 italic">
                       No hay comprobantes que coincidan con los filtros aplicados.
                     </td>
                   </tr>
@@ -860,6 +890,9 @@ export default function ComprobantesClientPage({
                     <tr key={item.id} className={styles.tr}>
                       <td className={styles.td}>
                         <span className="text-slate-100">{formatTijuanaDate(item.created_at)}</span>
+                      </td>
+                      <td className={styles.td}>
+                        <span className="text-slate-100 font-bold">{item.nombre_cliente}</span>
                       </td>
                       <td className={styles.td}>
                         {item.vendedor ? (
@@ -943,6 +976,8 @@ export default function ComprobantesClientPage({
               <h3 className="text-lg font-bold text-white">¿Eliminar Comprobante?</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
                 ¿Estás seguro de que deseas eliminar este comprobante?<br/>
+                Cliente: <strong className="text-white">{deletingItem.nombre_cliente}</strong><br/>
+                {deletingItem.comentarios && <>Comentarios: <span className="text-slate-300 italic">"{deletingItem.comentarios}"</span><br/></>}
                 Precio Compra: <strong className="text-slate-300">{formatCurrency(deletingItem.precio_compra)}</strong> | 
                 Pago Inicial: <strong className="text-slate-300">{formatCurrency(deletingItem.pago_inicial)}</strong> | 
                 Pago Recibido: <strong className="text-secondary">{formatCurrency(deletingItem.pago_recibido)}</strong><br/>

@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 
 export interface ComprobanteRecord {
   id: string;
+  nombre_cliente: string;
+  comentarios: string | null;
   precio_compra: number;
   pago_inicial: number;
   pago_recibido: number;
@@ -43,6 +45,8 @@ interface RepartidorSubQuery {
 
 interface ComprobanteRawResponse {
   id: string;
+  nombre_cliente: string;
+  comentarios: string | null;
   precio_compra: string | number;
   pago_inicial: string | number;
   pago_recibido: string | number;
@@ -67,6 +71,8 @@ export async function submitComprobante(formData: FormData) {
     return { success: false, error: "No autorizado. No tienes los permisos necesarios." };
   }
 
+  const nombreCliente = formData.get("nombre_cliente") as string;
+  const comentarios = formData.get("comentarios") as string;
   const vendedorId = formData.get("vendedor_id") as string;
   const repartidorId = formData.get("repartidor_id") as string;
   const precioCompraRaw = formData.get("precio_compra") as string;
@@ -77,7 +83,7 @@ export async function submitComprobante(formData: FormData) {
   const imei = formData.get("imei") as string;
   const file = formData.get("comprobante") as File | null;
 
-  if (!vendedorId || !repartidorId || !precioCompraRaw || !pagoInicialRaw || !pagoRecibidoRaw || !file || file.size === 0) {
+  if (!nombreCliente || !nombreCliente.trim() || !vendedorId || !repartidorId || !precioCompraRaw || !pagoInicialRaw || !pagoRecibidoRaw || !file || file.size === 0) {
     return { success: false, error: "Todos los campos son obligatorios, incluyendo el comprobante." };
   }
 
@@ -131,6 +137,8 @@ export async function submitComprobante(formData: FormData) {
   const { error } = await supabase
     .from('comprobantes')
     .insert([{
+      nombre_cliente: nombreCliente.trim(),
+      comentarios: comentarios ? comentarios.trim() : null,
       vendedor_id: vendedorId,
       repartidor_id: repartidorId,
       precio_compra: precioCompra,
@@ -194,6 +202,7 @@ export async function submitComprobante(formData: FormData) {
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://finvora.mx';
     const fields = [
+      { name: "👤 Cliente", value: `**${nombreCliente.trim()}**`, inline: false },
       { name: "👤 Vendedor", value: `**${vendedorName}**`, inline: false },
       { name: "👤 Repartidor/Cambaceador", value: `**${repartidorName}**`, inline: false },
       { name: "💵 Pago Recibido", value: `**$${pagoRecibido.toFixed(2)}**`, inline: true },
@@ -207,8 +216,12 @@ export async function submitComprobante(formData: FormData) {
       fields.push({ name: "🆔 IMEI", value: `\`${imei}\``, inline: false });
     }
 
+    if (comentarios && comentarios.trim()) {
+      fields.push({ name: "📝 Comentarios", value: comentarios.trim(), inline: false });
+    }
+
     fields.push(
-      { name: "📄 Archivo Comprobante", value: `[Ver Comprobante](${comprobanteUrl})`, inline: false }
+      { name: "📄 Archivo Comprobante", value: `[Visualizar](${comprobanteUrl})`, inline: false }
     );
 
     const embed = {
@@ -264,6 +277,8 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
     .from('comprobantes')
     .select(`
       id,
+      nombre_cliente,
+      comentarios,
       precio_compra,
       pago_inicial,
       pago_recibido,
@@ -287,6 +302,8 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
   // Mapeamos los datos de tipado para evitar problemas con arrays y devolver un esquema seguro
   const formattedData: ComprobanteRecord[] = ((data as unknown as ComprobanteRawResponse[]) || []).map((comprobanteRaw: ComprobanteRawResponse) => ({
     id: comprobanteRaw.id,
+    nombre_cliente: comprobanteRaw.nombre_cliente,
+    comentarios: comprobanteRaw.comentarios || null,
     precio_compra: Number(comprobanteRaw.precio_compra),
     pago_inicial: Number(comprobanteRaw.pago_inicial),
     pago_recibido: Number(comprobanteRaw.pago_recibido),
