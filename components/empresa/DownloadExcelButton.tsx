@@ -89,12 +89,14 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
       worksheetData = data.map(item => ({
         "Fecha (Tijuana)": formatTijuanaDate(item.created_at),
         "Vendedor": item.vendedor?.username || "Desconocido",
-        "Rol Vendedor": item.vendedor?.role || "",
-        "Repartidor": item.repartidor?.username || "Desconocido",
-        "Rol Repartidor": item.repartidor?.role || "",
-        "Monto Enganche": item.monto_enganche,
+        "Repartidor": item.repartidor?.nombre || "Desconocido",
+        "Celular": item.celular || "",
+        "Color": item.color_celular || "",
+        "IMEI": item.imei || "",
+        "Precio Compra": item.precio_compra,
+        "Pago Inicial": item.pago_inicial,
+        "Pago Recibido": item.pago_recibido,
         "Cargado Por": item.creador?.username || "Desconocido",
-        "Rol Creador": item.creador?.role || "",
         "URL Comprobante": item.comprobante_url
       }));
     }
