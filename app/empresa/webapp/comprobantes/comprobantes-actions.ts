@@ -1,8 +1,11 @@
 'use server';
 
+// ─── Next.js y utilidades externas ─────────────────────────────────────────
+import { revalidatePath } from "next/cache";
+
+// ─── Utilidades locales ─────────────────────────────────────────────────────
 import { createClient } from "@/utils/supabase/server";
 import { getUserProfile, isAllowed } from "@/utils/auth-check";
-import { revalidatePath } from "next/cache";
 
 export interface ComprobanteRecord {
   id: string;
@@ -64,8 +67,147 @@ interface ComprobanteRawResponse {
  * Server Action para subir un comprobante de enganche y registrarlo en la base de datos.
  * Accesible por: Admin, Supervisor, Developer, Repartidor.
  */
+/**
+ * Sube un archivo de comprobante al storage de Supabase.
+ */
+async function uploadComprobanteFile(
+  file: File,
+  supabase: any
+): Promise<{ success: boolean; publicUrl?: string; error?: string }> {
+  try {
+    const fileExt = file.name.split('.').pop() || 'png';
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+    const filePath = `comprobantes/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('comprobantes')
+      .upload(filePath, file, {
+        contentType: file.type,
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error("Error al subir archivo a storage:", uploadError);
+      return { success: false, error: uploadError.message };
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('comprobantes')
+      .getPublicUrl(filePath);
+
+    return { success: true, publicUrl };
+  } catch (error: any) {
+    console.error("Excepción en la carga del archivo:", error);
+    return { success: false, error: "Ocurrió un error inesperado al subir el comprobante." };
+  }
+}
+
+interface DiscordNotificationParams {
+  nombreCliente: string;
+  vendedorId: string;
+  repartidorId: string;
+  precioCompra: number;
+  pagoInicial: number;
+  pagoRecibido: number;
+  celular: string | null;
+  colorCelular: string | null;
+  imei: string | null;
+  comentarios: string | null;
+  comprobanteUrl: string;
+  userRole: string;
+  currentUsername: string;
+  supabase: any;
+}
+
+/**
+ * Envía una notificación formateada a Discord con los detalles del comprobante registrado.
+ */
+async function sendDiscordNotification(params: DiscordNotificationParams) {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL_8;
+  const roleId = process.env.DISCORD_ROLE_ID_2;
+
+  if (!webhookUrl) return;
+
+  try {
+    const { data: vendedorPerfil } = await params.supabase
+      .from("perfiles")
+      .select("username, role")
+      .eq("id", params.vendedorId)
+      .single();
+
+    let repartidorName = "Desconocido";
+    const { data: repartidorLogistics } = await params.supabase
+      .from("repartidores")
+      .select("nombre")
+      .eq("id", params.repartidorId)
+      .maybeSingle();
+
+    if (repartidorLogistics) {
+      repartidorName = repartidorLogistics.nombre;
+    }
+
+    const vendedorName = vendedorPerfil?.username
+      ? `${vendedorPerfil.role}: ${vendedorPerfil.username.charAt(0).toUpperCase() + vendedorPerfil.username.slice(1)}`
+      : "Desconocido";
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://finvora.mx';
+    const fields = [
+      { name: "👤 Cliente", value: `**${params.nombreCliente.trim()}**`, inline: false },
+      { name: "👤 Vendedor", value: `**${vendedorName}**`, inline: false },
+      { name: "👤 Repartidor/Cambaceador", value: `**${repartidorName}**`, inline: false },
+      { name: "💵 Pago Recibido", value: `**$${params.pagoRecibido.toFixed(2)}**`, inline: true },
+    ];
+
+    if (params.celular) {
+      const cleanCelular = params.celular.replace(/ - \d+GB.*$/, "");
+      fields.push({ name: "📱 Equipo", value: `**${cleanCelular}** ${params.colorCelular ? `(${params.colorCelular})` : ""}`, inline: false });
+    }
+    if (params.imei) {
+      fields.push({ name: "🆔 IMEI", value: `\`${params.imei}\``, inline: false });
+    }
+
+    if (params.comentarios && params.comentarios.trim()) {
+      fields.push({ name: "📝 Comentarios", value: params.comentarios.trim(), inline: false });
+    }
+
+    fields.push(
+      { name: "📄 Archivo Comprobante", value: `[Visualizar](${params.comprobanteUrl})`, inline: false }
+    );
+
+    const embed = {
+      title: "NUEVA VENTA REGISTRADA 🧾",
+      description: `Se ha registrado en Finvora un nuevo comprobante.`,
+      color: 0x10b981,
+      fields: fields,
+      timestamp: new Date().toISOString(),
+    };
+
+    const discordResponse = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: "Finvora Comprobantes",
+        avatar_url: `${siteUrl}/brands/finvoralogo.webp`,
+        content: roleId ? `🛎️ <@&${roleId}>` : undefined,
+        embeds: [embed]
+      }),
+    });
+
+    if (!discordResponse.ok) {
+      console.error(`Error de Discord API al notificar comprobante: status ${discordResponse.status}`);
+    }
+  } catch (discordError) {
+    console.error("Error enviando notificación de comprobante a Discord:", discordError);
+  }
+}
+
+/**
+ * Server Action para subir un comprobante de enganche y registrarlo en la base de datos.
+ * Accesible por: Admin, Supervisor, Developer, Repartidor.
+ */
 export async function submitComprobante(formData: FormData) {
-  const { id: currentUserId, role: userRole } = await getUserProfile();
+  const { id: currentUserId, role: userRole, username: currentUsername } = await getUserProfile();
 
   if (!currentUserId || !isAllowed(userRole, ["Developer", "Admin", "Supervisor", "Repartidor", "Cambaceador", "CambaCloser"])) {
     return { success: false, error: "No autorizado. No tienes los permisos necesarios." };
@@ -103,35 +245,13 @@ export async function submitComprobante(formData: FormData) {
 
   const supabase = await createClient();
 
-  // 1. Subir el comprobante (Imagen o PDF) a Supabase Storage
-  let comprobanteUrl = "";
-  try {
-    const fileExt = file.name.split('.').pop() || 'png';
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-    const filePath = `comprobantes/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('comprobantes')
-      .upload(filePath, file, {
-        contentType: file.type,
-        cacheControl: '3600',
-        upsert: false
-      });
-
-    if (uploadError) {
-      console.error("Error al subir archivo a storage:", uploadError);
-      return { success: false, error: `Error al subir el comprobante: ${uploadError.message}` };
-    }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('comprobantes')
-      .getPublicUrl(filePath);
-
-    comprobanteUrl = publicUrl;
-  } catch (error: any) {
-    console.error("Excepción en la carga del archivo:", error);
-    return { success: false, error: "Ocurrió un error inesperado al subir el comprobante." };
+  // 1. Subir el comprobante a Supabase Storage
+  const uploadResult = await uploadComprobanteFile(file, supabase);
+  if (!uploadResult.success || !uploadResult.publicUrl) {
+    return { success: false, error: uploadResult.error || "Error al subir el comprobante." };
   }
+
+  const comprobanteUrl = uploadResult.publicUrl;
 
   // 2. Registrar en la base de datos
   const { error } = await supabase
@@ -167,90 +287,23 @@ export async function submitComprobante(formData: FormData) {
     return { success: false, error: `Error en la base de datos: ${error.message}` };
   }
 
-  // 3. Enviar notificación a Discord (Webhook 8 con rol de Cambaceo ID 2)
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL_8;
-  const roleId = process.env.DISCORD_ROLE_ID_2;
-
-  if (webhookUrl) {
-    // Obtener nombres para el embed de Discord
-    const { data: vendedorPerfil } = await supabase
-      .from("perfiles")
-      .select("username, role")
-      .eq("id", vendedorId)
-      .single();
-
-    let repartidorName = "Desconocido";
-    const { data: repartidorLogistics } = await supabase
-      .from("repartidores")
-      .select("nombre")
-      .eq("id", repartidorId)
-      .maybeSingle();
-
-    if (repartidorLogistics) {
-      repartidorName = repartidorLogistics.nombre;
-    }
-
-    const { username: currentUsername } = await getUserProfile();
-
-    const vendedorName = vendedorPerfil?.username 
-      ? `${vendedorPerfil.role}: ${vendedorPerfil.username.charAt(0).toUpperCase() + vendedorPerfil.username.slice(1)}` 
-      : "Desconocido";
-
-    const creatorName = currentUsername 
-      ? `${userRole}: ${currentUsername.charAt(0).toUpperCase() + currentUsername.slice(1)}` 
-      : "Desconocido";
-
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://finvora.mx';
-    const fields = [
-      { name: "👤 Cliente", value: `**${nombreCliente.trim()}**`, inline: false },
-      { name: "👤 Vendedor", value: `**${vendedorName}**`, inline: false },
-      { name: "👤 Repartidor/Cambaceador", value: `**${repartidorName}**`, inline: false },
-      { name: "💵 Pago Recibido", value: `**$${pagoRecibido.toFixed(2)}**`, inline: true },
-    ];
-
-    if (celular) {
-      const cleanCelular = celular.replace(/ - \d+GB.*$/, ""); // limpia almacenamiento/ram del display key para el titulo
-      fields.push({ name: "📱 Equipo", value: `**${cleanCelular}** ${colorCelular ? `(${colorCelular})` : ""}`, inline: false });
-    }
-    if (imei) {
-      fields.push({ name: "🆔 IMEI", value: `\`${imei}\``, inline: false });
-    }
-
-    if (comentarios && comentarios.trim()) {
-      fields.push({ name: "📝 Comentarios", value: comentarios.trim(), inline: false });
-    }
-
-    fields.push(
-      { name: "📄 Archivo Comprobante", value: `[Visualizar](${comprobanteUrl})`, inline: false }
-    );
-
-    const embed = {
-      title: "NUEVA VENTA REGISTRADA 🧾",
-      description: `Se ha registrado en Finvora un nuevo comprobante.`,
-      color: 0x10b981, // Verde esmeralda para el comprobante
-      fields: fields,
-      timestamp: new Date().toISOString(),
-    };
-
-    try {
-      const discordResponse = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: "Finvora Comprobantes",
-          avatar_url: `${siteUrl}/brands/finvoralogo.webp`,
-          content: roleId ? `🛎️ <@&${roleId}>` : undefined,
-          embeds: [embed]
-        }),
-      });
-
-      if (!discordResponse.ok) {
-        console.error(`Error de Discord API al notificar comprobante: status ${discordResponse.status}`);
-      }
-    } catch (discordError) {
-      console.error("Error enviando notificación de comprobante a Discord:", discordError);
-    }
-  }
+  // 3. Enviar notificación a Discord (asíncrona)
+  sendDiscordNotification({
+    nombreCliente,
+    vendedorId,
+    repartidorId,
+    precioCompra,
+    pagoInicial,
+    pagoRecibido,
+    celular,
+    colorCelular,
+    imei,
+    comentarios,
+    comprobanteUrl,
+    userRole,
+    currentUsername: currentUsername || "",
+    supabase
+  });
 
   revalidatePath('/empresa/webapp/comprobantes');
   return { success: true };
@@ -299,8 +352,9 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
     return { success: false, error: `Error en la consulta: ${error.message}` };
   }
 
-  // Mapeamos los datos de tipado para evitar problemas con arrays y devolver un esquema seguro
-  const formattedData: ComprobanteRecord[] = ((data as unknown as ComprobanteRawResponse[]) || []).map((comprobanteRaw: ComprobanteRawResponse) => ({
+  // Mapeamos los datos de tipado para devolver un esquema seguro
+  const rawComprobantes = (data as any) as ComprobanteRawResponse[] | null;
+  const formattedData: ComprobanteRecord[] = (rawComprobantes || []).map((comprobanteRaw: ComprobanteRawResponse) => ({
     id: comprobanteRaw.id,
     nombre_cliente: comprobanteRaw.nombre_cliente,
     comentarios: comprobanteRaw.comentarios || null,
