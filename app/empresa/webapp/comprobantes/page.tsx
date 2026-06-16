@@ -1,10 +1,18 @@
+// ─── React y Next.js ───────────────────────────────────────────────────────
 import React from "react";
 import Link from "next/link";
-import { getUserProfile, isAllowed } from "@/utils/auth-check";
-import AccessDenied from "@/components/empresa/AccessDenied";
+
+// ─── Utilidades locales y globales ─────────────────────────────────────────
 import { createClient } from "@/utils/supabase/server";
-import ComprobantesClientPage from "./ComprobantesClientPage";
+import { getUserProfile, isAllowed } from "@/utils/auth-check";
+
+// ─── Componentes y Server Actions locales ──────────────────────────────────
+import AccessDenied from "@/components/empresa/AccessDenied";
+import ComprobantesClientPage from "@/components/empresa/ComprobantesClientPage";
 import { getComprobantes } from "./comprobantes-actions";
+
+// ─── Tipos e interfaces ───────────────────────────────────────────────────
+import type { ComprobanteRecord } from "./comprobantes-actions";
 
 export const revalidate = 0;
 
@@ -30,8 +38,6 @@ interface ZonaRepartoRawItem {
     perfil_id: string | null;
   } | null;
 }
-
-const cleanString = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 const capitalize = (strToCapitalize: string) => strToCapitalize.charAt(0).toUpperCase() + strToCapitalize.slice(1);
 
@@ -104,12 +110,12 @@ export default async function ComprobantesPage() {
 
   // 4. Obtener registros históricos si corresponde a roles superiores
   const showTable = isAllowed(userRole, ["Admin", "Supervisor", "Developer"]);
-  let comprobantesList: any[] = [];
+  let comprobantesList: ComprobanteRecord[] = [];
 
   if (showTable) {
-    const res = await getComprobantes();
-    if (res.success && res.data) {
-      comprobantesList = res.data;
+    const comprobantesResponse = await getComprobantes();
+    if (comprobantesResponse.success && comprobantesResponse.data) {
+      comprobantesList = comprobantesResponse.data;
     }
   }
 
