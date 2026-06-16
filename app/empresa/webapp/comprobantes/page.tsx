@@ -86,6 +86,7 @@ export default async function ComprobantesPage() {
       const nombreNorm = zonaReparto.repartidores.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       if (
         nombreNorm.includes("cambaceo") ||
+        nombreNorm.includes("jonathan") ||
         nombreNorm.includes("felix") ||
         nombreNorm.includes("alezkar") ||
         nombreNorm.split(/\s+/).includes("ct")
