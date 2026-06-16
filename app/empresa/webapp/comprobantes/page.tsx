@@ -81,7 +81,8 @@ export default async function ComprobantesPage() {
       if (
         nombreNorm.includes("cambaceo") ||
         nombreNorm.includes("felix") ||
-        nombreNorm.includes("alezkar")
+        nombreNorm.includes("alezkar") ||
+        nombreNorm.split(/\s+/).includes("ct")
       ) {
         uniqueRepartidoresMap.set(zonaReparto.repartidores.id, zonaReparto.repartidores.nombre);
       }
