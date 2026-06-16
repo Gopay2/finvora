@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { getUserProfile, isAllowed } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
-import VentasFormSelector from "@/components/empresa/VentasFormSelector";
+import VentasForm from "@/components/empresa/VentasForm";
 import { createClient } from "@/utils/supabase/server";
 
 export const revalidate = 0;
@@ -75,12 +75,11 @@ export default async function VentasPage() {
         </Link>
       </header>
 
-      {/* Pasamos los datos al selector de formulario */}
-      <VentasFormSelector
+      {/* Pasamos los datos al formulario */}
+      <VentasForm
         productos={productos || []}
         zonasReparto={zonasReparto}
         stockItems={stockItems || []}
-        userRole={userRole}
       />
     </div>
   );
