@@ -91,7 +91,7 @@ export default function FiltrosHistorial({
             <span className="text-slate-300 font-semibold text-sm">Fechas:</span>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <label className="text-xs text-slate-400 min-w-[45px] sm:min-w-0">Desde:</label>
+            <label className="text-xs sm:text-sm text-slate-400 font-semibold min-w-[85px] sm:min-w-0 shrink-0">Desde:</label>
             <div className="relative flex items-center flex-1 sm:flex-initial">
               <input
                 type="date"
@@ -115,7 +115,7 @@ export default function FiltrosHistorial({
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <label className="text-xs text-slate-400 min-w-[45px] sm:min-w-0">Hasta:</label>
+            <label className="text-xs sm:text-sm text-slate-400 font-semibold min-w-[85px] sm:min-w-0 shrink-0">Hasta:</label>
             <div className="relative flex items-center flex-1 sm:flex-initial">
               <input
                 type="date"
@@ -149,7 +149,7 @@ export default function FiltrosHistorial({
             <span className="material-symbols-outlined text-slate-400 text-base">person</span>
             <span className="text-slate-300 font-semibold text-sm">Vendedor:</span>
           </div>
-          <div className="relative w-full sm:w-[220px]">
+          <div className="relative w-full sm:w-[180px]">
             <input
               type="text"
               placeholder="Todos los vendedores"
@@ -213,9 +213,8 @@ export default function FiltrosHistorial({
                       setFilterVendedorSearch(vendedor.display);
                       setShowFilterVendedorDropdown(false);
                     }}
-                    className={`px-4 py-2.5 hover:bg-secondary/10 hover:text-secondary cursor-pointer transition-colors text-[16px] sm:text-[13px] text-left border-b border-slate-900/50 last:border-b-0 ${
-                      filterVendedor === vendedor.id ? "text-secondary font-semibold" : "text-slate-200"
-                    }`}
+                    className={`px-4 py-2.5 hover:bg-secondary/10 hover:text-secondary cursor-pointer transition-colors text-[16px] sm:text-[13px] text-left border-b border-slate-900/50 last:border-b-0 ${filterVendedor === vendedor.id ? "text-secondary font-semibold" : "text-slate-200"
+                      }`}
                   >
                     {vendedor.display}
                   </div>
@@ -231,7 +230,7 @@ export default function FiltrosHistorial({
             <span className="material-symbols-outlined text-slate-400 text-base">local_shipping</span>
             <span className="text-slate-300 font-semibold text-sm">Repartidor:</span>
           </div>
-          <div className="relative w-full sm:w-[220px]">
+          <div className="relative w-full sm:w-[180px]">
             <button
               type="button"
               onClick={() => {
@@ -260,9 +259,8 @@ export default function FiltrosHistorial({
                       setFilterRepartidor(repartidor.id);
                       setShowFilterRepartidorDropdown(false);
                     }}
-                    className={`px-4 py-2.5 hover:bg-secondary/10 hover:text-secondary cursor-pointer transition-colors text-[16px] sm:text-[13px] text-left border-b border-slate-900/50 last:border-b-0 ${
-                      filterRepartidor === repartidor.id ? "text-secondary font-semibold" : "text-slate-200"
-                    }`}
+                    className={`px-4 py-2.5 hover:bg-secondary/10 hover:text-secondary cursor-pointer transition-colors text-[16px] sm:text-[13px] text-left border-b border-slate-900/50 last:border-b-0 ${filterRepartidor === repartidor.id ? "text-secondary font-semibold" : "text-slate-200"
+                      }`}
                   >
                     {repartidor.display}
                   </div>
