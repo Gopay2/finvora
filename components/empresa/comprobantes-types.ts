@@ -30,6 +30,7 @@ export interface ModeloAgrupado {
   modelo: string;
   totalDisponible: number;
   totalAConsultar: number;
+  totalEnEnvio: number;
   totalStock: number;
 }
 
