@@ -72,6 +72,8 @@ export async function submitVenta(formData: FormData) {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_7;
   } else if (zonaNormalizada === "monterrey") {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_2 || process.env.DISCORD_WEBHOOK_URL;
+  } else if (zonaNormalizada === "mexicali") {
+    webhookUrl = process.env.DISCORD_WEBHOOK_URL_9 || process.env.DISCORD_WEBHOOK_URL;
   }
 
   if (!webhookUrl) {
