@@ -164,7 +164,7 @@ export function DropdownSelect<T>({
         type="button"
         disabled={disabled}
         onClick={handleToggle}
-        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-[16px] sm:text-sm text-left text-slate-100 focus:outline-none focus:border-secondary transition-all flex items-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-[16px] sm:text-sm text-left text-slate-100 focus:outline-none focus:border-secondary transition-all flex items-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed md:h-[50px]"
       >
         <span className="truncate">
           {disabled && disabledPlaceholder ? disabledPlaceholder : (valueDisplay || placeholder)}
