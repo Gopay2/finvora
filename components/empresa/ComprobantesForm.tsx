@@ -80,7 +80,14 @@ export default function ComprobantesForm({
         const unidadesValidas = stockFiltrado.filter(stockItem => stockItem.producto_id === producto.id);
         const cantidadDisponible = unidadesValidas.filter(stockItem => stockItem.estado === 'Disponible').length;
         const cantidadAConsultar = unidadesValidas.filter(stockItem => stockItem.estado === 'A consultar').length;
-        return { ...producto, cantidadDisponible, cantidadAConsultar, cantidadStock: cantidadDisponible + cantidadAConsultar };
+        const cantidadEnEnvio = unidadesValidas.filter(stockItem => stockItem.estado === 'En envío').length;
+        return { 
+          ...producto, 
+          cantidadDisponible, 
+          cantidadAConsultar, 
+          cantidadEnEnvio,
+          cantidadStock: cantidadDisponible + cantidadAConsultar + cantidadEnEnvio 
+        };
       })
       .filter(producto => producto.cantidadStock > 0);
   }, [selectedRepartidorOriginalId, productos, stockFiltrado]);
@@ -92,10 +99,19 @@ export default function ComprobantesForm({
       const display = `${producto.marca} ${producto.modelo} - ${producto.almacenamiento} - ${producto.ram}`;
       const existing = map.get(display);
       if (!existing) {
-        map.set(display, { display, marca: producto.marca, modelo: producto.modelo, totalDisponible: producto.cantidadDisponible, totalAConsultar: producto.cantidadAConsultar, totalStock: producto.cantidadStock });
+        map.set(display, { 
+          display, 
+          marca: producto.marca, 
+          modelo: producto.modelo, 
+          totalDisponible: producto.cantidadDisponible, 
+          totalAConsultar: producto.cantidadAConsultar, 
+          totalEnEnvio: producto.cantidadEnEnvio,
+          totalStock: producto.cantidadStock 
+        });
       } else {
         existing.totalDisponible += producto.cantidadDisponible;
         existing.totalAConsultar += producto.cantidadAConsultar;
+        existing.totalEnEnvio += producto.cantidadEnEnvio;
         existing.totalStock += producto.cantidadStock;
       }
     });
@@ -107,7 +123,13 @@ export default function ComprobantesForm({
     if (!selectedModelKey) return [];
     return productosConStock
       .filter(producto => `${producto.marca} ${producto.modelo} - ${producto.almacenamiento} - ${producto.ram}` === selectedModelKey)
-      .map(producto => ({ color: producto.color, cantidadDisponible: producto.cantidadDisponible, cantidadAConsultar: producto.cantidadAConsultar, hasStock: producto.cantidadDisponible > 0 }));
+      .map(producto => ({ 
+        color: producto.color, 
+        cantidadDisponible: producto.cantidadDisponible, 
+        cantidadAConsultar: producto.cantidadAConsultar, 
+        cantidadEnEnvio: producto.cantidadEnEnvio, 
+        hasStock: producto.cantidadStock > 0 
+      }));
   }, [selectedModelKey, productosConStock]);
 
   // IMEIs disponibles para modelo y color seleccionados
@@ -118,7 +140,9 @@ export default function ComprobantesForm({
     );
     const matchingProductIds = new Set(matchingProducts.map(producto => producto.id));
     return stockFiltrado.filter(
-      stockItem => matchingProductIds.has(stockItem.producto_id) && stockItem.estado === 'Disponible' && stockItem.imei
+      stockItem => matchingProductIds.has(stockItem.producto_id) && 
+        (stockItem.estado === 'Disponible' || stockItem.estado === 'A consultar' || stockItem.estado === 'En envío') && 
+        stockItem.imei
     );
   }, [selectedModelKey, selectedColor, productosConStock, stockFiltrado]);
 
@@ -282,17 +306,6 @@ export default function ComprobantesForm({
             getItemKey={([key]) => key}
             getItemDisplay={([, info]) => info.display}
             renderItem={([key, info], onClick) => {
-              const isAConsultar = info.totalDisponible === 0 && info.totalAConsultar > 0;
-              if (isAConsultar) {
-                return (
-                  <div
-                    key={key}
-                    className="px-4 py-3 text-slate-500 italic border-b border-slate-900/50 last:border-b-0 flex items-center justify-between cursor-not-allowed select-none text-sm"
-                  >
-                    <span className="font-medium truncate">{info.display} (A consultar)</span>
-                  </div>
-                );
-              }
               return (
                 <div
                   key={key}
@@ -301,7 +314,7 @@ export default function ComprobantesForm({
                 >
                   <span className="font-medium truncate">{info.display}</span>
                   <span className="text-xs text-slate-400 shrink-0 ml-2">
-                    {`(${info.totalDisponible} disp.)`}
+                    {`(${info.totalStock} disp.)`}
                   </span>
                 </div>
               );
@@ -326,17 +339,6 @@ export default function ComprobantesForm({
             getItemKey={(variante) => variante.color}
             getItemDisplay={(variante) => variante.color}
             renderItem={(variante, onClick) => {
-              const isAConsultar = variante.cantidadDisponible === 0 && variante.cantidadAConsultar > 0;
-              if (isAConsultar) {
-                return (
-                  <div
-                    key={variante.color}
-                    className="px-4 py-3 text-slate-500 italic border-b border-slate-900/50 last:border-b-0 flex items-center cursor-not-allowed select-none text-sm"
-                  >
-                    <span className="font-medium">{variante.color} (A consultar)</span>
-                  </div>
-                );
-              }
               return (
                 <div
                   key={variante.color}
