@@ -40,12 +40,7 @@ export default async function StockPage() {
   const repartidores = repartidoresRaw || [];
 
   // Definir estados disponibles según el rol (excluyendo 'Vendido' ya que las unidades vendidas se mueven al histórico)
-  let estados = ["Disponible", "A consultar", "En envío"];
-  if (userRole === "Repartidor") {
-    estados = ["Disponible"];
-  } else if (userRole === "Closer" || userRole === "Cambaceador" || userRole === "CambaCloser") {
-    estados = ["Disponible", "A consultar"];
-  }
+  const estados = ["Disponible", "A consultar", "En envío"];
 
   const query = supabase
     .from("stock")
@@ -64,12 +59,6 @@ export default async function StockPage() {
     `)
     .order('fecha_ingreso', { ascending: false });
 
-  // Restricciones de seguridad por rol
-  if (userRole === "Repartidor") {
-    query.neq('estado', 'A consultar').neq('estado', 'En envío');
-  } else if (userRole === "Closer" || userRole === "Cambaceador" || userRole === "CambaCloser") {
-    query.neq('estado', 'En envío');
-  }
 
   const { data: unidades, error } = await query;
 
