@@ -21,11 +21,24 @@ const styles = {
 export default function WebAppPage() {
   return (
     <div className={styles.grid}>
+      {/* Mis Operaciones - Acceso para todos */}
+      <Link href="/empresa/webapp/mis-operaciones" className={styles.card}>
+        <div className={styles.cardGlow} />
+        <div className={styles.iconWrapper}>
+          <span className={styles.icon}>history</span>
+        </div>
+        <div>
+          <h2 className={styles.cardTitle}>Mis Operaciones</h2>
+          <p className={styles.cardDesc}>Consulta tu historial de ventas y entregas.</p>
+        </div>
+        <div className={styles.cardButton}>Acceder</div>
+      </Link>
+
       {/* Formulario de Ventas - Acceso para todos */}
       <Link href="/empresa/webapp/ventas" className={styles.card}>
         <div className={styles.cardGlow} />
         <div className={styles.iconWrapper}>
-          <span className={styles.icon}>point_of_sale</span>
+          <span className="material-symbols-outlined text-secondary" style={{ fontSize: '34px' }}>campaign</span>
         </div>
         <div>
           <h2 className={styles.cardTitle}>Formulario de Ventas</h2>
@@ -47,19 +60,6 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
-      {/* Dashboard - Bloqueado para Closer en la subpágina */}
-      <Link href="/empresa/webapp/dashboard" className={styles.card}>
-        <div className={styles.cardGlow} />
-        <div className={styles.iconWrapper}>
-          <span className={styles.icon}>monitoring</span>
-        </div>
-        <div>
-          <h2 className={styles.cardTitle}>Dashboard</h2>
-          <p className={styles.cardDesc}>Visualiza métricas, reportes y el rendimiento de la empresa.</p>
-        </div>
-        <div className={styles.cardButton}>Acceder</div>
-      </Link>
-      
       {/* Repartos */}
       <Link href="/empresa/webapp/repartos" className={styles.card}>
         <div className={styles.cardGlow} />
@@ -69,19 +69,6 @@ export default function WebAppPage() {
         <div>
           <h2 className={styles.cardTitle}>Repartos</h2>
           <p className={styles.cardDesc}>Calendario de entregas y logística.</p>
-        </div>
-        <div className={styles.cardButton}>Acceder</div>
-      </Link>
-
-      {/* Catálogo Web */}
-      <Link href="/empresa/webapp/catalogo-web" className={styles.card}>
-        <div className={styles.cardGlow} />
-        <div className={styles.iconWrapper}>
-          <span className={styles.icon}>menu_book</span>
-        </div>
-        <div>
-          <h2 className={styles.cardTitle}>Catálogo Web</h2>
-          <p className={styles.cardDesc}>Gestiona los modelos y variantes de celulares visibles en la web pública.</p>
         </div>
         <div className={styles.cardButton}>Acceder</div>
       </Link>
@@ -99,18 +86,31 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
-      {/* Próxima Sección 1 */}
-      <div className={styles.cardUpcoming}>
+      {/* Catálogo Web */}
+      <Link href="/empresa/webapp/catalogo-web" className={styles.card}>
         <div className={styles.cardGlow} />
         <div className={styles.iconWrapper}>
-          <span className="material-symbols-outlined text-3xl text-slate-500">pending</span>
+          <span className={styles.icon}>menu_book</span>
         </div>
         <div>
-          <h2 className={styles.cardTitle}>Nueva Sección</h2>
-          <p className={styles.cardDesc}>Próxima funcionalidad en desarrollo.</p>
+          <h2 className={styles.cardTitle}>Catálogo Web</h2>
+          <p className={styles.cardDesc}>Gestiona los modelos y variantes de celulares visibles en la web pública.</p>
         </div>
-        <div className={styles.cardButtonUpcoming}>Próximamente</div>
-      </div>
+        <div className={styles.cardButton}>Acceder</div>
+      </Link>
+
+      {/* Dashboard - Bloqueado para Closer en la subpágina */}
+      <Link href="/empresa/webapp/dashboard" className={styles.card}>
+        <div className={styles.cardGlow} />
+        <div className={styles.iconWrapper}>
+          <span className={styles.icon}>monitoring</span>
+        </div>
+        <div>
+          <h2 className={styles.cardTitle}>Dashboard</h2>
+          <p className={styles.cardDesc}>Visualiza métricas, reportes y el rendimiento de la empresa.</p>
+        </div>
+        <div className={styles.cardButton}>Acceder</div>
+      </Link>
 
       {/* Próxima Sección 2 */}
       <div className={styles.cardUpcoming}>
