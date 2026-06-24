@@ -118,13 +118,19 @@ export default function FiltrosDashboard({
         // Deseleccionar (vuelve a actual)
         updateURLFilters({
           year: 'actual',
+          month: currentMonth || 'actual',
+          week: currentWeek || 'actual',
         });
       } else {
         // Cambiar año: si la semana era 'actual' o 'anterior', la limpiamos porque
         // son relativas al presente y no aplican a años pasados.
-        const nextWeek = (currentWeek === 'actual' || currentWeek === 'anterior') ? null : currentWeek;
+        // Si el mes era 'actual', también lo limpiamos porque es relativo y queremos
+        // mostrar el año completo.
+        const nextWeek = (currentWeek === 'actual' || currentWeek === 'anterior' || !currentWeek) ? null : currentWeek;
+        const nextMonth = (currentMonth === 'actual' || !currentMonth) ? null : currentMonth;
         updateURLFilters({
           year: yearOption,
+          month: nextMonth,
           week: nextWeek,
         });
       }
