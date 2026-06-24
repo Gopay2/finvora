@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 
+// ─── Interfaces y Tipos ──────────────────────────────────────────────────────
 interface Sale {
   fecha_venta: string;
   [key: string]: any;
@@ -9,96 +10,156 @@ interface Sale {
 
 interface SalesChartProps {
   sales: Sale[];
+  viewMode: 'semanal' | 'mensual' | 'anual' | 'historico';
+  startDateStr?: string; // Fecha de inicio del filtro actual
 }
 
-type ViewType = 'diario' | 'semanal' | 'mensual' | 'anual';
-
-export default function SalesChart({ sales }: SalesChartProps) {
-  const [view, setView] = useState<ViewType>('semanal');
+// ─── Componente Principal ──────────────────────────────────────────────────
+export default function SalesChart({ sales, viewMode, startDateStr }: SalesChartProps) {
+  // Estado local para controlar el punto sobre el que el usuario hace hover
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
+  // Agrupar y formatear los datos del gráfico según el período seleccionado
   const chartData = useMemo(() => {
-    const now = new Date();
-    const getMexicoDate = (date: Date) => new Date(date.toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
-    const mexicoNow = getMexicoDate(now);
+    const rawData = (() => {
+      // Si no hay fecha de inicio, es vista histórica
+      if (!startDateStr || viewMode === 'historico') {
+        const yearlyStats: Record<string, number> = {};
+        
+        sales.forEach(sale => {
+          const year = new Date(sale.fecha_venta).getFullYear().toString();
+          yearlyStats[year] = (yearlyStats[year] || 0) + 1;
+        });
 
-    if (view === 'diario') {
-      const hours = Array.from({ length: 24 }, (_, i) => ({ label: `${i}h`, value: 0 }));
-      const todayStr = mexicoNow.toISOString().split('T')[0];
-      
-      sales.forEach(sale => {
-        const saleDate = getMexicoDate(new Date(sale.fecha_venta));
-        if (saleDate.toISOString().split('T')[0] === todayStr) {
-          const hour = saleDate.getHours();
-          hours[hour].value++;
+        // Asegurar que si no hay datos, al menos mostramos años lógicos
+        const years = Object.keys(yearlyStats);
+        if (years.length === 0) {
+          const currentYear = new Date().getFullYear();
+          return [
+            { label: (currentYear - 1).toString(), value: 0 },
+            { label: currentYear.toString(), value: 0 },
+          ];
         }
-      });
-      return hours;
-    }
 
-    if (view === 'semanal') {
-      const days = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
-      const data = days.map(day => ({ label: day, value: 0 }));
-      
-      const dayOfWeek = mexicoNow.getDay();
-      const diffToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
-      const startOfWeek = new Date(mexicoNow);
-      startOfWeek.setDate(mexicoNow.getDate() - diffToMonday);
-      startOfWeek.setHours(0, 0, 0, 0);
+        return Object.entries(yearlyStats)
+          .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+          .map(([year, count]) => ({ label: year, value: count }));
+      }
 
-      sales.forEach(sale => {
-        const saleDate = getMexicoDate(new Date(sale.fecha_venta));
-        if (saleDate >= startOfWeek) {
-          const diff = Math.floor((saleDate.getTime() - startOfWeek.getTime()) / (1000 * 60 * 60 * 24));
-          if (diff >= 0 && diff < 7) {
-            data[diff].value++;
+      const startDate = new Date(startDateStr);
+
+      // 1. VISTA SEMANAL: Detalle de Lunes a Domingo
+      if (viewMode === 'semanal') {
+        const days = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
+        
+        // Encontrar el lunes de la semana correspondiente a startDate
+        const tempDate = new Date(startDate.getTime());
+        const dayOfWeek = tempDate.getDay();
+        const diffToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
+        const mondayDate = new Date(tempDate);
+        mondayDate.setDate(tempDate.getDate() - diffToMonday);
+
+        const targetMonth = startDate.getMonth(); // Mes de la semana seleccionada
+
+        const data = days.map((day, index) => {
+          const dayDate = new Date(mondayDate.getTime());
+          dayDate.setDate(mondayDate.getDate() + index);
+          return {
+            label: `${day} ${String(dayDate.getDate()).padStart(2, '0')}`,
+            dateStr: dayDate.toISOString().split('T')[0],
+            monthIndex: dayDate.getMonth(),
+            value: 0
+          };
+        }).filter(d => d.monthIndex === targetMonth); // Excluir días del mes anterior o siguiente
+
+        sales.forEach(sale => {
+          const saleDateStr = new Date(sale.fecha_venta).toISOString().split('T')[0];
+          const found = data.find(d => d.dateStr === saleDateStr);
+          if (found) {
+            found.value++;
           }
-        }
-      });
-      return data;
+        });
+        return data;
+      }
+
+      // 2. VISTA MENSUAL: Detalle de los días del mes (1 al 28/30/31)
+      if (viewMode === 'mensual') {
+        const daysInMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate();
+        const data = Array.from({ length: daysInMonth }, (_, i) => {
+          const dayDate = new Date(startDate.getFullYear(), startDate.getMonth(), i + 1);
+          return {
+            label: `${i + 1}`,
+            dateStr: dayDate.toISOString().split('T')[0],
+            value: 0
+          };
+        });
+
+        sales.forEach(sale => {
+          const saleDateStr = new Date(sale.fecha_venta).toISOString().split('T')[0];
+          const found = data.find(d => d.dateStr === saleDateStr);
+          if (found) {
+            found.value++;
+          }
+        });
+        return data;
+      }
+
+      // 3. VISTA ANUAL: Detalle por meses (Enero a Diciembre)
+      if (viewMode === 'anual') {
+        const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const data = months.map((m, index) => ({
+          label: m,
+          monthIndex: index,
+          value: 0
+        }));
+
+        sales.forEach(sale => {
+          const saleDate = new Date(sale.fecha_venta);
+          if (saleDate.getFullYear() === startDate.getFullYear()) {
+            const month = saleDate.getMonth();
+            data[month].value++;
+          }
+        });
+        return data;
+      }
+
+      return [];
+    })();
+
+    // Evitar divisiones por cero si hay exactamente 1 punto en los datos procesados
+    if (rawData.length === 1) {
+      const singleVal = rawData[0].value;
+      const singleLabel = rawData[0].label;
+      const numericLabel = parseInt(singleLabel);
+      if (!isNaN(numericLabel)) {
+        return [
+          { label: (numericLabel - 1).toString(), value: 0 },
+          { label: singleLabel, value: singleVal }
+        ];
+      }
+      return [
+        { label: '', value: 0 },
+        { label: singleLabel, value: singleVal }
+      ];
     }
 
-    if (view === 'mensual') {
-      const daysInMonth = new Date(mexicoNow.getFullYear(), mexicoNow.getMonth() + 1, 0).getDate();
-      const data = Array.from({ length: daysInMonth }, (_, i) => ({ label: `${i + 1}`, value: 0 }));
-      
-      sales.forEach(sale => {
-        const saleDate = getMexicoDate(new Date(sale.fecha_venta));
-        if (saleDate.getMonth() === mexicoNow.getMonth() && saleDate.getFullYear() === mexicoNow.getFullYear()) {
-          data[saleDate.getDate() - 1].value++;
-        }
-      });
-      return data;
-    }
+    return rawData;
+  }, [sales, viewMode, startDateStr]);
 
-    if (view === 'anual') {
-      const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-      const data = months.map(m => ({ label: m, value: 0 }));
-      
-      sales.forEach(sale => {
-        const saleDate = getMexicoDate(new Date(sale.fecha_venta));
-        if (saleDate.getFullYear() === mexicoNow.getFullYear()) {
-          data[saleDate.getMonth()].value++;
-        }
-      });
-      return data;
-    }
-
-    return [];
-  }, [sales, view]);
-
+  // Cálculos matemáticos de altura y proporciones para dibujar los polígonos del SVG
   const maxVal = Math.max(...chartData.map(d => d.value), 1);
   const points = chartData.map((d, i) => {
     const x = (i / (chartData.length - 1)) * 100;
-    const y = 100 - (d.value / maxVal) * 80;
+    const y = 100 - (d.value / maxVal) * 80; // dejamos un margen del 20% arriba
     return `${x},${y}`;
   }).join(' ');
 
   const areaPoints = `0,100 ${points} 100,100`;
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
+  // Manejar movimiento del ratón para actualizar el foco del Tooltip
+  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
     const width = rect.width;
     const index = Math.round((x / width) * (chartData.length - 1));
     if (index >= 0 && index < chartData.length) {
@@ -106,96 +167,99 @@ export default function SalesChart({ sales }: SalesChartProps) {
     }
   };
 
-  const hoveredData = hoveredIndex !== null ? chartData[hoveredIndex] : null;
-  const hoveredX = hoveredIndex !== null ? (hoveredIndex / (chartData.length - 1)) * 100 : 0;
-  const hoveredY = hoveredData !== null ? 100 - (hoveredData.value / maxVal) * 80 : 0;
+  const hoveredData = (hoveredIndex !== null && hoveredIndex >= 0 && hoveredIndex < chartData.length)
+    ? chartData[hoveredIndex]
+    : null;
+  const hoveredX = (hoveredIndex !== null && chartData.length > 1)
+    ? (hoveredIndex / (chartData.length - 1)) * 100
+    : 0;
+  const hoveredY = hoveredData
+    ? 100 - (hoveredData.value / maxVal) * 80
+    : 0;
 
   const totalPeriodSales = useMemo(() => {
     return chartData.reduce((sum, item) => sum + item.value, 0);
   }, [chartData]);
 
+  // Texto abreviado para el Badge de Vista del gráfico
+  const getBadgeLabel = () => {
+    switch (viewMode) {
+      case 'semanal': return 'Semanal';
+      case 'mensual': return 'Mensual';
+      case 'anual': return 'Anual';
+      case 'historico': return 'Histórico';
+      default: return viewMode;
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h3 className="text-xl font-bold text-white tracking-tight">Ventas</h3>
-          <span className="bg-secondary/15 text-secondary border border-secondary/20 px-3 py-0.5 rounded-lg text-sm font-black tracking-normal">
+    <div className={styles.wrapper}>
+      <div className={styles.header}>
+        <div className="flex items-baseline gap-2">
+          <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Ventas</h3>
+          <span className="text-2xl sm:text-3xl font-black text-secondary">
             {totalPeriodSales}
           </span>
         </div>
-        <div className="grid grid-cols-4 sm:flex bg-slate-800/50 p-1 rounded-xl border border-slate-700 w-full sm:w-auto">
-          {(['diario', 'semanal', 'mensual', 'anual'] as ViewType[]).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`py-1.5 sm:px-3 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase transition-all text-center w-full ${
-                view === v 
-                  ? 'bg-secondary text-slate-950 shadow-lg shadow-secondary/20' 
-                  : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              {v}
-            </button>
-          ))}
+        <div className={styles.viewBadge}>
+          <span className="w-2.5 h-2.5 rounded-full bg-secondary shadow-lg shadow-secondary/50 animate-pulse" />
+          <span className="capitalize">{getBadgeLabel()}</span>
         </div>
       </div>
 
+      {/* Área del Gráfico SVG */}
       <div 
-        className="flex-1 min-h-0 relative group cursor-crosshair"
+        className={styles.chartArea}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoveredIndex(null)}
       >
         <svg viewBox="0 0 100 100" className="w-full h-full preserve-3d" preserveAspectRatio="none">
           <defs>
             <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-secondary)" stopOpacity="0.3" />
+              <stop offset="0%" stopColor="var(--color-secondary)" stopOpacity="0.35" />
               <stop offset="100%" stopColor="var(--color-secondary)" stopOpacity="0" />
             </linearGradient>
           </defs>
           
+          {/* Líneas de cuadrícula horizontales */}
           {[0, 25, 50, 75, 100].map(g => (
-            <line key={g} x1="0" y1={g} x2="100" y2={g} stroke="white" strokeOpacity="0.05" strokeWidth="0.1" />
+            <line key={g} x1="0" y1={g} x2="100" y2={g} stroke="white" strokeOpacity="0.04" strokeWidth="0.1" />
           ))}
 
+          {/* Línea vertical de foco interactivo (Hover) */}
           {hoveredIndex !== null && (
             <line 
               x1={hoveredX} y1="0" x2={hoveredX} y2="100" 
-              stroke="var(--color-secondary)" strokeOpacity="0.2" strokeWidth="0.5" 
+              stroke="var(--color-secondary)" strokeOpacity="0.25" strokeWidth="0.3" 
               vectorEffect="non-scaling-stroke"
             />
           )}
 
+          {/* Área sombreada bajo la línea */}
           <polyline
             points={areaPoints}
             fill="url(#chartGradient)"
             className="transition-all duration-700 ease-in-out"
           />
 
+          {/* Línea principal de trazado */}
           <polyline
             points={points}
             fill="none"
             stroke="var(--color-secondary)"
-            strokeWidth="2"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
             className="transition-all duration-700 ease-in-out drop-shadow-[0_0_8px_rgba(var(--color-secondary-rgb),0.5)]"
             vectorEffect="non-scaling-stroke"
           />
-
-          {hoveredIndex !== null && (
-            <line 
-              x1={hoveredX} y1="0" x2={hoveredX} y2="100" 
-              stroke="var(--color-secondary)" strokeOpacity="0.2" strokeWidth="0.5" 
-              vectorEffect="non-scaling-stroke"
-            />
-          )}
         </svg>
 
+        {/* Marcador y Tooltip sobre el Hover */}
         {hoveredData && (
           <>
-            {/* Punto redondo (fuera del SVG para evitar deformación) */}
             <div 
-              className="absolute w-3 h-3 bg-secondary rounded-full border-2 border-slate-900 shadow-[0_0_15px_rgba(var(--color-secondary-rgb),0.8)] pointer-events-none z-10"
+              className={styles.hoverDot}
               style={{ 
                 left: `${hoveredX}%`, 
                 top: `${hoveredY}%`,
@@ -203,32 +267,33 @@ export default function SalesChart({ sales }: SalesChartProps) {
               }}
             />
             
-            {/* Tooltip */}
             <div 
-              className="absolute bg-slate-900/90 border border-slate-700 p-2 rounded-lg shadow-2xl pointer-events-none animate-in fade-in zoom-in duration-200 z-20"
+              className={styles.tooltip}
               style={{ 
                 left: `${Math.min(Math.max(hoveredX, 10), 90)}%`, 
-                top: `${hoveredY - 10}%`,
+                top: `${hoveredY - 8}%`,
                 transform: 'translate(-50%, -100%)'
               }}
             >
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{hoveredData.label}</span>
-              <span className="text-sm text-secondary font-black">{hoveredData.value} <span className="text-[10px] font-bold text-slate-400">UNIDADES</span></span>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">{hoveredData.label}</span>
+                <span className="text-xs text-secondary font-black">
+                  {hoveredData.value} <span className="text-[9px] font-bold text-slate-400">UNIDADES</span>
+                </span>
+              </div>
             </div>
-          </div>
           </>
         )}
-
       </div>
 
-      <div className="flex justify-between text-slate-600 text-[8px] sm:text-[10px] font-bold uppercase tracking-normal sm:tracking-widest px-1">
+      {/* Etiquetas del eje X */}
+      <div className={styles.axisX}>
         {chartData.map((d, i) => {
           let shouldShow = false;
-          if (view === 'diario') shouldShow = i % 4 === 0 || i === 23;
-          else if (view === 'semanal') shouldShow = true;
-          else if (view === 'mensual') shouldShow = i % 5 === 0 || i === chartData.length - 1;
-          else if (view === 'anual') shouldShow = true;
+          if (viewMode === 'semanal') shouldShow = true;
+          else if (viewMode === 'mensual') shouldShow = i % 4 === 0 || i === chartData.length - 1;
+          else if (viewMode === 'anual') shouldShow = true;
+          else if (viewMode === 'historico') shouldShow = true;
 
           return shouldShow ? <span key={i}>{d.label}</span> : <span key={i} className="invisible">.</span>;
         })}
@@ -236,3 +301,16 @@ export default function SalesChart({ sales }: SalesChartProps) {
     </div>
   );
 }
+
+// ─── Estilos Extraídos (Tailwind) ───────────────────────────────────────────
+const styles = {
+  wrapper: "flex flex-col h-full space-y-6 w-full",
+  header: "flex items-center justify-between gap-3 w-full",
+  title: "text-lg font-bold text-white tracking-tight sm:text-xl",
+  badge: "bg-secondary/15 text-secondary border border-secondary/20 px-3 py-0.5 rounded-lg text-xs font-black tracking-normal",
+  viewBadge: "flex items-center gap-2.5 px-4 py-2 bg-slate-950/60 border border-slate-800 rounded-xl text-xs sm:text-sm text-slate-300 font-extrabold uppercase tracking-widest shadow-lg",
+  chartArea: "flex-1 min-h-0 relative group cursor-crosshair w-full",
+  hoverDot: "absolute w-3.5 h-3.5 bg-secondary rounded-full border-2 border-slate-900 shadow-[0_0_15px_rgba(var(--color-secondary-rgb),0.85)] pointer-events-none z-10",
+  tooltip: "absolute bg-slate-950/95 border border-slate-800 p-2 rounded-xl shadow-2xl pointer-events-none animate-in fade-in zoom-in-95 duration-150 z-20 backdrop-blur-md",
+  axisX: "flex justify-between text-slate-500 text-[8px] sm:text-[9px] font-bold uppercase tracking-normal sm:tracking-widest px-1 w-full select-none",
+};
