@@ -5,6 +5,9 @@ import AccessDenied from "@/components/empresa/AccessDenied";
 import { createClient } from "@/utils/supabase/server";
 import SalesChart from "@/components/empresa/SalesChart";
 import FiltrosDashboard from "@/components/empresa/FiltrosDashboard";
+import PerformancePieChart from "@/components/empresa/PerformancePieChart";
+import type { VentaDashboard } from "@/components/empresa/PerformancePieChart";
+import { getMexicoDate, getMexicoMonthWeeks } from "@/utils/date-helpers";
 
 // ─── Revalidación y Configuración ──────────────────────────────────────────
 export const revalidate = 0; // Deshabilitamos caché para responder inmediatamente a los URL Search Params
@@ -21,214 +24,6 @@ const styles = {
   kpiCard: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-4 sm:p-5 rounded-2xl flex flex-col items-center justify-center space-y-1 hover:border-secondary/30 transition-all shadow-lg",
   kpiValue: "text-sm sm:text-base md:text-lg font-bold text-white text-center break-words line-clamp-2 w-full",
   kpiLabel: "text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-400 font-bold text-center mt-0.5",
-};
-
-// ─── Helpers de Fecha (Zona Horaria México - CST UTC-6) ─────────────────────
-function getMexicoDate(year: number, monthIndex: number, day: number, hours = 0, minutes = 0, seconds = 0, ms = 0): Date {
-  const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
-  return new Date(`${dateStr}-06:00`); // Offset estándar CST de Ciudad de México
-}
-
-// Calcular las semanas del mes calendario (de Lunes a Domingo)
-function getMexicoMonthWeeks(year: number, monthIndex: number): { start: Date; end: Date }[] {
-  const firstDay = getMexicoDate(year, monthIndex, 1, 0, 0, 0, 0);
-  const lastDayDate = new Date(getMexicoDate(year, monthIndex + 1, 1, 0, 0, 0, 0).getTime() - 1);
-  const weeks: { start: Date; end: Date }[] = [];
-
-  let currentStart = new Date(firstDay);
-
-  while (currentStart <= lastDayDate) {
-    const dayOfWeek = currentStart.getDay(); // 0 = Domingo, 1 = Lunes
-    const daysToSunday = (7 - dayOfWeek) % 7;
-    
-    const sundayDate = new Date(currentStart);
-    sundayDate.setDate(currentStart.getDate() + daysToSunday);
-    
-    const sundayEndOfDay = getMexicoDate(
-      sundayDate.getFullYear(),
-      sundayDate.getMonth(),
-      sundayDate.getDate(),
-      23, 59, 59, 999
-    );
-
-    const currentEnd = sundayEndOfDay > lastDayDate ? new Date(lastDayDate) : sundayEndOfDay;
-
-    weeks.push({
-      start: new Date(currentStart),
-      end: new Date(currentEnd)
-    });
-
-    // Avanzamos al lunes siguiente
-    const nextMonday = new Date(currentEnd.getTime() + 1);
-    currentStart = nextMonday;
-  }
-
-  return weeks;
-}
-
-// ─── Componente para Gráfico de Torta Dinámico de Vendedores ──────────────────
-interface PerformancePieChartProps {
-  sales: any[];
-}
-
-const PerformancePieChart = ({ sales }: PerformancePieChartProps) => {
-  // Calcular rendimiento de vendedores para el período seleccionado
-  const stats: Record<string, number> = {};
-  sales.forEach((sale: any) => {
-    const name = sale.vendedor?.username || "Desconocido";
-    stats[name] = (stats[name] || 0) + 1;
-  });
-
-  const sortedStats = Object.entries(stats).sort((a, b) => b[1] - a[1]);
-  const totalSales = sales.length;
-
-  if (totalSales === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <span className="text-slate-500 text-sm font-bold uppercase tracking-wider">Sin ventas registradas en este período</span>
-      </div>
-    );
-  }
-
-  // Tomamos el mejor vendedor
-  const topSalesName = sortedStats[0]?.[0] || "---";
-  const topSalesCount = sortedStats[0]?.[1] || 0;
-  const topPct = topSalesCount / totalSales;
-  const restPct = 1 - topPct;
-  
-  const radius = 25;
-  const circumference = 2 * Math.PI * radius;
-  const topDash = topPct * circumference;
-
-  const getLabelPos = (pct: number) => {
-    const angle = pct * 2 * Math.PI;
-    const x = 50 + Math.cos(angle) * 28;
-    const y = 50 + Math.sin(angle) * 28;
-    return { x, y };
-  };
-
-  const topPos = getLabelPos(topPct / 2);
-  const restPos = getLabelPos(topPct + restPct / 2);
-
-  return (
-    <div className="flex flex-col md:flex-row items-center justify-around gap-8 w-full mt-4">
-      {/* Gráfico SVG circular */}
-      <div className="flex flex-col items-center justify-center">
-        <div className="w-56 h-56 sm:w-64 sm:h-64 relative flex items-center justify-center">
-          <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90 drop-shadow-2xl">
-            {/* Resto de vendedores (fondo completo) */}
-            <circle 
-              r={radius} cx="50" cy="50" 
-              fill="transparent" 
-              stroke="#3b82f6" 
-              strokeWidth="50" 
-              className="hover:opacity-80 transition-opacity" 
-            />
-            {/* Mejor vendedor (porción superior) */}
-            {topPct > 0 && (
-              <circle 
-                r={radius} cx="50" cy="50" 
-                fill="transparent" 
-                stroke="#10b981" 
-                strokeWidth="50" 
-                strokeDasharray={`${topDash} ${circumference}`} 
-                strokeDashoffset="0" 
-                className="hover:opacity-80 transition-opacity" 
-              />
-            )}
-            
-            {/* Textos de Porcentajes */}
-            {restPct > 0.05 && (
-              <text 
-                x={restPos.x} y={restPos.y} 
-                fill="#001c3a" fontSize="10" fontWeight="black" 
-                textAnchor="middle" dominantBaseline="central"
-                transform={`rotate(90 ${restPos.x} ${restPos.y})`} 
-                className="pointer-events-none font-bold"
-              >
-                {Math.round(restPct * 100)}%
-              </text>
-            )}
-            {topPct > 0.05 && (
-              <text 
-                x={topPos.x} y={topPos.y} 
-                fill="#001f27" fontSize="10" fontWeight="black" 
-                textAnchor="middle" dominantBaseline="central"
-                transform={`rotate(90 ${topPos.x} ${topPos.y})`} 
-                className="pointer-events-none font-bold"
-              >
-                {Math.round(topPct * 100)}%
-              </text>
-            )}
-          </svg>
-        </div>
-        {/* Leyenda */}
-        <div className="flex gap-4 sm:gap-6 mt-6">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/20"></div>
-            <span className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-wider">
-              {topSalesName.substring(0, 15)} ({topSalesCount} U.)
-            </span>
-          </div>
-          {restPct > 0 && (
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-blue-500 shadow-lg shadow-blue-500/20"></div>
-              <span className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-wider">Resto ({totalSales - topSalesCount} U.)</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Ranking de vendedores completo con barra de progreso */}
-      <div className="flex-1 w-full max-w-sm space-y-4">
-        <h5 className="text-slate-400 text-sm sm:text-base font-bold uppercase tracking-widest border-b border-slate-800/80 pb-2">
-          Ranking de Vendedores
-        </h5>
-        <div className="space-y-4 max-h-64 overflow-y-auto custom-scrollbar pr-2">
-          {sortedStats.map(([name, count], index) => {
-            const percentage = Math.round((count / totalSales) * 100);
-            const isTopOne = index === 0;
-            return (
-              <div key={name} className="flex flex-col gap-2">
-                <div className="flex justify-between items-center text-sm sm:text-base">
-                  <div className="flex items-center gap-3 text-slate-300 font-semibold">
-                    <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs sm:text-sm font-black ${
-                      isTopOne 
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                        : 'bg-slate-800 text-slate-400 border border-slate-700/50'
-                    }`}>
-                      {index + 1}
-                    </span>
-                    <span className="capitalize">{name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-extrabold text-xs sm:text-sm">
-                      {count} <span className="text-[10px] sm:text-xs text-slate-400 font-medium">U.</span>
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-black border ${
-                      isTopOne 
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.05)]' 
-                        : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                    }`}>
-                      {percentage}%
-                    </span>
-                  </div>
-                </div>
-                <div className="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-800/80">
-                  <div 
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      isTopOne ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-blue-500'
-                    }`}
-                    style={{ width: `${percentage}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
 };
 
 // ─── Componente Principal de Página ──────────────────────────────────────────
@@ -290,7 +85,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   
   // A. Ventas Hoy
   let ventasHoy = 0;
-  sales.forEach((sale: any) => {
+  sales.forEach((sale: VentaDashboard) => {
     const saleDate = new Date(sale.fecha_venta);
     if (getMexicoDateString(saleDate) === mexicoTodayStr) {
       ventasHoy++;
@@ -313,7 +108,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   endOfWeek.setHours(23, 59, 59, 999);
 
   let ventasSemana = 0;
-  sales.forEach((sale: any) => {
+  sales.forEach((sale: VentaDashboard) => {
     const saleDate = new Date(sale.fecha_venta);
     if (saleDate >= startOfWeek && saleDate <= endOfWeek) {
       ventasSemana++;
@@ -326,7 +121,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const endOfMonth = getMexicoDate(currentMexicoYear, currentMexicoMonth, lastDayCurrentMonth, 23, 59, 59, 999);
 
   let ventasMesActual = 0;
-  sales.forEach((sale: any) => {
+  sales.forEach((sale: VentaDashboard) => {
     const saleDate = new Date(sale.fecha_venta);
     if (saleDate >= startOfMonth && saleDate <= endOfMonth) {
       ventasMesActual++;
@@ -337,9 +132,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const vendedoresMesStats: Record<string, number> = {};
   const vendedoresHistoricoStats: Record<string, number> = {};
   
-  sales.forEach((sale: any) => {
+  sales.forEach((sale: VentaDashboard) => {
     const saleDate = new Date(sale.fecha_venta);
-    const vName = (sale.vendedor as any)?.username || "Desconocido";
+    const vName = sale.vendedor?.username || "Desconocido";
     
     vendedoresHistoricoStats[vName] = (vendedoresHistoricoStats[vName] || 0) + 1;
     
@@ -362,9 +157,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const productosMesStats: Record<string, number> = {};
   const productosHistoricoStats: Record<string, number> = {};
 
-  sales.forEach((sale: any) => {
+  sales.forEach((sale: VentaDashboard) => {
     const saleDate = new Date(sale.fecha_venta);
-    const pName = sale.productos ? `${(sale.productos as any).marca} ${(sale.productos as any).modelo}` : "Desconocido";
+    const pName = sale.productos ? `${sale.productos.marca} ${sale.productos.modelo}` : "Desconocido";
     
     productosHistoricoStats[pName] = (productosHistoricoStats[pName] || 0) + 1;
     
@@ -437,7 +232,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   // Filtrar en memoria
   if (startDate && endDate) {
-    filteredSales = sales.filter((sale: any) => {
+    filteredSales = sales.filter((sale: VentaDashboard) => {
       const saleDate = new Date(sale.fecha_venta);
       return saleDate >= startDate! && saleDate <= endDate!;
     });
@@ -445,7 +240,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   // Extraer los años únicos que tienen datos de ventas reales en la base de datos
   const yearsWithSalesData = Array.from(
-    new Set(sales.map((sale: any) => new Date(sale.fecha_venta).getFullYear()))
+    new Set(sales.map((sale: VentaDashboard) => new Date(sale.fecha_venta).getFullYear()))
   ) as number[];
   yearsWithSalesData.sort((a, b) => b - a);
   const availableYears = yearsWithSalesData.length > 0 ? yearsWithSalesData : [currentMexicoYear];

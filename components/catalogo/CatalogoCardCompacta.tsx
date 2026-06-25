@@ -2,9 +2,10 @@
 
 import React from "react";
 import Link from "next/link";
+import type { CatalogoCelular } from "@/types/catalogo";
 
 interface CatalogoCardCompactaProps {
-  celular: any;
+  celular: CatalogoCelular;
 }
 
 export default function CatalogoCardCompacta({ celular }: CatalogoCardCompactaProps) {

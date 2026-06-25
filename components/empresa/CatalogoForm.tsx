@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { crearCelular, editarCelular, getModelosPorMarca, getEspecificacionesPorModelo } from "@/app/empresa/webapp/catalogo-web/catalogo-actions";
 import SubmitButton from "./SubmitButton";
 import { MARCAS, ALMACENAMIENTOS, RAMS } from "@/utils/constants";
+import type { CatalogoCelular } from "@/types/catalogo";
 
 const styles = {
   grid: "grid grid-cols-1 md:grid-cols-2 gap-6",
@@ -18,7 +19,7 @@ const styles = {
 };
 
 interface CatalogoFormProps {
-  celular?: any; // Objeto de celular a editar si aplica
+  celular?: CatalogoCelular; // Objeto de celular a editar si aplica
   onSuccess?: () => void; // Callback al finalizar con éxito
 }
 

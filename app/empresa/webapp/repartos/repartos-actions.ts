@@ -383,6 +383,7 @@ export async function getZonasList() {
       id,
       repartidor_id,
       nombre_zona,
+      sigla,
       descripcion,
       created_at,
       repartidores (
@@ -410,6 +411,7 @@ export async function getZonasList() {
 export async function crearZona(formData: {
   repartidor_id: string;
   nombre_zona: string;
+  sigla?: string;
   descripcion?: string;
 }) {
   const { role } = await getUserProfile();
@@ -423,6 +425,7 @@ export async function crearZona(formData: {
     .insert({
       repartidor_id: formData.repartidor_id,
       nombre_zona: formData.nombre_zona,
+      sigla: formData.sigla || '',
       descripcion: formData.descripcion || ''
     });
 
@@ -449,6 +452,7 @@ export async function editarZona(
   formData: {
     repartidor_id: string;
     nombre_zona: string;
+    sigla?: string;
     descripcion?: string;
   }
 ) {
@@ -463,6 +467,7 @@ export async function editarZona(
     .update({
       repartidor_id: formData.repartidor_id,
       nombre_zona: formData.nombre_zona,
+      sigla: formData.sigla || '',
       descripcion: formData.descripcion || ''
     })
     .eq('id', zonaId);

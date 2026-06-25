@@ -10,7 +10,8 @@ import {
 import type {
   OptionItem, Producto, StockItem, ModeloAgrupado
 } from "./comprobantes-types";
-import { VendedorAutocomplete, DropdownSelect } from "./SelectoresFormulario";
+import { VendedorAutocomplete } from "./VendedorAutocomplete";
+import { DropdownSelect } from "./DropdownSelect";
 
 interface ComprobantesFormProps {
   vendedores: OptionItem[];

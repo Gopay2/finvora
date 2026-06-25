@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from "react";
+import type { CatalogoCelular } from "@/types/catalogo";
 
 interface CatalogoCardProps {
-  celular: any;
+  celular: CatalogoCelular;
   whatsappPhone: string;
 }
 
