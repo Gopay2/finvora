@@ -34,15 +34,15 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
-      {/* Formulario de Ventas - Acceso para todos */}
-      <Link href="/empresa/webapp/ventas" className={styles.card}>
+      {/* Orden de Entrega - Acceso para todos */}
+      <Link href="/empresa/webapp/ordenes-entrega" className={styles.card}>
         <div className={styles.cardGlow} />
         <div className={styles.iconWrapper}>
           <span className="material-symbols-outlined text-secondary" style={{ fontSize: '34px' }}>campaign</span>
         </div>
         <div>
-          <h2 className={styles.cardTitle}>Formulario de Ventas</h2>
-          <p className={styles.cardDesc}>Registro de nuevos pedidos y notificaciones a repartidores</p>
+          <h2 className={styles.cardTitle}>Orden de Entrega</h2>
+          <p className={styles.cardDesc}>Registro de nuevas órdenes y notificaciones a repartidores</p>
         </div>
         <div className={styles.cardButton}>Acceder</div>
       </Link>

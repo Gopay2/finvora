@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useMemo } from "react";
-import { submitVenta } from "@/app/empresa/webapp/ventas/actions";
+import { submitOrdenEntrega } from "@/app/empresa/webapp/ordenes-entrega/actions";
 
 interface Producto {
   id: string;
@@ -31,7 +31,7 @@ interface StockItem {
   imei?: string;
 }
 
-interface VentasFormProps {
+interface OrdenesEntregaFormProps {
   productos: Producto[];
   zonasReparto: RepartoZonaInfo[];
   stockItems: StockItem[];
@@ -57,7 +57,7 @@ const styles = {
   pickerIcon: "absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base"
 };
 
-export default function VentasForm({ productos, zonasReparto, stockItems }: VentasFormProps) {
+export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems }: OrdenesEntregaFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   
@@ -73,7 +73,7 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
   // 1. Filtrar stockItems según el repartidor seleccionado
   const stockFiltrado = useMemo(() => {
     if (!selectedRepartidorId) return [];
-    return stockItems.filter(s => s.zona === selectedRepartidorId);
+    return stockItems.filter(stockItem => stockItem.zona === selectedRepartidorId);
   }, [selectedRepartidorId, stockItems]);
 
   // 2. Mapeamos y filtramos los productos que tienen stock asignado a este repartidor (cantidad > 0)
@@ -81,46 +81,46 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
     if (!selectedRepartidorId) return [];
     
     // Obtenemos los IDs de productos del catálogo que tienen stock físico con el repartidor
-    const idsConStock = new Set(stockFiltrado.map(s => s.producto_id));
+    const idsConStock = new Set(stockFiltrado.map(stockItem => stockItem.producto_id));
 
     return productos
-      .filter(p => idsConStock.has(p.id))
-      .map(p => {
-        const unidadesValidas = stockFiltrado.filter(s => s.producto_id === p.id);
-        const cantidadDisponible = unidadesValidas.filter(s => s.estado === 'Disponible').length;
-        const cantidadAConsultar = unidadesValidas.filter(s => s.estado === 'A consultar').length;
+      .filter(producto => idsConStock.has(producto.id))
+      .map(producto => {
+        const unidadesValidas = stockFiltrado.filter(stockItem => stockItem.producto_id === producto.id);
+        const cantidadDisponible = unidadesValidas.filter(stockItem => stockItem.estado === 'Disponible').length;
+        const cantidadAConsultar = unidadesValidas.filter(stockItem => stockItem.estado === 'A consultar').length;
         
         return {
-          ...p,
+          ...producto,
           cantidadDisponible,
           cantidadAConsultar,
           cantidadStock: cantidadDisponible + cantidadAConsultar
         };
       })
-      .filter(p => p.cantidadStock > 0); // Nos aseguramos de que solo pasen productos con stock positivo
+      .filter(producto => producto.cantidadStock > 0); // Nos aseguramos de que solo pasen productos con stock positivo
   }, [selectedRepartidorId, productos, stockFiltrado]);
 
   // 3. Agrupamos modelos únicos a partir de los productos con stock
   const modelosUnicos = useMemo(() => {
     const map = new Map();
-    productosConStock.forEach(p => {
+    productosConStock.forEach(producto => {
       // Formato: MARCA MODELO - 256GB - 8GB
-      const display = `${p.marca} ${p.modelo} - ${p.almacenamiento} - ${p.ram}`;
+      const display = `${producto.marca} ${producto.modelo} - ${producto.almacenamiento} - ${producto.ram}`;
       const existing = map.get(display);
       
       if (!existing) {
         map.set(display, {
           display: display,
-          marca: p.marca,
-          modelo: p.modelo,
-          totalDisponible: p.cantidadDisponible,
-          totalAConsultar: p.cantidadAConsultar,
-          totalStock: p.cantidadStock
+          marca: producto.marca,
+          modelo: producto.modelo,
+          totalDisponible: producto.cantidadDisponible,
+          totalAConsultar: producto.cantidadAConsultar,
+          totalStock: producto.cantidadStock
         });
       } else {
-        existing.totalDisponible += p.cantidadDisponible;
-        existing.totalAConsultar += p.cantidadAConsultar;
-        existing.totalStock += p.cantidadStock;
+        existing.totalDisponible += producto.cantidadDisponible;
+        existing.totalAConsultar += producto.cantidadAConsultar;
+        existing.totalStock += producto.cantidadStock;
       }
     });
     return Array.from(map.entries());
@@ -130,12 +130,12 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
   const variantesColor = useMemo(() => {
     if (!selectedModelKey) return [];
     return productosConStock
-      .filter(p => `${p.marca} ${p.modelo} - ${p.almacenamiento} - ${p.ram}` === selectedModelKey)
-      .map(p => ({
-        color: p.color,
-        cantidadDisponible: p.cantidadDisponible,
-        cantidadAConsultar: p.cantidadAConsultar,
-        hasStock: p.cantidadDisponible > 0
+      .filter(producto => `${producto.marca} ${producto.modelo} - ${producto.almacenamiento} - ${producto.ram}` === selectedModelKey)
+      .map(producto => ({
+        color: producto.color,
+        cantidadDisponible: producto.cantidadDisponible,
+        cantidadAConsultar: producto.cantidadAConsultar,
+        hasStock: producto.cantidadDisponible > 0
       }));
   }, [selectedModelKey, productosConStock]);
 
@@ -143,20 +143,20 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
   const imeisDisponibles = useMemo(() => {
     if (!selectedModelKey || !selectedColor) return [];
     const matchingProducts = productosConStock.filter(
-      p => `${p.marca} ${p.modelo} - ${p.almacenamiento} - ${p.ram}` === selectedModelKey && p.color === selectedColor
+      producto => `${producto.marca} ${producto.modelo} - ${producto.almacenamiento} - ${producto.ram}` === selectedModelKey && producto.color === selectedColor
     );
-    const matchingProductIds = new Set(matchingProducts.map(p => p.id));
+    const matchingProductIds = new Set(matchingProducts.map(producto => producto.id));
     return stockFiltrado.filter(
-      s => matchingProductIds.has(s.producto_id) && s.estado === 'Disponible' && s.imei
+      stockItem => matchingProductIds.has(stockItem.producto_id) && stockItem.estado === 'Disponible' && stockItem.imei
     );
   }, [selectedModelKey, selectedColor, productosConStock, stockFiltrado]);
 
   // 5. Zonas únicas configuradas
   const zonasUnicas = useMemo(() => {
     const set = new Set<string>();
-    (zonasReparto || []).forEach(z => {
-      if (z.nombre_zona) {
-        set.add(z.nombre_zona);
+    (zonasReparto || []).forEach(zonaInfo => {
+      if (zonaInfo.nombre_zona) {
+        set.add(zonaInfo.nombre_zona);
       }
     });
     return Array.from(set).sort();
@@ -167,19 +167,19 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
     if (!selectedZona) return [];
     const map = new Map<string, string>();
     (zonasReparto || [])
-      .filter(z => 
-        z.nombre_zona === selectedZona && 
-        z.repartidor_nombre &&
-        !z.repartidor_nombre.toLowerCase().includes("cambaceo")
+      .filter(zonaInfo => 
+        zonaInfo.nombre_zona === selectedZona && 
+        zonaInfo.repartidor_nombre &&
+        !zonaInfo.repartidor_nombre.toLowerCase().includes("cambaceo")
       )
-      .forEach(z => {
-        map.set(z.repartidor_id, z.repartidor_nombre);
+      .forEach(zonaInfo => {
+        map.set(zonaInfo.repartidor_id, zonaInfo.repartidor_nombre);
       });
     return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre }));
   }, [selectedZona, zonasReparto]);
 
   const selectedRepartidorName = useMemo(() => {
-    return repartidoresValidos.find(r => r.id === selectedRepartidorId)?.nombre || "";
+    return repartidoresValidos.find(repartidor => repartidor.id === selectedRepartidorId)?.nombre || "";
   }, [selectedRepartidorId, repartidoresValidos]);
 
   const handleModelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -230,10 +230,10 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
     }
     formData.set("color_celular", selectedColor);
 
-    const result = await submitVenta(formData);
+    const result = await submitOrdenEntrega(formData);
 
     if (result.success) {
-      setStatus({ type: 'success', message: '¡Venta registrada y enviada a Discord!' });
+      setStatus({ type: 'success', message: `¡Orden de Entrega ${result.folio || ''} registrada y enviada a Discord!` });
       formRef.current?.reset();
       setSelectedModelKey("");
       setSelectedColor("");
@@ -241,7 +241,7 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
       setSelectedRepartidorId("");
       setSelectedImei("");
     } else {
-      setStatus({ type: 'error', message: result.error || 'Error al procesar la venta.' });
+      setStatus({ type: 'error', message: result.error || 'Error al procesar la orden.' });
     }
     setIsSubmitting(false);
   };
@@ -382,7 +382,7 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
           <input 
             type="hidden" 
             name="repartidor" 
-            value={repartidoresValidos.find(r => r.id === selectedRepartidorId)?.nombre || ""} 
+            value={repartidoresValidos.find(repartidor => repartidor.id === selectedRepartidorId)?.nombre || ""} 
           />
         </div>
 
@@ -532,7 +532,7 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
           <textarea
             name="comentarios"
             className={styles.textarea}
-            placeholder="Notas adicionales sobre la venta o entrega..."
+            placeholder="Notas adicionales sobre la orden o entrega..."
           />
         </div>
       </div>
@@ -548,7 +548,7 @@ export default function VentasForm({ productos, zonasReparto, stockItems }: Vent
             Procesando...
           </>
         ) : (
-          'Registrar Venta'
+          'Registrar Orden de Entrega'
         )}
       </button>
     </form>
