@@ -86,6 +86,7 @@ export default async function ComprobantesPage() {
       const nombreNorm = zonaReparto.repartidores.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       if (
         // Filtros para agregar al select repartidores y ubicaciones especificas
+        nombreNorm.includes("humberto") ||
         nombreNorm.includes("local") ||
         nombreNorm.includes("cambaceo") ||
         nombreNorm.includes("jonathan") ||
