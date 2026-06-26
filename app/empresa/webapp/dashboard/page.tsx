@@ -7,7 +7,7 @@ import SalesChart from "@/components/empresa/SalesChart";
 import FiltrosDashboard from "@/components/empresa/FiltrosDashboard";
 import PerformancePieChart from "@/components/empresa/PerformancePieChart";
 import type { VentaDashboard } from "@/components/empresa/PerformancePieChart";
-import { getMexicoDate, getMexicoMonthWeeks } from "@/utils/date-helpers";
+import { getTijuanaDate, getTijuanaMonthWeeks } from "@/utils/date-helpers";
 
 // ─── Revalidación y Configuración ──────────────────────────────────────────
 export const revalidate = 0; // Deshabilitamos caché para responder inmediatamente a los URL Search Params
@@ -64,22 +64,23 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   const sales = allSales || [];
 
-  // 3. Lógica Temporal de México (CST UTC-6)
+  // 3. Lógica Temporal de Tijuana (America/Tijuana)
   const now = new Date();
-  const mexicoNowStr = now.toLocaleString('en-US', { timeZone: 'America/Mexico_City' });
-  const currentMexicoDate = new Date(mexicoNowStr);
-  const currentMexicoYear = currentMexicoDate.getFullYear();
-  const currentMexicoMonth = currentMexicoDate.getMonth(); // 0-11
+  const tijuanaNowStr = now.toLocaleString('en-US', { timeZone: 'America/Tijuana' });
+  const currentTijuanaDate = new Date(tijuanaNowStr);
+  const currentTijuanaYear = currentTijuanaDate.getFullYear();
+  const currentTijuanaMonth = currentTijuanaDate.getMonth(); // 0-11
 
-  const getMexicoDateString = (date: Date) => 
+  const getTijuanaDateString = (date: Date) => 
     new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Mexico_City',
+      timeZone: 'America/Tijuana',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit'
     }).format(date);
 
-  const mexicoTodayStr = getMexicoDateString(currentMexicoDate);
+  const tijuanaTodayStr = getTijuanaDateString(currentTijuanaDate);
+  const [currYear, currMonth, currDay] = tijuanaTodayStr.split('-').map(Number);
 
   // 4. Calcular KPIs Fijos (Absolutos)
   
@@ -87,25 +88,34 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   let ventasHoy = 0;
   sales.forEach((sale: VentaDashboard) => {
     const saleDate = new Date(sale.fecha_venta);
-    if (getMexicoDateString(saleDate) === mexicoTodayStr) {
+    if (getTijuanaDateString(saleDate) === tijuanaTodayStr) {
       ventasHoy++;
     }
   });
 
   // B. Ventas Última Semana (Semana vigente de Lunes a Domingo)
-  const dayOfWeek = currentMexicoDate.getDay();
+  const dayOfWeek = currentTijuanaDate.getDay();
   const diffToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
-  const startOfWeek = getMexicoDate(
-    currentMexicoDate.getFullYear(),
-    currentMexicoDate.getMonth(),
-    currentMexicoDate.getDate(),
+  
+  const mondayDateHelper = new Date(Date.UTC(currYear, currMonth - 1, currDay));
+  mondayDateHelper.setUTCDate(mondayDateHelper.getUTCDate() - diffToMonday);
+  
+  const startOfWeek = getTijuanaDate(
+    mondayDateHelper.getUTCFullYear(),
+    mondayDateHelper.getUTCMonth(),
+    mondayDateHelper.getUTCDate(),
     0, 0, 0, 0
   );
-  startOfWeek.setDate(currentMexicoDate.getDate() - diffToMonday);
   
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6);
-  endOfWeek.setHours(23, 59, 59, 999);
+  const sundayDateHelper = new Date(mondayDateHelper);
+  sundayDateHelper.setUTCDate(mondayDateHelper.getUTCDate() + 6);
+  
+  const endOfWeek = getTijuanaDate(
+    sundayDateHelper.getUTCFullYear(),
+    sundayDateHelper.getUTCMonth(),
+    sundayDateHelper.getUTCDate(),
+    23, 59, 59, 999
+  );
 
   let ventasSemana = 0;
   sales.forEach((sale: VentaDashboard) => {
@@ -116,9 +126,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   });
 
   // C. Ventas Mes Actual
-  const startOfMonth = getMexicoDate(currentMexicoYear, currentMexicoMonth, 1, 0, 0, 0, 0);
-  const lastDayCurrentMonth = new Date(currentMexicoYear, currentMexicoMonth + 1, 0).getDate();
-  const endOfMonth = getMexicoDate(currentMexicoYear, currentMexicoMonth, lastDayCurrentMonth, 23, 59, 59, 999);
+  const startOfMonth = getTijuanaDate(currentTijuanaYear, currentTijuanaMonth, 1, 0, 0, 0, 0);
+  const lastDayCurrentMonth = new Date(currentTijuanaYear, currentTijuanaMonth + 1, 0).getDate();
+  const endOfMonth = getTijuanaDate(currentTijuanaYear, currentTijuanaMonth, lastDayCurrentMonth, 23, 59, 59, 999);
 
   let ventasMesActual = 0;
   sales.forEach((sale: VentaDashboard) => {
@@ -177,13 +187,13 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const celularMasVendidoHistorico = getWinnerProduct(productosHistoricoStats);
 
   // 5. Calcular Parámetros de Filtro
-  const filterYearNum = yearParam === 'actual' ? currentMexicoYear : (yearParam === 'historico' ? null : parseInt(yearParam));
-  const filterMonthIdx = monthParam === 'actual' ? currentMexicoMonth : (monthParam ? parseInt(monthParam) - 1 : null);
+  const filterYearNum = yearParam === 'actual' ? currentTijuanaYear : (yearParam === 'historico' ? null : parseInt(yearParam));
+  const filterMonthIdx = monthParam === 'actual' ? currentTijuanaMonth : (monthParam ? parseInt(monthParam) - 1 : null);
 
   // Determinar cuántas semanas tiene el mes seleccionado
   let weeksInSelectedMonth = 0;
   if (filterYearNum !== null && filterMonthIdx !== null) {
-    weeksInSelectedMonth = getMexicoMonthWeeks(filterYearNum, filterMonthIdx).length;
+    weeksInSelectedMonth = getTijuanaMonthWeeks(filterYearNum, filterMonthIdx).length;
   }
 
   // 6. Aplicar Filtro de Fechas para los Gráficos
@@ -193,21 +203,21 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   let chartViewMode: 'semanal' | 'mensual' | 'anual' | 'historico' = 'historico';
 
   if (yearParam !== 'historico') {
-    const targetYear = yearParam === 'actual' ? currentMexicoYear : parseInt(yearParam);
+    const targetYear = yearParam === 'actual' ? currentTijuanaYear : parseInt(yearParam);
     
     if (!monthParam || monthParam === '') {
       // Todo el año
-      startDate = getMexicoDate(targetYear, 0, 1, 0, 0, 0, 0);
-      endDate = getMexicoDate(targetYear, 11, 31, 23, 59, 59, 999);
+      startDate = getTijuanaDate(targetYear, 0, 1, 0, 0, 0, 0);
+      endDate = getTijuanaDate(targetYear, 11, 31, 23, 59, 59, 999);
       chartViewMode = 'anual';
     } else {
-      const targetMonthIndex = monthParam === 'actual' ? currentMexicoMonth : parseInt(monthParam) - 1;
+      const targetMonthIndex = monthParam === 'actual' ? currentTijuanaMonth : parseInt(monthParam) - 1;
       
       if (!weekParam || weekParam === '') {
         // Todo el mes
-        startDate = getMexicoDate(targetYear, targetMonthIndex, 1, 0, 0, 0, 0);
+        startDate = getTijuanaDate(targetYear, targetMonthIndex, 1, 0, 0, 0, 0);
         const lastDayFilteredMonth = new Date(targetYear, targetMonthIndex + 1, 0).getDate();
-        endDate = getMexicoDate(targetYear, targetMonthIndex, lastDayFilteredMonth, 23, 59, 59, 999);
+        endDate = getTijuanaDate(targetYear, targetMonthIndex, lastDayFilteredMonth, 23, 59, 59, 999);
         chartViewMode = 'mensual';
       } else if (weekParam === 'actual') {
         startDate = startOfWeek;
@@ -219,7 +229,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         chartViewMode = 'semanal';
       } else if (weekParam.startsWith('S')) {
         const weekNum = parseInt(weekParam.substring(1));
-        const monthWeeks = getMexicoMonthWeeks(targetYear, targetMonthIndex);
+        const monthWeeks = getTijuanaMonthWeeks(targetYear, targetMonthIndex);
         const selectedWeek = monthWeeks[weekNum - 1];
         if (selectedWeek) {
           startDate = selectedWeek.start;
@@ -243,7 +253,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     new Set(sales.map((sale: VentaDashboard) => new Date(sale.fecha_venta).getFullYear()))
   ) as number[];
   yearsWithSalesData.sort((a, b) => b - a);
-  const availableYears = yearsWithSalesData.length > 0 ? yearsWithSalesData : [currentMexicoYear];
+  const availableYears = yearsWithSalesData.length > 0 ? yearsWithSalesData : [currentTijuanaYear];
 
   return (
     <div className={styles.container}>
