@@ -14,6 +14,24 @@ interface SalesChartProps {
   startDateStr?: string; // Fecha de inicio del filtro actual
 }
 
+// ─── Helpers de Timezone México ──────────────────────────────────────────────
+/** Devuelve la fecha YYYY-MM-DD en timezone de México (America/Mexico_City) */
+function toMexicoDateStr(date: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Mexico_City',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(date);
+}
+
+/** Extrae año, mes (0-11) y día en timezone de México */
+function getMexicoParts(date: Date): { year: number; month: number; day: number } {
+  const str = toMexicoDateStr(date);
+  const [y, m, d] = str.split('-').map(Number);
+  return { year: y, month: m - 1, day: d };
+}
+
 // ─── Componente Principal ──────────────────────────────────────────────────
 export default function SalesChart({ sales, viewMode, startDateStr }: SalesChartProps) {
   // Estado local para controlar el punto sobre el que el usuario hace hover
@@ -27,7 +45,7 @@ export default function SalesChart({ sales, viewMode, startDateStr }: SalesChart
         const yearlyStats: Record<string, number> = {};
         
         sales.forEach(sale => {
-          const year = new Date(sale.fecha_venta).getFullYear().toString();
+          const year = toMexicoDateStr(new Date(sale.fecha_venta)).slice(0, 4);
           yearlyStats[year] = (yearlyStats[year] || 0) + 1;
         });
 
@@ -59,21 +77,22 @@ export default function SalesChart({ sales, viewMode, startDateStr }: SalesChart
         const mondayDate = new Date(tempDate);
         mondayDate.setDate(tempDate.getDate() - diffToMonday);
 
-        const targetMonth = startDate.getMonth(); // Mes de la semana seleccionada
+        const targetMonth = getMexicoParts(startDate).month; // Mes de la semana seleccionada (timezone México)
 
         const data = days.map((day, index) => {
           const dayDate = new Date(mondayDate.getTime());
           dayDate.setDate(mondayDate.getDate() + index);
+          const dayParts = getMexicoParts(dayDate);
           return {
-            label: `${day} ${String(dayDate.getDate()).padStart(2, '0')}`,
-            dateStr: dayDate.toISOString().split('T')[0],
-            monthIndex: dayDate.getMonth(),
+            label: `${day} ${String(dayParts.day).padStart(2, '0')}`,
+            dateStr: toMexicoDateStr(dayDate),
+            monthIndex: dayParts.month,
             value: 0
           };
         }).filter(d => d.monthIndex === targetMonth); // Excluir días del mes anterior o siguiente
 
         sales.forEach(sale => {
-          const saleDateStr = new Date(sale.fecha_venta).toISOString().split('T')[0];
+          const saleDateStr = toMexicoDateStr(new Date(sale.fecha_venta));
           const found = data.find(d => d.dateStr === saleDateStr);
           if (found) {
             found.value++;
@@ -84,18 +103,18 @@ export default function SalesChart({ sales, viewMode, startDateStr }: SalesChart
 
       // 2. VISTA MENSUAL: Detalle de los días del mes (1 al 28/30/31)
       if (viewMode === 'mensual') {
-        const daysInMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate();
+        const startParts = getMexicoParts(startDate);
+        const daysInMonth = new Date(startParts.year, startParts.month + 1, 0).getDate();
         const data = Array.from({ length: daysInMonth }, (_, i) => {
-          const dayDate = new Date(startDate.getFullYear(), startDate.getMonth(), i + 1);
           return {
             label: `${i + 1}`,
-            dateStr: dayDate.toISOString().split('T')[0],
+            dateStr: `${startParts.year}-${String(startParts.month + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`,
             value: 0
           };
         });
 
         sales.forEach(sale => {
-          const saleDateStr = new Date(sale.fecha_venta).toISOString().split('T')[0];
+          const saleDateStr = toMexicoDateStr(new Date(sale.fecha_venta));
           const found = data.find(d => d.dateStr === saleDateStr);
           if (found) {
             found.value++;
@@ -113,11 +132,11 @@ export default function SalesChart({ sales, viewMode, startDateStr }: SalesChart
           value: 0
         }));
 
+        const targetYear = getMexicoParts(startDate).year;
         sales.forEach(sale => {
-          const saleDate = new Date(sale.fecha_venta);
-          if (saleDate.getFullYear() === startDate.getFullYear()) {
-            const month = saleDate.getMonth();
-            data[month].value++;
+          const saleParts = getMexicoParts(new Date(sale.fecha_venta));
+          if (saleParts.year === targetYear) {
+            data[saleParts.month].value++;
           }
         });
         return data;
