@@ -14,20 +14,20 @@ interface SalesChartProps {
   startDateStr?: string; // Fecha de inicio del filtro actual
 }
 
-// ─── Helpers de Timezone México ──────────────────────────────────────────────
-/** Devuelve la fecha YYYY-MM-DD en timezone de México (America/Mexico_City) */
-function toMexicoDateStr(date: Date): string {
+// ─── Helpers de Timezone Tijuana ──────────────────────────────────────────────
+/** Devuelve la fecha YYYY-MM-DD en timezone de Tijuana (America/Tijuana) */
+function toTijuanaDateStr(date: Date): string {
   return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Mexico_City',
+    timeZone: 'America/Tijuana',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
   }).format(date);
 }
 
-/** Extrae año, mes (0-11) y día en timezone de México */
-function getMexicoParts(date: Date): { year: number; month: number; day: number } {
-  const str = toMexicoDateStr(date);
+/** Extrae año, mes (0-11) y día en timezone de Tijuana */
+function getTijuanaParts(date: Date): { year: number; month: number; day: number } {
+  const str = toTijuanaDateStr(date);
   const [y, m, d] = str.split('-').map(Number);
   return { year: y, month: m - 1, day: d };
 }
@@ -45,7 +45,7 @@ export default function SalesChart({ sales, viewMode, startDateStr }: SalesChart
         const yearlyStats: Record<string, number> = {};
         
         sales.forEach(sale => {
-          const year = toMexicoDateStr(new Date(sale.fecha_venta)).slice(0, 4);
+          const year = toTijuanaDateStr(new Date(sale.fecha_venta)).slice(0, 4);
           yearlyStats[year] = (yearlyStats[year] || 0) + 1;
         });
 
@@ -70,29 +70,32 @@ export default function SalesChart({ sales, viewMode, startDateStr }: SalesChart
       if (viewMode === 'semanal') {
         const days = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
         
-        // Encontrar el lunes de la semana correspondiente a startDate
-        const tempDate = new Date(startDate.getTime());
-        const dayOfWeek = tempDate.getDay();
-        const diffToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
-        const mondayDate = new Date(tempDate);
-        mondayDate.setDate(tempDate.getDate() - diffToMonday);
+        // Obtenemos los componentes de fecha del lunes en Tijuana (startDate)
+        const startTijuanaStr = toTijuanaDateStr(startDate);
+        const [startY, startM, startD] = startTijuanaStr.split('-').map(Number);
 
-        const targetMonth = getMexicoParts(startDate).month; // Mes de la semana seleccionada (timezone México)
+        // Creamos una fecha auxiliar de referencia puramente en UTC
+        const refUtcDate = new Date(Date.UTC(startY, startM - 1, startD));
+        const targetMonth = startM - 1; // Mes de la semana seleccionada en Tijuana
 
         const data = days.map((day, index) => {
-          const dayDate = new Date(mondayDate.getTime());
-          dayDate.setDate(mondayDate.getDate() + index);
-          const dayParts = getMexicoParts(dayDate);
+          // Generamos el día sumando index de forma matemática en UTC
+          const dayUtc = new Date(refUtcDate);
+          dayUtc.setUTCDate(refUtcDate.getUTCDate() + index);
+          
+          // Ahora construimos el string YYYY-MM-DD en Tijuana
+          const dayStr = `${dayUtc.getUTCFullYear()}-${String(dayUtc.getUTCMonth() + 1).padStart(2, '0')}-${String(dayUtc.getUTCDate()).padStart(2, '0')}`;
+          
           return {
-            label: `${day} ${String(dayParts.day).padStart(2, '0')}`,
-            dateStr: toMexicoDateStr(dayDate),
-            monthIndex: dayParts.month,
+            label: `${day} ${String(dayUtc.getUTCDate()).padStart(2, '0')}`,
+            dateStr: dayStr,
+            monthIndex: dayUtc.getUTCMonth(),
             value: 0
           };
         }).filter(d => d.monthIndex === targetMonth); // Excluir días del mes anterior o siguiente
 
         sales.forEach(sale => {
-          const saleDateStr = toMexicoDateStr(new Date(sale.fecha_venta));
+          const saleDateStr = toTijuanaDateStr(new Date(sale.fecha_venta));
           const found = data.find(d => d.dateStr === saleDateStr);
           if (found) {
             found.value++;
@@ -103,7 +106,7 @@ export default function SalesChart({ sales, viewMode, startDateStr }: SalesChart
 
       // 2. VISTA MENSUAL: Detalle de los días del mes (1 al 28/30/31)
       if (viewMode === 'mensual') {
-        const startParts = getMexicoParts(startDate);
+        const startParts = getTijuanaParts(startDate);
         const daysInMonth = new Date(startParts.year, startParts.month + 1, 0).getDate();
         const data = Array.from({ length: daysInMonth }, (_, i) => {
           return {
@@ -114,7 +117,7 @@ export default function SalesChart({ sales, viewMode, startDateStr }: SalesChart
         });
 
         sales.forEach(sale => {
-          const saleDateStr = toMexicoDateStr(new Date(sale.fecha_venta));
+          const saleDateStr = toTijuanaDateStr(new Date(sale.fecha_venta));
           const found = data.find(d => d.dateStr === saleDateStr);
           if (found) {
             found.value++;
@@ -132,9 +135,9 @@ export default function SalesChart({ sales, viewMode, startDateStr }: SalesChart
           value: 0
         }));
 
-        const targetYear = getMexicoParts(startDate).year;
+        const targetYear = getTijuanaParts(startDate).year;
         sales.forEach(sale => {
-          const saleParts = getMexicoParts(new Date(sale.fecha_venta));
+          const saleParts = getTijuanaParts(new Date(sale.fecha_venta));
           if (saleParts.year === targetYear) {
             data[saleParts.month].value++;
           }

@@ -3,7 +3,7 @@
 import React from "react";
 import * as XLSX from "xlsx";
 
-type DownloadPreset = 'stock' | 'ventas' | 'comprobantes';
+type DownloadPreset = 'stock' | 'ventas' | 'comprobantes' | 'ordenes_entrega';
 
 interface RepartidorOption {
   id: string;
@@ -102,6 +102,32 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
         "URL Comprobante": item.comprobante_url
       }));
     }
+    else if (type === 'ordenes_entrega') {
+      fileNamePrefix = "Ordenes_Entrega";
+      sheetName = "Ordenes de Entrega";
+      worksheetData = data.map(orden => ({
+        "Folio": orden.folio || "",
+        "Fecha Entrega": orden.fecha_entrega || "N/A",
+        "Hora Entrega": orden.hora_entrega || "N/A",
+        "Cliente": orden.nombre_cliente || "",
+        "Teléfono": orden.telefono || "",
+        "Dirección": orden.direccion || "",
+        "Celular": orden.celular || "",
+        "Color": orden.color_celular || "",
+        "Enganche": orden.enganche || 0,
+        "IMEI": orden.imei || "N/A",
+        "Cuenta Activa": orden.cuenta_activa || "N/A",
+        "Historial Cliente": orden.cliente_historial || "N/A",
+        "Zona": orden.zona || "",
+        "Repartidor": orden.repartidor || (orden.repartidores?.nombre || "Sin Asignar"),
+        "Vendedor": orden.vendedor?.username || "Desconocido",
+        "CURP": orden.curp || "",
+        "Identificación": orden.identificacion_fisica || "",
+        "Especificar Local": orden.especificar_local || "",
+        "Comentarios": orden.comentarios || "",
+        "Creado en": new Date(orden.created_at).toLocaleDateString('es-AR') + " " + new Date(orden.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+      }));
+    }
 
     // Proceso de generación de Excel
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
@@ -115,7 +141,8 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
   const titles = {
     stock: "Descargar Stock en Excel",
     ventas: "Descargar Historial de Ventas",
-    comprobantes: "Descargar Comprobantes en Excel"
+    comprobantes: "Descargar Comprobantes en Excel",
+    ordenes_entrega: "Descargar Órdenes de Entrega en Excel"
   };
 
   const isDisabled = !data || data.length === 0;
