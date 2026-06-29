@@ -12,6 +12,7 @@ interface SalesChartProps {
   sales: Sale[];
   viewMode: 'semanal' | 'mensual' | 'anual' | 'historico';
   startDateStr?: string; // Fecha de inicio del filtro actual
+  weekParam?: string; // El filtro de semana seleccionado ('actual', 'anterior', 'S1', etc.)
 }
 
 // ─── Helpers de Timezone Tijuana ──────────────────────────────────────────────
@@ -33,7 +34,7 @@ function getTijuanaParts(date: Date): { year: number; month: number; day: number
 }
 
 // ─── Componente Principal ──────────────────────────────────────────────────
-export default function SalesChart({ sales, viewMode, startDateStr }: SalesChartProps) {
+export default function SalesChart({ sales, viewMode, startDateStr, weekParam }: SalesChartProps) {
   // Estado local para controlar el punto sobre el que el usuario hace hover
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -92,16 +93,22 @@ export default function SalesChart({ sales, viewMode, startDateStr }: SalesChart
             monthIndex: dayUtc.getUTCMonth(),
             value: 0
           };
-        }).filter(d => d.monthIndex === targetMonth); // Excluir días del mes anterior o siguiente
+        });
+
+        // Solo se filtra por mes si el filtro corresponde a una semana del calendario específica (S1-S6)
+        const shouldFilterByMonth = weekParam && weekParam.startsWith('S');
+        const filteredData = shouldFilterByMonth
+          ? data.filter(d => d.monthIndex === targetMonth)
+          : data;
 
         sales.forEach(sale => {
           const saleDateStr = toTijuanaDateStr(new Date(sale.fecha_venta));
-          const found = data.find(d => d.dateStr === saleDateStr);
+          const found = filteredData.find(d => d.dateStr === saleDateStr);
           if (found) {
             found.value++;
           }
         });
-        return data;
+        return filteredData;
       }
 
       // 2. VISTA MENSUAL: Detalle de los días del mes (1 al 28/30/31)
@@ -166,7 +173,7 @@ export default function SalesChart({ sales, viewMode, startDateStr }: SalesChart
     }
 
     return rawData;
-  }, [sales, viewMode, startDateStr]);
+  }, [sales, viewMode, startDateStr, weekParam]);
 
   // Cálculos matemáticos de altura y proporciones para dibujar los polígonos del SVG
   const maxVal = Math.max(...chartData.map(d => d.value), 1);
