@@ -152,8 +152,8 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
       onClick={downloadExcel}
       disabled={isDisabled}
       className={`flex items-center justify-center px-3 md:px-4 py-2 md:py-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl transition-all ${isDisabled
-          ? "opacity-40 cursor-not-allowed"
-          : "hover:bg-slate-700 hover:text-white cursor-pointer"
+        ? "opacity-40 cursor-not-allowed"
+        : "hover:bg-slate-700 hover:text-white cursor-pointer"
         }`}
       title={titles[type]}
     >

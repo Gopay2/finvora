@@ -140,7 +140,7 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 text-sm text-white placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary transition-all"
               />
             </div>
-            
+
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">
                 Zona Horaria
@@ -226,14 +226,14 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
                                 timeZoneName: 'shortOffset'
                               });
                               tzShort = formatter.formatToParts(new Date()).find(p => p.type === 'timeZoneName')?.value || 'GMT';
-                            } catch (e) {}
-                            
+                            } catch (e) { }
+
                             // Formatear bonito el nombre de la ciudad
-                             let cityName = 'Monterrey';
-                             if (r.zona_horaria === 'America/Cancun') cityName = 'Cancún';
-                             else if (r.zona_horaria === 'America/Mexico_City' || r.zona_horaria === 'America/Monterrey') cityName = 'Monterrey';
-                             else if (r.zona_horaria === 'America/Hermosillo' || r.zona_horaria === 'America/Mazatlan') cityName = 'Sonora';
-                             else if (r.zona_horaria === 'America/Tijuana') cityName = 'Tijuana';
+                            let cityName = 'Monterrey';
+                            if (r.zona_horaria === 'America/Cancun') cityName = 'Cancún';
+                            else if (r.zona_horaria === 'America/Mexico_City' || r.zona_horaria === 'America/Monterrey') cityName = 'Monterrey';
+                            else if (r.zona_horaria === 'America/Hermosillo' || r.zona_horaria === 'America/Mazatlan') cityName = 'Sonora';
+                            else if (r.zona_horaria === 'America/Tijuana') cityName = 'Tijuana';
                             else cityName = r.zona_horaria.split('/').pop()?.replace('_', ' ') || r.zona_horaria;
 
                             return `🇲🇽 ${tzShort} (${cityName})`;
@@ -244,20 +244,17 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
                             {/* Toggle Switch */}
                             <button
                               onClick={() => handleToggleActivo(r.id, r.activo)}
-                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                r.activo ? 'bg-secondary' : 'bg-slate-800'
-                              }`}
+                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${r.activo ? 'bg-secondary' : 'bg-slate-800'
+                                }`}
                             >
                               <span
-                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-slate-950 shadow ring-0 transition duration-200 ease-in-out ${
-                                  r.activo ? 'translate-x-4' : 'translate-x-0'
-                                }`}
+                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-slate-950 shadow ring-0 transition duration-200 ease-in-out ${r.activo ? 'translate-x-4' : 'translate-x-0'
+                                  }`}
                               />
                             </button>
                             <span
-                              className={`text-[10px] font-bold uppercase tracking-wider ${
-                                r.activo ? 'text-secondary' : 'text-slate-500'
-                              }`}
+                              className={`text-[10px] font-bold uppercase tracking-wider ${r.activo ? 'text-secondary' : 'text-slate-500'
+                                }`}
                             >
                               {r.activo ? 'Activo' : 'Inactivo'}
                             </span>
@@ -302,7 +299,7 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
       {deleteConfirmId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           {/* Backdrop con Blur y oscurecimiento suave */}
-          <div 
+          <div
             className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity animate-in fade-in duration-300"
             onClick={() => {
               setDeleteConfirmId(null);
@@ -314,11 +311,11 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
             <div className="mx-auto w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
               <span className="material-symbols-outlined text-2xl">warning</span>
             </div>
-            
+
             <div className="space-y-2">
               <h3 className="text-lg font-bold text-white">¿Eliminar Repartidor?</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                ¿Estás seguro de que deseas eliminar al repartidor <strong className="text-white">"{deleteConfirmName}"</strong>?<br/>
+                ¿Estás seguro de que deseas eliminar al repartidor <strong className="text-white">"{deleteConfirmName}"</strong>?<br />
                 Esta acción es irreversible y se desvinculará de todas sus zonas asociadas.
               </p>
             </div>

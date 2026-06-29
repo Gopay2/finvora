@@ -47,8 +47,8 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const isDefaultState = Object.keys(resolvedParams).length === 0;
   const yearParam = resolvedParams.year || 'actual';
   const weekParam = isDefaultState ? 'actual' : (resolvedParams.week || '');
-  const monthParam = isDefaultState 
-    ? 'actual' 
+  const monthParam = isDefaultState
+    ? 'actual'
     : (resolvedParams.month || (weekParam ? 'actual' : ''));
 
   const supabase = await createClient();
@@ -66,12 +66,8 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   // 3. Lógica Temporal de Tijuana (America/Tijuana)
   const now = new Date();
-  const tijuanaNowStr = now.toLocaleString('en-US', { timeZone: 'America/Tijuana' });
-  const currentTijuanaDate = new Date(tijuanaNowStr);
-  const currentTijuanaYear = currentTijuanaDate.getFullYear();
-  const currentTijuanaMonth = currentTijuanaDate.getMonth(); // 0-11
 
-  const getTijuanaDateString = (date: Date) => 
+  const getTijuanaDateString = (date: Date) =>
     new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/Tijuana',
       year: 'numeric',
@@ -79,11 +75,14 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       day: '2-digit'
     }).format(date);
 
-  const tijuanaTodayStr = getTijuanaDateString(currentTijuanaDate);
+  const tijuanaTodayStr = getTijuanaDateString(now);
   const [currYear, currMonth, currDay] = tijuanaTodayStr.split('-').map(Number);
 
+  const currentTijuanaYear = currYear;
+  const currentTijuanaMonth = currMonth - 1; // 0-11
+
   // 4. Calcular KPIs Fijos (Absolutos)
-  
+
   // A. Ventas Hoy
   let ventasHoy = 0;
   sales.forEach((sale: VentaDashboard) => {
@@ -93,23 +92,35 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     }
   });
 
+  // A.5 Ventas Ayer
+  let ventasAyer = 0;
+  const yesterdayDateHelper = new Date(Date.UTC(currYear, currMonth - 1, currDay - 1));
+  const tijuanaYesterdayStr = yesterdayDateHelper.toISOString().split('T')[0];
+  sales.forEach((sale: VentaDashboard) => {
+    const saleDate = new Date(sale.fecha_venta);
+    if (getTijuanaDateString(saleDate) === tijuanaYesterdayStr) {
+      ventasAyer++;
+    }
+  });
+
   // B. Ventas Última Semana (Semana vigente de Lunes a Domingo)
-  const dayOfWeek = currentTijuanaDate.getDay();
+  const tempUtcTijuana = new Date(Date.UTC(currYear, currMonth - 1, currDay));
+  const dayOfWeek = tempUtcTijuana.getUTCDay(); // 0 = Domingo, 1 = Lunes, etc.
   const diffToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
   
   const mondayDateHelper = new Date(Date.UTC(currYear, currMonth - 1, currDay));
   mondayDateHelper.setUTCDate(mondayDateHelper.getUTCDate() - diffToMonday);
-  
+
   const startOfWeek = getTijuanaDate(
     mondayDateHelper.getUTCFullYear(),
     mondayDateHelper.getUTCMonth(),
     mondayDateHelper.getUTCDate(),
     0, 0, 0, 0
   );
-  
+
   const sundayDateHelper = new Date(mondayDateHelper);
   sundayDateHelper.setUTCDate(mondayDateHelper.getUTCDate() + 6);
-  
+
   const endOfWeek = getTijuanaDate(
     sundayDateHelper.getUTCFullYear(),
     sundayDateHelper.getUTCMonth(),
@@ -141,13 +152,13 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   // D. Mejores Vendedores (Mes actual vs Histórico)
   const vendedoresMesStats: Record<string, number> = {};
   const vendedoresHistoricoStats: Record<string, number> = {};
-  
+
   sales.forEach((sale: VentaDashboard) => {
     const saleDate = new Date(sale.fecha_venta);
     const vName = sale.vendedor?.username || "Desconocido";
-    
+
     vendedoresHistoricoStats[vName] = (vendedoresHistoricoStats[vName] || 0) + 1;
-    
+
     if (saleDate >= startOfMonth && saleDate <= endOfMonth) {
       vendedoresMesStats[vName] = (vendedoresMesStats[vName] || 0) + 1;
     }
@@ -170,9 +181,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   sales.forEach((sale: VentaDashboard) => {
     const saleDate = new Date(sale.fecha_venta);
     const pName = sale.productos ? `${sale.productos.marca} ${sale.productos.modelo}` : "Desconocido";
-    
+
     productosHistoricoStats[pName] = (productosHistoricoStats[pName] || 0) + 1;
-    
+
     if (saleDate >= startOfMonth && saleDate <= endOfMonth) {
       productosMesStats[pName] = (productosMesStats[pName] || 0) + 1;
     }
@@ -204,7 +215,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   if (yearParam !== 'historico') {
     const targetYear = yearParam === 'actual' ? currentTijuanaYear : parseInt(yearParam);
-    
+
     if (!monthParam || monthParam === '') {
       // Todo el año
       startDate = getTijuanaDate(targetYear, 0, 1, 0, 0, 0, 0);
@@ -212,7 +223,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       chartViewMode = 'anual';
     } else {
       const targetMonthIndex = monthParam === 'actual' ? currentTijuanaMonth : parseInt(monthParam) - 1;
-      
+
       if (!weekParam || weekParam === '') {
         // Todo el mes
         startDate = getTijuanaDate(targetYear, targetMonthIndex, 1, 0, 0, 0, 0);
@@ -268,30 +279,26 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         </Link>
       </header>
 
-      {/* ─── FILA 1: DETALLE + 3 TARJETAS VENTAS ─────────────────────────────── */}
+      {/* ─── FILA 1: 4 TARJETAS VENTAS ─────────────────────────────── */}
       <div className={styles.kpiGrid}>
-        {/* Tarjeta Enlace a Historial */}
-        <Link 
-          href="/empresa/webapp/dashboard/detalle-ventas" 
-          className={`${styles.kpiCard} group relative overflow-hidden border-emerald-500/40 shadow-[0_0_25px_rgba(16,185,129,0.12)] hover:shadow-[0_0_35px_rgba(16,185,129,0.22)] hover:bg-emerald-500/10 transition-all duration-500 cursor-pointer h-24 sm:h-28`}
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent -translate-x-full animate-shimmer-smooth pointer-events-none w-[200%]" />
-          <span className={`${styles.kpiValue} text-emerald-400 group-hover:text-emerald-200 transition-colors`}>Detalle ventas</span>
-          <span className="material-symbols-outlined text-emerald-500/50 absolute top-2 right-2 text-sm opacity-40 group-hover:opacity-100 transition-opacity">open_in_new</span>
-        </Link>
-        
         {/* KPI: Ventas Hoy */}
         <div className={`${styles.kpiCard} h-24 sm:h-28`}>
           <span className={styles.kpiValue}>{ventasHoy}</span>
-          <span className={styles.kpiLabel}>Ventas Hoy</span>
+          <span className={styles.kpiLabel}>Ventas de hoy</span>
         </div>
-        
+
+        {/* KPI: Ventas Ayer */}
+        <div className={`${styles.kpiCard} h-24 sm:h-28`}>
+          <span className={styles.kpiValue}>{ventasAyer}</span>
+          <span className={styles.kpiLabel}>Ventas de ayer</span>
+        </div>
+
         {/* KPI: Ventas Última Semana */}
         <div className={`${styles.kpiCard} h-24 sm:h-28`}>
           <span className={styles.kpiValue}>{ventasSemana}</span>
           <span className={styles.kpiLabel}>Ventas Última Semana</span>
         </div>
-        
+
         {/* KPI: Ventas Mes Actual */}
         <div className={`${styles.kpiCard} h-24 sm:h-28`}>
           <span className={styles.kpiValue}>{ventasMesActual}</span>
@@ -300,7 +307,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       </div>
 
       {/* ─── FILA 2: BARRA DE FILTROS COMBINABLES ─────────────────────────────── */}
-      <FiltrosDashboard 
+      <FiltrosDashboard
         currentYear={yearParam}
         currentMonth={monthParam}
         currentWeek={weekParam}
@@ -310,7 +317,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
       {/* ─── FILA 3: GRÁFICO LINEAL DE VENTAS (ANCHO COMPLETO) ────────────────── */}
       <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] relative overflow-hidden h-[24rem] sm:h-96 flex flex-col w-full">
-        <SalesChart 
+        <SalesChart
           sales={filteredSales}
           viewMode={chartViewMode}
           startDateStr={startDate ? startDate.toISOString() : undefined}

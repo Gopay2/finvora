@@ -126,4 +126,23 @@ input:autofill {
   background: #a2e7ff; /* Color secondary de la paleta */
 }
 
+/* Invertir el color del icono calendario nativo del input type="date" en tema oscuro */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(0.9);
+  cursor: pointer;
+}
+
+/* Forzar la herencia de color en los campos internos de inputs de tipo fecha para asegurar su visibilidad en móviles (iOS Safari / Chrome) */
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: inherit !important;
+}
+
+
+
+
 
