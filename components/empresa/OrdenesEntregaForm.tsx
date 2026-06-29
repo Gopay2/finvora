@@ -67,6 +67,18 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
   const [selectedRepartidorId, setSelectedRepartidorId] = useState<string>("");
   const [selectedImei, setSelectedImei] = useState<string>("");
   
+  const [isIOS, setIsIOS] = useState(false);
+  const [fechaEntrega, setFechaEntrega] = useState("");
+  const [horaEntrega, setHoraEntrega] = useState("");
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const ua = window.navigator.userAgent;
+      const isIOSDevice = /iPhone|iPad|iPod/.test(ua);
+      setIsIOS(isIOSDevice);
+    }
+  }, []);
+
   const formRef = useRef<HTMLFormElement>(null);
   const lastPickerOpen = useRef(0);
 
@@ -240,6 +252,8 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
       setSelectedZona("");
       setSelectedRepartidorId("");
       setSelectedImei("");
+      setFechaEntrega("");
+      setHoraEntrega("");
     } else {
       setStatus({ type: 'error', message: result.error || 'Error al procesar la orden.' });
     }
@@ -247,7 +261,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
   };
 
   return (
-    <form ref={formRef} className={styles.formCard} onSubmit={handleSubmit}>
+    <form ref={formRef} className={styles.formCard} onSubmit={handleSubmit} suppressHydrationWarning>
       {status && (
         <div className={status.type === 'success' ? styles.statusSuccess : styles.statusError}>
           <span className="material-symbols-outlined">
@@ -260,7 +274,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
       <div className={styles.formGrid}>
         <div className={styles.inputGroupFull}>
           <label className={styles.label}>Nombre de cliente</label>
-          <input type="text" name="nombre_cliente" className={styles.input} required placeholder="Nombre completo" />
+          <input type="text" name="nombre_cliente" className={styles.input} required placeholder="Nombre completo" suppressHydrationWarning />
         </div>
 
         <div className={styles.inputGroup}>
@@ -270,6 +284,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
             className={styles.selectInput}
             style={{ colorScheme: 'dark' }}
             required
+            suppressHydrationWarning
           >
             <option value="Si" className="bg-slate-950 text-white">Sí cuenta con INE/Residencia</option>
             <option value="No" className="bg-slate-950 text-white">No cuenta con INE/Residencia</option>
@@ -284,15 +299,16 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
             className={styles.input}
             required
             placeholder="Ingrese los 18 caracteres de la CURP"
+            suppressHydrationWarning
           />
         </div>
         <div className={styles.inputGroup}>
           <label className={styles.label}>Número de teléfono</label>
-          <input type="tel" name="telefono" className={styles.input} required placeholder="Ej: 5212345678900" />
+          <input type="tel" name="telefono" className={styles.input} required placeholder="Ej: 5212345678900" suppressHydrationWarning />
         </div>
         <div className={styles.inputGroup}>
           <label className={styles.label}>Dirección</label>
-          <input type="text" name="direccion" className={styles.input} required placeholder="Enlace Google Maps" />
+          <input type="text" name="direccion" className={styles.input} required placeholder="Enlace Google Maps" suppressHydrationWarning />
         </div>
         <div className={styles.inputGroup}>
           <label className={styles.label}>Enganche</label>
@@ -305,6 +321,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
               required
               min="0"
               placeholder="0.00"
+              suppressHydrationWarning
             />
           </div>
         </div>
@@ -317,6 +334,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
             style={{ colorScheme: 'dark' }}
             required
             defaultValue="si"
+            suppressHydrationWarning
           >
             <option value="si" className="bg-slate-950 text-white">Sí</option>
             <option value="no" className="bg-slate-950 text-white">No</option>
@@ -331,6 +349,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
             style={{ colorScheme: 'dark' }}
             required
             defaultValue=""
+            suppressHydrationWarning
           >
             <option value="" disabled className="bg-slate-950 text-slate-500 italic">Seleccione...</option>
             <option value="Si" className="bg-slate-950 text-white">Sí</option>
@@ -348,6 +367,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
             style={{ colorScheme: 'dark' }}
             required
             onChange={handleZonaChange}
+            suppressHydrationWarning
           >
             <option value="" className="bg-slate-950 text-slate-500 italic">Seleccione una zona...</option>
             {zonasUnicas.map((zona) => (
@@ -369,6 +389,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
             required
             disabled={!selectedZona}
             onChange={handleRepartidorChange}
+            suppressHydrationWarning
           >
             <option value="" className="bg-slate-950 text-slate-500 italic">
               {!selectedZona ? "Primero elija una zona" : "Seleccione un repartidor..."}
@@ -383,6 +404,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
             type="hidden" 
             name="repartidor" 
             value={repartidoresValidos.find(repartidor => repartidor.id === selectedRepartidorId)?.nombre || ""} 
+            suppressHydrationWarning
           />
         </div>
 
@@ -395,6 +417,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
               className={styles.selectInput}
               style={{ colorScheme: 'dark' }}
               required
+              suppressHydrationWarning
             >
               <option value="" className="bg-slate-950 text-slate-500 italic">Seleccione un local...</option>
               <option value="Península" className="bg-slate-950 text-white">Península</option>
@@ -418,6 +441,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
             required
             disabled={!selectedRepartidorId}
             onChange={handleModelChange}
+            suppressHydrationWarning
           >
             <option value="" className="bg-slate-950 text-slate-500 italic">
               {!selectedRepartidorId ? "Primero elija un repartidor..." : "Seleccione un modelo..."}
@@ -455,6 +479,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
               setSelectedColor(e.target.value);
               setSelectedImei("");
             }}
+            suppressHydrationWarning
           >
             <option value="" className="bg-slate-950 text-slate-500 italic">
               {!selectedModelKey ? "Primero elija un modelo" : "Seleccione un color..."}
@@ -473,8 +498,8 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
               );
             })}
           </select>
-          <input type="hidden" name="celular" value={selectedModelKey} />
-          <input type="hidden" name="color_celular" value={selectedColor} />
+          <input type="hidden" name="celular" value={selectedModelKey} suppressHydrationWarning />
+          <input type="hidden" name="color_celular" value={selectedColor} suppressHydrationWarning />
         </div>
 
         {/* SELECTOR DE IMEI */}
@@ -488,6 +513,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
             required
             disabled={!selectedColor}
             onChange={(e) => setSelectedImei(e.target.value)}
+            suppressHydrationWarning
           >
             <option value="" className="bg-slate-950 text-slate-500 italic">
               {!selectedColor ? "Primero elija un color" : "Seleccione un IMEI..."}
@@ -507,10 +533,22 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
             <input
               type="date"
               name="fecha_entrega"
+              value={fechaEntrega}
+              onChange={(e) => setFechaEntrega(e.target.value)}
               className={styles.pickerInput}
+              style={{ paddingLeft: "40px" }}
               required
               onClick={handleOpenPicker}
+              suppressHydrationWarning
             />
+            {!fechaEntrega && isIOS && (
+              <span
+                className="absolute text-slate-500 text-base pointer-events-none select-none"
+                style={{ left: "40px" }}
+              >
+                dd/mm/aaaa
+              </span>
+            )}
           </div>
         </div>
         <div className={styles.inputGroup}>
@@ -520,10 +558,22 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
             <input
               type="time"
               name="hora_entrega"
+              value={horaEntrega}
+              onChange={(e) => setHoraEntrega(e.target.value)}
               className={styles.pickerInput}
+              style={{ paddingLeft: "40px" }}
               required
               onClick={handleOpenPicker}
+              suppressHydrationWarning
             />
+            {!horaEntrega && isIOS && (
+              <span
+                className="absolute text-slate-500 text-base pointer-events-none select-none"
+                style={{ left: "40px" }}
+              >
+                hh:mm
+              </span>
+            )}
           </div>
         </div>
 
@@ -533,6 +583,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
             name="comentarios"
             className={styles.textarea}
             placeholder="Notas adicionales sobre la orden o entrega..."
+            suppressHydrationWarning
           />
         </div>
       </div>

@@ -177,7 +177,7 @@ export default function StockClientView({
             )}
 
             {canEdit && (
-              <DownloadExcelButton 
+              <DownloadExcelButton
                 data={filteredUnidades}
                 type="stock"
                 repartidores={repartidores}
@@ -206,7 +206,7 @@ export default function StockClientView({
                 filteredUnidades.map((unidad: StockItem) => (
                   <tr key={unidad.imei} className={styles.tr}>
                     <td className={styles.td}>
-                       <span className={styles.imeiBadge}>{unidad.imei}</span>
+                      <span className={styles.imeiBadge}>{unidad.imei}</span>
                     </td>
                     <td className={styles.td}>
                       <div className="flex flex-col items-center">

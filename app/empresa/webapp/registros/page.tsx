@@ -9,7 +9,7 @@ export const revalidate = 0;
 export default async function RegistrosPage() {
   const { role: userRole } = await getUserProfile();
 
-  if (!isAllowed(userRole, ["Developer"])) {
+  if (!isAllowed(userRole, ["Admin", "Supervisor", "Developer"])) {
     return <AccessDenied role={userRole} sectionName="Registros" />;
   }
 
