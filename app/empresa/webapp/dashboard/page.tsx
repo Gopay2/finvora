@@ -321,6 +321,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           sales={filteredSales}
           viewMode={chartViewMode}
           startDateStr={startDate ? startDate.toISOString() : undefined}
+          weekParam={weekParam}
         />
       </div>
 
