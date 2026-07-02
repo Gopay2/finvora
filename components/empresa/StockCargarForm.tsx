@@ -34,6 +34,38 @@ const styles = {
 
 export default function StockCargarForm({ productos, repartidores }: StockCargarFormProps) {
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [selectedMarca, setSelectedMarca] = useState<string>("");
+  const [selectedProductoId, setSelectedProductoId] = useState<string>("");
+
+  // Obtener marcas únicas ordenadas alfabéticamente
+  const marcas = Array.from(new Set(productos.map(p => p.marca).filter(Boolean))).sort();
+
+  // Filtrar los productos por la marca seleccionada y ordenarlos por modelo, color y almacenamiento
+  const filteredProductos = selectedMarca
+    ? productos
+        .filter(p => p.marca === selectedMarca)
+        .sort((a, b) => {
+          // Ordenar por modelo (numérico natural, ej. G06, G35, G56, G85)
+          const compModelo = a.modelo.localeCompare(b.modelo, undefined, { numeric: true, sensitivity: 'base' });
+          if (compModelo !== 0) return compModelo;
+          
+          // Si el modelo es el mismo, ordenar por color
+          const compColor = a.color.localeCompare(b.color, undefined, { sensitivity: 'base' });
+          if (compColor !== 0) return compColor;
+          
+          // Si el color también es el mismo, ordenar por almacenamiento
+          return a.almacenamiento.localeCompare(b.almacenamiento, undefined, { numeric: true });
+        })
+    : [];
+
+  const handleMarcaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedMarca(e.target.value);
+    setSelectedProductoId(""); // Limpiar selección de producto al cambiar de marca
+  };
+
+  const handleProductoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedProductoId(e.target.value);
+  };
   
   const clientAction = async (formData: FormData) => {
     setStatus(null);
@@ -76,38 +108,71 @@ export default function StockCargarForm({ productos, repartidores }: StockCargar
           {status.message}
         </div>
       )}
-      <div className={styles.inputGroup}>
-        <label className={styles.label}>Seleccionar Producto</label>
-        <div className="relative">
-          <select 
-            name="producto_id" 
-            required 
-            className={`${styles.input} appearance-none cursor-pointer bg-slate-950 text-slate-100`}
-            style={{ colorScheme: 'dark' }}
-            defaultValue=""
-          >
-            <option value="" className="bg-slate-950 text-white">Elegir modelo del catálogo...</option>
-            {productos.map(p => (
-              <option key={p.id} value={p.id} className="bg-slate-950 text-white">
-                {p.marca} {p.modelo} - {p.color} ({p.almacenamiento} / {p.ram})
-              </option>
-            ))}
-          </select>
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-base">
-            expand_more
-          </span>
+      <div className={styles.grid}>
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>Marca</label>
+          <div className="relative">
+            <select 
+              value={selectedMarca}
+              onChange={handleMarcaChange}
+              className={`${styles.input} appearance-none cursor-pointer bg-slate-950 text-slate-100`}
+              style={{ colorScheme: 'dark' }}
+            >
+              <option value="" className="bg-slate-950 text-slate-500 italic">Elegir marca...</option>
+              {marcas.map(marca => (
+                <option key={marca} value={marca} className="bg-slate-950 text-white">
+                  {marca}
+                </option>
+              ))}
+            </select>
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-base">
+              expand_more
+            </span>
+          </div>
+        </div>
+
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>Seleccionar Producto</label>
+          <div className="relative">
+            <select 
+              name="producto_id" 
+              required 
+              value={selectedProductoId}
+              onChange={handleProductoChange}
+              disabled={!selectedMarca}
+              className={`${styles.input} appearance-none cursor-pointer bg-slate-950 text-slate-100 disabled:opacity-50 disabled:cursor-not-allowed`}
+              style={{ colorScheme: 'dark' }}
+            >
+              {!selectedMarca ? (
+                <option value="" className="bg-slate-950 text-slate-500 italic">Selecciona una marca primero...</option>
+              ) : (
+                <>
+                  <option value="" className="bg-slate-950 text-white">Elegir modelo del catálogo...</option>
+                  {filteredProductos.map(p => (
+                    <option key={p.id} value={p.id} className="bg-slate-950 text-white">
+                      {p.modelo} - {p.color} ({p.almacenamiento} / {p.ram})
+                    </option>
+                  ))}
+                </>
+              )}
+            </select>
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-base">
+              expand_more
+            </span>
+          </div>
         </div>
       </div>
 
       <div className={styles.grid}>
         <div className={styles.inputGroup}>
-          <label className={styles.label}>Número de IMEI</label>
+          <label className={styles.label}>IMEI</label>
           <input 
             name="imei" 
             type="text" 
-            placeholder="Ej: 354678123456789" 
+            placeholder="Ingresar 15 dígitos" 
             required 
             className={styles.input} 
+            autoComplete="one-time-code"
           />
         </div>
 
