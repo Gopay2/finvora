@@ -125,18 +125,18 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
-      {/* Próxima Sección 3 */}
-      <div className={styles.cardUpcoming}>
+      {/* Gestión de Usuarios */}
+      <Link href="/empresa/webapp/usuarios" className={styles.card}>
         <div className={styles.cardGlow} />
         <div className={styles.iconWrapper}>
-          <span className="material-symbols-outlined text-3xl text-slate-500">pending</span>
+          <span className={styles.icon}>group</span>
         </div>
         <div>
-          <h2 className={styles.cardTitle}>Nueva Sección</h2>
-          <p className={styles.cardDesc}>Próxima funcionalidad en desarrollo.</p>
+          <h2 className={styles.cardTitle}>Gestión de usuarios</h2>
+          <p className={styles.cardDesc}>Administra roles y permisos de acceso para todo el personal.</p>
         </div>
-        <div className={styles.cardButtonUpcoming}>Próximamente</div>
-      </div>
+        <div className={styles.cardButton}>Acceder</div>
+      </Link>
     </div>
   );
 }
