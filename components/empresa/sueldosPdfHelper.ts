@@ -272,7 +272,7 @@ export async function exportarReciboPDF({
         formatTijuanaOnlyDate(item.created_at),
         item.celular ? `${item.celular}${item.color_celular ? ` (${item.color_celular})` : ""}` : "—",
         formatCurrency(precioCompra),
-        formatCurrency(costoEquipo),
+        formatCurrency(-costoEquipo),
         formatCurrency(-pagoInicial),
         formatCurrency(-config.plataformaVal),
         formatCurrency(-rowEntrega),

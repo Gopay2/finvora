@@ -576,7 +576,7 @@ export default function CalculadoraSueldosClientPage({
                             <span className="text-slate-300">{formatCurrency(item.precio_compra)}</span>
                           </td>
                           <td className={customTd} style={{ width: "10%" }}>
-                            <span className="text-slate-300">{formatCurrency(costoEquipo)}</span>
+                            <span className="text-slate-300">{formatCurrency(-costoEquipo)}</span>
                           </td>
                           <td className={customTd} style={{ width: "11%" }}>
                             <span className="text-slate-300">{formatCurrency(-item.pago_inicial)}</span>
