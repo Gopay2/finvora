@@ -137,6 +137,45 @@ export default function WebAppPage() {
         </div>
         <div className={styles.cardButton}>Acceder</div>
       </Link>
+
+      {/* Calculadora de sueldos */}
+      <Link href="/empresa/webapp/sueldos" className={styles.card}>
+        <div className={styles.cardGlow} />
+        <div className={styles.iconWrapper}>
+          <span className={styles.icon}>calculate</span>
+        </div>
+        <div>
+          <h2 className={styles.cardTitle}>Calculadora de sueldos</h2>
+          <p className={styles.cardDesc}>Consulta y filtra las operaciones recientes por empleado.</p>
+        </div>
+        <div className={styles.cardButton}>Acceder</div>
+      </Link>
+
+      {/* Próximamente 2 */}
+      <div className={styles.cardUpcoming}>
+        <div className={styles.cardGlow} />
+        <div className={styles.iconWrapper}>
+          <span className={styles.icon}>pending</span>
+        </div>
+        <div>
+          <h2 className={styles.cardTitle}>Próximamente</h2>
+          <p className={styles.cardDesc}>Nueva sección en desarrollo.</p>
+        </div>
+        <div className={styles.cardButtonUpcoming}>Próximamente</div>
+      </div>
+
+      {/* Próximamente 3 */}
+      <div className={styles.cardUpcoming}>
+        <div className={styles.cardGlow} />
+        <div className={styles.iconWrapper}>
+          <span className={styles.icon}>more_horiz</span>
+        </div>
+        <div>
+          <h2 className={styles.cardTitle}>Próximamente</h2>
+          <p className={styles.cardDesc}>Nueva sección en desarrollo.</p>
+        </div>
+        <div className={styles.cardButtonUpcoming}>Próximamente</div>
+      </div>
     </div>
   );
 }

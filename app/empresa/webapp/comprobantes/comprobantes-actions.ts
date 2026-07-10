@@ -19,6 +19,7 @@ export interface ComprobanteRecord {
   imei: string | null;
   comprobante_url: string;
   created_at: string;
+  costo_equipo?: number;
   vendedor: {
     id: string;
     username: string;
