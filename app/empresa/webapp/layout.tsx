@@ -19,7 +19,7 @@ export const revalidate = 0;
 
 const styles = {
   wrapper: "min-h-screen bg-slate-950 text-slate-100 font-[family-name:var(--font-outfit)]",
-  container: "max-w-6xl mx-auto p-6 md:p-12",
+  container: "max-w-7xl mx-auto p-6 md:p-12",
   header: "flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6",
   titleGroup: "space-y-1",
   title: "text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent",
