@@ -87,6 +87,7 @@ export default async function ComprobantesPage() {
       if (
         // Filtros para agregar al select repartidores y ubicaciones especificas
         nombreNorm.includes("humberto") ||
+        nombreNorm.includes("socio") ||
         nombreNorm.includes("local") ||
         nombreNorm.includes("cambaceo") ||
         nombreNorm.includes("jonathan") ||
