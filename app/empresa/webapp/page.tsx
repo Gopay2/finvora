@@ -151,18 +151,18 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
-      {/* Próximamente 2 */}
-      <div className={styles.cardUpcoming}>
+      {/* Taskboard */}
+      {/* <Link href="/empresa/webapp/taskboard" className={styles.card}>
         <div className={styles.cardGlow} />
         <div className={styles.iconWrapper}>
-          <span className={styles.icon}>pending</span>
+          <span className={styles.icon}>dashboard_customize</span>
         </div>
         <div>
-          <h2 className={styles.cardTitle}>Próximamente</h2>
-          <p className={styles.cardDesc}>Nueva sección en desarrollo.</p>
+          <h2 className={styles.cardTitle}>Taskboard</h2>
+          <p className={styles.cardDesc}>Tablero de tareas. Gestiona y asigna flujos de trabajo.</p>
         </div>
-        <div className={styles.cardButtonUpcoming}>Próximamente</div>
-      </div>
+        <div className={styles.cardButton}>Acceder</div>
+      </Link> */}
 
       {/* Próximamente 3 */}
       <div className={styles.cardUpcoming}>
