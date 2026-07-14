@@ -38,6 +38,10 @@ export default function HistorialClient({
   const [filtroUsuario, setFiltroUsuario] = useState("");
   const [isPending, startTransition] = useTransition();
 
+  // Estados para rehacer tarea con modal
+  const [tareaARehacer, setTareaARehacer] = useState<TareaTerminada | null>(null);
+  const [nuevaDescripcionRehacer, setNuevaDescripcionRehacer] = useState("");
+
   // Paginación
   const [paginaActual, setPaginaActual] = useState(1);
   const itemsPorPagina = 15;
@@ -77,20 +81,28 @@ export default function HistorialClient({
     }
   };
 
-  // Acción de Reabrir Tarea
-  const handleReabrir = async (id: string) => {
-    if (!confirm("¿Deseas reabrir esta tarea y moverla a 'Pendientes'?")) return;
+  // Acción de Rehacer Tarea (Click inicial)
+  const handleRehacerClick = (tarea: TareaTerminada) => {
+    setTareaARehacer(tarea);
+    setNuevaDescripcionRehacer(tarea.descripcion || "");
+  };
+
+  const handleConfirmarRehacer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tareaARehacer) return;
+    const id = tareaARehacer.id;
+    const desc = nuevaDescripcionRehacer;
+    setTareaARehacer(null);
 
     // Optimista
     setTareas((prev) => prev.filter((t) => t.id !== id));
 
     try {
-      await actualizarEstadoTarea(id, "Pendientes");
+      await actualizarEstadoTarea(id, "Pendientes", desc);
       router.refresh();
     } catch (error) {
-      console.error("Error al reabrir tarea:", error);
-      alert("Ocurrió un error al reabrir la tarea.");
-      // Recargar la página si falla para asegurar consistencia
+      console.error("Error al rehacer tarea:", error);
+      alert("Ocurrió un error al rehacer la tarea.");
       router.refresh();
     }
   };
@@ -144,7 +156,7 @@ export default function HistorialClient({
                 setBuscar(e.target.value);
                 setPaginaActual(1); // Resetear página al buscar
               }}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-secondary transition-all"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-4 py-2.5 text-base md:text-sm text-white placeholder-slate-600 focus:outline-none focus:border-secondary transition-all"
             />
           </div>
         </div>
@@ -162,7 +174,7 @@ export default function HistorialClient({
                 setFiltroUsuario(e.target.value);
                 setPaginaActual(1); // Resetear página al cambiar filtro
               }}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-secondary transition-all"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-10 py-2.5 text-base md:text-sm text-white focus:outline-none focus:border-secondary transition-all appearance-none"
             >
               <option value="">Todos los usuarios</option>
               {perfiles.map((p) => (
@@ -171,6 +183,9 @@ export default function HistorialClient({
                 </option>
               ))}
             </select>
+            <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 text-base">
+              keyboard_arrow_down
+            </span>
           </div>
         </div>
       </div>
@@ -235,24 +250,15 @@ export default function HistorialClient({
 
                     {/* Acciones */}
                     <td className="py-4 px-6">
-                      <div className="flex items-center justify-center gap-2">
-                        {/* Reabrir */}
+                      <div className="flex items-center justify-center">
+                        {/* Rehacer */}
                         <button
-                          onClick={() => handleReabrir(tarea.id)}
-                          className="px-3 py-1.5 bg-slate-850 hover:bg-slate-800 text-secondary border border-slate-800 hover:border-secondary/20 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
-                          title="Reabrir y mover a Pendientes"
+                          onClick={() => handleRehacerClick(tarea)}
+                          className="px-3.5 py-1.5 bg-slate-850 hover:bg-slate-800 text-white border border-slate-800 hover:border-secondary/25 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                          title="Rehacer y mover a Pendientes"
                         >
-                          <span className="material-symbols-outlined text-sm">settings_backup_restore</span>
-                          <span>Reabrir</span>
-                        </button>
-
-                        {/* Eliminar */}
-                        <button
-                          onClick={() => handleEliminar(tarea.id)}
-                          className="p-1.5 hover:bg-red-500/10 text-slate-500 hover:text-red-400 rounded-lg transition-all cursor-pointer"
-                          title="Eliminar tarea"
-                        >
-                          <span className="material-symbols-outlined text-sm">delete</span>
+                          <span className="material-symbols-outlined text-base text-secondary">settings_backup_restore</span>
+                          <span>Rehacer</span>
                         </button>
                       </div>
                     </td>
@@ -293,11 +299,10 @@ export default function HistorialClient({
                   <button
                     key={pag}
                     onClick={() => handleCambiarPagina(pag)}
-                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      paginaActual === pag
+                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${paginaActual === pag
                         ? "bg-secondary text-slate-950"
                         : "bg-slate-900/60 border border-slate-850 text-slate-400 hover:text-white hover:bg-slate-850"
-                    }`}
+                      }`}
                   >
                     {pag}
                   </button>
@@ -315,6 +320,64 @@ export default function HistorialClient({
           </div>
         )}
       </div>
+
+      {/* Modal de Rehacer Tarea (Editar descripción) */}
+      {tareaARehacer && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            {/* Cabecera */}
+            <div className="flex justify-between items-center p-6 border-b border-slate-850">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary">settings_backup_restore</span>
+                Rehacer Tarea
+              </h3>
+              <button
+                onClick={() => setTareaARehacer(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Formulario */}
+            <form onSubmit={handleConfirmarRehacer} className="p-6 space-y-4">
+              <div className="space-y-1.5 text-left">
+                <div className="text-sm font-semibold text-slate-200">
+                  Tarea: <span className="text-slate-400 font-normal">{tareaARehacer.titulo}</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 text-left">
+                <label className="text-xs font-semibold text-slate-400">Editar Descripción (Opcional)</label>
+                <textarea
+                  placeholder="Detalles sobre lo que se necesita hacer..."
+                  value={nuevaDescripcionRehacer}
+                  onChange={(e) => setNuevaDescripcionRehacer(e.target.value)}
+                  rows={4}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-base md:text-sm text-white placeholder-slate-600 focus:outline-none focus:border-secondary transition-all resize-none custom-scrollbar"
+                />
+              </div>
+
+              {/* Botones de acción */}
+              <div className="flex gap-3 pt-3 border-t border-slate-850 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setTareaARehacer(null)}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-semibold transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-secondary hover:bg-secondary-fixed text-slate-950 rounded-xl text-sm font-bold shadow-lg shadow-secondary/10 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  Rehacer Tarea
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

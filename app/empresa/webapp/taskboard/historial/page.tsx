@@ -69,17 +69,27 @@ export default async function HistorialTaskboardPage() {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <div className={styles.titleGroup}>
-          <h1 className={styles.title}>Historial de Tareas</h1>
+      <header className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+        <div className="space-y-1 flex-1 w-full">
+          <div className="flex justify-between items-start md:block w-full mb-1.5 md:mb-0">
+            <h1 className={styles.title}>Historial de Tareas</h1>
+            <div className="md:hidden -mt-1">
+              <Link href="/empresa/webapp/taskboard" className="text-slate-500 hover:text-slate-300 flex items-center gap-2 text-lg transition-colors">
+                <span className="material-symbols-outlined text-xl">arrow_back</span>
+                <span>Volver</span>
+              </Link>
+            </div>
+          </div>
           <p className={styles.subtitle}>
             Consulta el archivo de tareas completadas del equipo.
           </p>
         </div>
-        <Link href="/empresa/webapp/taskboard" className="text-slate-500 hover:text-slate-300 flex items-center gap-2 text-base transition-colors">
-          <span className="material-symbols-outlined text-lg">arrow_back</span>
-          Volver
-        </Link>
+        <div className="hidden md:block">
+          <Link href="/empresa/webapp/taskboard" className="text-slate-500 hover:text-slate-300 flex items-center gap-2 text-lg transition-colors">
+            <span className="material-symbols-outlined text-xl">arrow_back</span>
+            Volver
+          </Link>
+        </div>
       </header>
 
       <HistorialClient

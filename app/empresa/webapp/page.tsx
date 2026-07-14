@@ -21,6 +21,20 @@ const styles = {
 export default function WebAppPage() {
   return (
     <div className={styles.grid}>
+
+      {/* Taskboard */}
+      <Link href="/empresa/webapp/taskboard" className={styles.card}>
+        <div className={styles.cardGlow} />
+        <div className={styles.iconWrapper}>
+          <span className={styles.icon}>dashboard_customize</span>
+        </div>
+        <div>
+          <h2 className={styles.cardTitle}>Taskboard</h2>
+          <p className={styles.cardDesc}>Tablero de tareas. Gestiona y asigna flujos de trabajo.</p>
+        </div>
+        <div className={styles.cardButton}>Acceder</div>
+      </Link>
+
       {/* Mis Operaciones - Acceso para todos */}
       <Link href="/empresa/webapp/mis-operaciones" className={styles.card}>
         <div className={styles.cardGlow} />
@@ -99,19 +113,6 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
-      {/* Dashboard - Bloqueado para Closer en la subpágina */}
-      <Link href="/empresa/webapp/dashboard" className={styles.card}>
-        <div className={styles.cardGlow} />
-        <div className={styles.iconWrapper}>
-          <span className={styles.icon}>monitoring</span>
-        </div>
-        <div>
-          <h2 className={styles.cardTitle}>Dashboard</h2>
-          <p className={styles.cardDesc}>Visualiza métricas, reportes y el rendimiento de la empresa.</p>
-        </div>
-        <div className={styles.cardButton}>Acceder</div>
-      </Link>
-
       {/* Registros */}
       <Link href="/empresa/webapp/registros" className={styles.card}>
         <div className={styles.cardGlow} />
@@ -151,18 +152,18 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
-      {/* Taskboard */}
-      {/* <Link href="/empresa/webapp/taskboard" className={styles.card}>
+      {/* Dashboard - Bloqueado para Closer en la subpágina */}
+      <Link href="/empresa/webapp/dashboard" className={styles.card}>
         <div className={styles.cardGlow} />
         <div className={styles.iconWrapper}>
-          <span className={styles.icon}>dashboard_customize</span>
+          <span className={styles.icon}>monitoring</span>
         </div>
         <div>
-          <h2 className={styles.cardTitle}>Taskboard</h2>
-          <p className={styles.cardDesc}>Tablero de tareas. Gestiona y asigna flujos de trabajo.</p>
+          <h2 className={styles.cardTitle}>Dashboard</h2>
+          <p className={styles.cardDesc}>Visualiza métricas, reportes y el rendimiento de la empresa.</p>
         </div>
         <div className={styles.cardButton}>Acceder</div>
-      </Link> */}
+      </Link>
 
       {/* Próximamente 3 */}
       <div className={styles.cardUpcoming}>

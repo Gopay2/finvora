@@ -49,7 +49,8 @@ export async function crearTarea(formData: {
  */
 export async function actualizarEstadoTarea(
   tareaId: string,
-  nuevoEstado: "Pendientes" | "En proceso" | "Terminado"
+  nuevoEstado: "Pendientes" | "En proceso" | "Terminado",
+  nuevaDescripcion?: string | null
 ) {
   const { id: userId, role: userRole } = await getUserProfile();
 
@@ -58,12 +59,19 @@ export async function actualizarEstadoTarea(
   }
 
   const supabase = await createClient();
+
+  const updateData: any = {
+    estado: nuevoEstado,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (nuevaDescripcion !== undefined) {
+    updateData.descripcion = nuevaDescripcion?.trim() || null;
+  }
+
   const { data, error } = await supabase
     .from("taskboard")
-    .update({
-      estado: nuevoEstado,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq("id", tareaId)
     .select()
     .single();
