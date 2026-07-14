@@ -97,14 +97,21 @@ export default async function TaskboardPage() {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <div className={styles.titleGroup}>
-          <h1 className={styles.title}>Taskboard</h1>
+      <header className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+        <div className="space-y-1 flex-1 w-full">
+          <div className="flex justify-between items-start md:block w-full mb-1.5 md:mb-0">
+            <h1 className={styles.title}>Taskboard</h1>
+            <div className="md:hidden -mt-1.5">
+              <Link href="/empresa/webapp" className={styles.btnHome} title="Volver al Inicio">
+                <span className="material-symbols-outlined text-xl">home</span>
+              </Link>
+            </div>
+          </div>
           <p className={styles.subtitle}>
             Tablero Kanban de tareas. Asigna y gestiona el flujo de trabajo del equipo en tiempo real.
           </p>
         </div>
-        <div className={styles.actions}>
+        <div className="hidden md:block">
           <Link href="/empresa/webapp" className={styles.btnHome} title="Volver al Inicio">
             <span className="material-symbols-outlined text-xl">home</span>
           </Link>
