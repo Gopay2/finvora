@@ -3,7 +3,7 @@
 import React from "react";
 import * as XLSX from "xlsx";
 
-type DownloadPreset = 'stock' | 'ventas' | 'comprobantes' | 'ordenes_entrega';
+type DownloadPreset = 'stock' | 'ventas' | 'comprobantes' | 'ordenes_entrega' | 'garantias';
 
 interface RepartidorOption {
   id: string;
@@ -128,6 +128,23 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
         "Creado en": new Date(orden.created_at).toLocaleDateString('es-AR') + " " + new Date(orden.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
       }));
     }
+    else if (type === 'garantias') {
+      fileNamePrefix = "Garantias";
+      sheetName = "Garantias";
+      worksheetData = data.map(garantiaItem => ({
+        "IMEI": garantiaItem.imei,
+        "Marca": garantiaItem.productos?.marca || "N/A",
+        "Modelo": garantiaItem.productos?.modelo || "N/A",
+        "Color": garantiaItem.productos?.color || "N/A",
+        "RAM": garantiaItem.productos?.ram || "N/A",
+        "Almacenamiento": garantiaItem.productos?.almacenamiento || "N/A",
+        "Ubicación": garantiaItem.repartidor?.nombre || "Sin Asignar",
+        "Solicitado Por": garantiaItem.solicitante?.username || "Desconocido",
+        "Motivo": garantiaItem.motivo || "",
+        "Fecha Ingreso": new Date(garantiaItem.fecha_ingreso).toLocaleDateString('es-AR'),
+        "Fecha Garantía": new Date(garantiaItem.fecha_garantia).toLocaleDateString('es-AR') + " " + new Date(garantiaItem.fecha_garantia).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+      }));
+    }
 
     // Proceso de generación de Excel
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
@@ -142,7 +159,8 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
     stock: "Descargar Stock en Excel",
     ventas: "Descargar Historial de Ventas",
     comprobantes: "Descargar Comprobantes en Excel",
-    ordenes_entrega: "Descargar Órdenes de Entrega en Excel"
+    ordenes_entrega: "Descargar Órdenes de Entrega en Excel",
+    garantias: "Descargar Historial de Garantías en Excel"
   };
 
   const isDisabled = !data || data.length === 0;

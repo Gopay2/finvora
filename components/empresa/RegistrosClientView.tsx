@@ -71,9 +71,34 @@ interface RepartidorOption {
   nombre: string;
 }
 
+interface Garantia {
+  id: string;
+  imei: string;
+  precio_costo: number;
+  motivo: string;
+  fecha_ingreso: string;
+  fecha_garantia: string;
+  repartidor?: {
+    id: string;
+    nombre: string;
+  };
+  productos?: {
+    marca: string;
+    modelo: string;
+    color: string;
+    almacenamiento: string;
+    ram: string;
+  };
+  solicitante?: {
+    id: string;
+    username: string;
+  };
+}
+
 interface RegistrosClientViewProps {
   ventas: Venta[];
   ordenes: OrdenEntrega[];
+  garantias: Garantia[];
   vendedores: PerfilOption[];
   repartidores: RepartidorOption[];
 }
@@ -83,11 +108,12 @@ const ITEMS_PER_PAGE = 20;
 export default function RegistrosClientView({
   ventas,
   ordenes,
+  garantias,
   vendedores,
   repartidores
 }: RegistrosClientViewProps) {
   // Estados principales
-  const [activeTab, setActiveTab] = useState<"ventas" | "ordenes">("ventas");
+  const [activeTab, setActiveTab] = useState<"ventas" | "ordenes" | "garantias">("ventas");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedVendedor, setSelectedVendedor] = useState("");
   const [selectedRepartidor, setSelectedRepartidor] = useState("");
@@ -105,7 +131,7 @@ export default function RegistrosClientView({
   }, []);
 
   // Limpiar filtros al cambiar de pestaña
-  const handleTabChange = (tab: "ventas" | "ordenes") => {
+  const handleTabChange = (tab: "ventas" | "ordenes" | "garantias") => {
     setActiveTab(tab);
     setSearchQuery("");
     setSelectedVendedor("");
@@ -243,7 +269,62 @@ export default function RegistrosClientView({
     });
   }, [activeTab, ordenes, searchQuery, selectedVendedor, selectedRepartidor, fechaDesde, fechaHasta]);
 
-  const activeData = (activeTab === "ventas" ? filteredVentas : filteredOrdenes) as any[];
+  // Filtrado de Garantías en Memoria
+  const filteredGarantias = useMemo(() => {
+    if (activeTab !== "garantias") return [];
+
+    return garantias.filter((garantia) => {
+      // 1. Buscador General
+      if (searchQuery.trim() !== "") {
+        const query = searchQuery.toLowerCase();
+        const imeiMatch = garantia.imei.toLowerCase().includes(query);
+        const marcaMatch = garantia.productos?.marca?.toLowerCase().includes(query);
+        const modeloMatch = garantia.productos?.modelo?.toLowerCase().includes(query);
+        const colorMatch = garantia.productos?.color?.toLowerCase().includes(query);
+        const solicitanteMatch = garantia.solicitante?.username?.toLowerCase().includes(query);
+        const repartidorMatch = garantia.repartidor?.nombre?.toLowerCase().includes(query);
+        const motivoMatch = garantia.motivo?.toLowerCase().includes(query);
+
+        if (
+          !imeiMatch && !marcaMatch && !modeloMatch && !colorMatch &&
+          !solicitanteMatch && !repartidorMatch && !motivoMatch
+        ) {
+          return false;
+        }
+      }
+
+      // 2. Filtro Solicitante (Vendedor)
+      if (selectedVendedor && garantia.solicitante?.id !== selectedVendedor) {
+        return false;
+      }
+
+      // 3. Filtro Repartidor
+      if (selectedRepartidor && garantia.repartidor?.id !== selectedRepartidor) {
+        return false;
+      }
+
+      // 4. Fechas (Filtramos sobre fecha_garantia)
+      const fechaGarantia = new Date(garantia.fecha_garantia);
+      if (fechaDesde) {
+        const desde = new Date(`${fechaDesde}T00:00:00`);
+        if (fechaGarantia < desde) return false;
+      }
+      if (fechaHasta) {
+        const hasta = new Date(`${fechaHasta}T23:59:59`);
+        if (fechaGarantia > hasta) return false;
+      }
+
+      return true;
+    });
+  }, [activeTab, garantias, searchQuery, selectedVendedor, selectedRepartidor, fechaDesde, fechaHasta]);
+
+  const activeData = (
+    activeTab === "ventas" 
+      ? filteredVentas 
+      : activeTab === "ordenes" 
+        ? filteredOrdenes 
+        : filteredGarantias
+  ) as any[];
 
   // Lógica de Paginación
   const totalPages = Math.max(1, Math.ceil(activeData.length / ITEMS_PER_PAGE));
@@ -264,14 +345,17 @@ export default function RegistrosClientView({
     titleGroup: "space-y-1",
     title: "text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent",
     subtitle: "text-slate-500 text-sm",
-    btnHome: "flex items-center justify-center p-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl hover:bg-slate-700 hover:text-white transition-all cursor-pointer w-fit",
+    btnHome: "flex items-center justify-center p-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl hover:bg-slate-700 hover:text-white transition-all cursor-pointer w-fit -translate-y-1.5 sm:translate-y-0",
 
     // Tabs
-    tabContainer: "flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 w-full sm:w-fit",
-    tabButton: (active: boolean) =>
-      `flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer select-none ${active
-        ? "bg-secondary text-slate-950 shadow-lg shadow-secondary/20"
-        : "text-slate-400 hover:text-white"
+    tabContainer: "grid grid-cols-2 sm:flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 w-full sm:w-fit gap-1.5 sm:gap-0",
+    tabButton: (active: boolean, isThird: boolean = false) =>
+      `flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
+        isThird ? "col-span-2 sm:col-span-1" : "col-span-1"
+      } ${
+        active
+          ? "bg-secondary text-slate-950 shadow-lg shadow-secondary/20"
+          : "text-slate-400 hover:text-white"
       }`,
 
     // Filtros Grid
@@ -308,12 +392,20 @@ export default function RegistrosClientView({
     <div className={styles.container}>
       {/* ENCABEZADO */}
       <header className={styles.header}>
-        <div className={styles.titleGroup}>
-          <h1 className={styles.title}>Auditoría de Registros</h1>
-          <p className={styles.subtitle}>Consulta y exportación unificada del historial operativo</p>
+        <div className="w-full sm:w-auto">
+          <div className="flex items-center justify-between w-full gap-4">
+            <h1 className={styles.title}>Auditoría de Registros</h1>
+
+            <div className="flex sm:hidden items-center gap-3">
+              <Link href="/empresa/webapp" className={styles.btnHome} title="Volver al Inicio">
+                <span className="material-symbols-outlined text-xl">home</span>
+              </Link>
+            </div>
+          </div>
+          <p className={`${styles.subtitle} mt-1`}>Consulta y exportación unificada del historial operativo</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="hidden sm:flex items-center gap-3">
           <Link href="/empresa/webapp" className={styles.btnHome} title="Volver al Inicio">
             <span className="material-symbols-outlined text-xl">home</span>
           </Link>
@@ -326,14 +418,21 @@ export default function RegistrosClientView({
           className={styles.tabButton(activeTab === "ventas")}
           onClick={() => handleTabChange("ventas")}
         >
-          <span className="material-symbols-outlined text-lg">sell</span>
+          <span className="material-symbols-outlined text-base sm:text-lg">sell</span>
           Ventas
         </div>
         <div
-          className={styles.tabButton(activeTab === "ordenes")}
+          className={styles.tabButton(activeTab === "garantias")}
+          onClick={() => handleTabChange("garantias")}
+        >
+          <span className="material-symbols-outlined text-base sm:text-lg">published_with_changes</span>
+          Garantías
+        </div>
+        <div
+          className={styles.tabButton(activeTab === "ordenes", true)}
           onClick={() => handleTabChange("ordenes")}
         >
-          <span className="material-symbols-outlined text-lg">local_shipping</span>
+          <span className="material-symbols-outlined text-base sm:text-lg">local_shipping</span>
           Órdenes de Entrega
         </div>
       </div>
@@ -347,7 +446,13 @@ export default function RegistrosClientView({
             <label className={styles.label}>Buscador General</label>
             <input
               type="text"
-              placeholder={activeTab === "ventas" ? "Buscar por IMEI, modelo..." : "Buscar folio, cliente, IMEI..."}
+              placeholder={
+                activeTab === "ventas" 
+                  ? "Buscar por IMEI, modelo..." 
+                  : activeTab === "ordenes" 
+                    ? "Buscar folio, cliente, IMEI..." 
+                    : "Buscar IMEI, modelo, solicitante, motivo..."
+              }
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               className={styles.input}
@@ -373,7 +478,7 @@ export default function RegistrosClientView({
 
           {/* 3. Repartidor */}
           <div className={styles.filterGroup}>
-            <label className={styles.label}>Repartidor</label>
+            <label className={styles.label}>Repartidor / Ubicación</label>
             <select
               value={selectedRepartidor}
               onChange={(e) => { setSelectedRepartidor(e.target.value); setCurrentPage(1); }}
@@ -456,7 +561,7 @@ export default function RegistrosClientView({
             </button>
             <DownloadExcelButton
               data={activeData}
-              type={activeTab === "ventas" ? "ventas" : "ordenes_entrega"}
+              type={activeTab === "ventas" ? "ventas" : activeTab === "garantias" ? "garantias" : "ordenes_entrega"}
             />
           </div>
         </div>
@@ -547,6 +652,87 @@ export default function RegistrosClientView({
                   <tr>
                     <td colSpan={6} className="px-6 py-20 text-center text-slate-500 italic text-sm">
                       No se encontraron ventas con los filtros seleccionados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          ) : activeTab === "garantias" ? (
+            /* TABLA DE GARANTÍAS */
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th className={`${styles.th} w-[15%] min-w-[130px]`}>IMEI</th>
+                  <th className={`${styles.th} w-[20%] min-w-[160px]`}>Producto</th>
+                  <th className={`${styles.th} w-[12%] min-w-[100px]`}>Solicitado por</th>
+                  <th className={`${styles.th} w-[13%] min-w-[110px]`}>Repartidor / Ubicación</th>
+                  <th className={`${styles.th} w-[25%] min-w-[180px]`}>Motivo</th>
+                  <th className={`${styles.th} w-[15%] min-w-[130px] whitespace-nowrap`}>Fecha Garantía</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedData.length > 0 ? (
+                  (paginatedData as Garantia[]).map((garantia) => (
+                    <tr key={garantia.id} className={styles.tr}>
+                      <td className={styles.td}>
+                        <span className={styles.imeiBadge}>{garantia.imei}</span>
+                      </td>
+                      <td className={styles.td}>
+                        <div className="flex flex-col items-center">
+                          <div className="font-bold text-white flex items-center gap-2 justify-center">
+                            {garantia.productos?.marca} {garantia.productos?.modelo}
+                            <span className="text-[10px] font-normal text-slate-500 uppercase tracking-widest border-l border-slate-700 pl-2 ml-1">
+                              {garantia.productos?.color}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 justify-center text-[10px] text-slate-400 font-bold bg-slate-800/40 px-2 py-0.5 rounded border border-slate-800/60 mt-1">
+                            <span>RAM {garantia.productos?.ram}</span>
+                            <span>•</span>
+                            <span>ALM {garantia.productos?.almacenamiento}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        <div className={styles.userBadge}>
+                          <span className="material-symbols-outlined text-[10px]">person</span>
+                          {garantia.solicitante?.username || "Desconocido"}
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        <span className={styles.zonaBadge}>
+                          {garantia.repartidor?.nombre || "Sin Asignar"}
+                        </span>
+                      </td>
+                      <td className={styles.td}>
+                        <div className="text-left text-xs text-slate-400 line-clamp-2 hover:line-clamp-none transition-all duration-300 w-full" title={garantia.motivo}>
+                          {garantia.motivo}
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        <div className="flex flex-col items-center">
+                          <span className="text-slate-300 font-medium">
+                            {new Date(garantia.fecha_garantia).toLocaleDateString("es-MX", {
+                              timeZone: "America/Tijuana",
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric"
+                            })}
+                          </span>
+                          <span className="text-slate-500 text-[10px] uppercase">
+                            {new Date(garantia.fecha_garantia).toLocaleTimeString("es-MX", {
+                              timeZone: "America/Tijuana",
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-20 text-center text-slate-500 italic text-sm">
+                      No se encontraron garantías con los filtros seleccionados.
                     </td>
                   </tr>
                 )}
