@@ -320,6 +320,66 @@ export async function registrarVenta(imei: string, vendedorId?: string) {
 }
 
 /**
+ * Transición crítica de inventario para Garantías: Registra un recambio en la tabla 'garantias'
+ * y al mismo tiempo da de baja física la unidad del inventario ('stock').
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Developer
+ * @param imei Identificador único de hardware (IMEI) de la unidad en stock a cambiar
+ * @param solicitadoPorId ID del usuario/vendedor que solicita el recambio
+ * @param motivo Motivo por el cual se realiza el recambio
+ * @returns Objeto con éxito o error de la transacción
+ */
+export async function registrarRecambio(imei: string, solicitadoPorId: string, motivo: string) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+    return { error: "No autorizado" };
+  }
+
+  const supabase = await createClient();
+
+  // 1. Obtener datos del equipo antes de borrarlo del inventario activo
+  const { data: item, error: fetchError } = await supabase
+    .from('stock')
+    .select('*, productos(precio)')
+    .eq('imei', imei)
+    .single();
+
+  if (fetchError || !item) return { error: "No se encontró el equipo en stock" };
+
+  // 2. Mover la unidad a la tabla de garantias
+  const { error: insertError } = await supabase
+    .from('garantias')
+    .insert({
+      imei: item.imei,
+      producto_id: item.producto_id,
+      solicitado_por: solicitadoPorId,
+      zona: item.zona,
+      precio_costo: (item.productos as any)?.precio || 0,
+      motivo: motivo,
+      fecha_ingreso: item.fecha_ingreso
+    });
+
+  if (insertError) {
+    console.error("Error al insertar en garantias:", insertError);
+    return { error: "Error al registrar el recambio en el historial de garantías" };
+  }
+
+  // 3. Remover el equipo físicamente de la tabla de stock
+  const { error: deleteError } = await supabase
+    .from('stock')
+    .delete()
+    .eq('imei', imei);
+
+  if (deleteError) {
+    console.error("Error al borrar de stock para recambio:", deleteError);
+    return { error: "Error al remover del stock, pero la garantía fue registrada" };
+  }
+
+  revalidatePath('/empresa/webapp/stock');
+  return { success: true };
+}
+
+/**
  * Elimina de forma directa y permanente un equipo individual del stock físico (tabla 'stock')
  * sin generar transición de venta histórica (ej. descarte por falla de hardware o merma).
  * 
