@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { actualizarEstadoStock, registrarVenta, getVendedores } from "@/app/empresa/webapp/stock/stock-actions";
+import { actualizarEstadoStock, registrarVenta, getVendedores, registrarRecambio } from "@/app/empresa/webapp/stock/stock-actions";
 
 interface StockStatusSelectorProps {
   imei: string;
@@ -22,8 +22,11 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [showSellerModal, setShowSellerModal] = useState(false);
+  const [showRecambioModal, setShowRecambioModal] = useState(false);
   const [vendedoresList, setVendedoresList] = useState<Vendedor[]>(vendedores);
   const [vendedorSeleccionado, setVendedorSeleccionado] = useState<string>("");
+  const [solicitadoPor, setSolicitadoPor] = useState<string>("");
+  const [motivoRecambio, setMotivoRecambio] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   
@@ -37,7 +40,8 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
     Disponible: "bg-green-500/10 text-green-400 border-green-500/20",
     "En envío": "bg-amber-500/10 text-amber-400 border-amber-500/20",
     Vendido: "bg-red-500/10 text-red-400 border-red-500/20",
-    "A consultar": "bg-purple-500/10 text-purple-400 border-purple-500/20"
+    "A consultar": "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    Recambio: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
   };
 
   useEffect(() => {
@@ -58,16 +62,31 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
         setTimeLeft(prev => (prev !== null ? prev - 1 : null));
       }, 1000);
     } else if (timeLeft === 0) {
-      ejecutarVentaDefinitiva();
+      if (estado === "Vendido") {
+        ejecutarVentaDefinitiva();
+      } else if (estado === "Recambio") {
+        ejecutarRecambioDefinitivo();
+      }
     }
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [timeLeft]);
+  }, [timeLeft, estado]);
 
   const ejecutarVentaDefinitiva = async () => {
     setLoading(true);
     const result = await registrarVenta(imei, vendedorSeleccionado || undefined);
+    if (result.error) {
+      setError(result.error);
+      setEstado(estadoActual);
+      setTimeLeft(null);
+    }
+    setLoading(false);
+  };
+
+  const ejecutarRecambioDefinitivo = async () => {
+    setLoading(true);
+    const result = await registrarRecambio(imei, solicitadoPor, motivoRecambio);
     if (result.error) {
       setError(result.error);
       setEstado(estadoActual);
@@ -84,6 +103,12 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
     if (nuevoEstado === "Vendido") {
       setError(null);
       setShowSellerModal(true);
+      return;
+    }
+
+    if (nuevoEstado === "Recambio") {
+      setError(null);
+      setShowRecambioModal(true);
       return;
     }
 
@@ -117,6 +142,27 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
   const handleCancelVenta = () => {
     setError(null);
     setShowSellerModal(false);
+    setEstado(estadoActual);
+  };
+
+  const handleConfirmRecambio = () => {
+    if (!solicitadoPor) {
+      setError("Debes seleccionar quién solicita el recambio");
+      return;
+    }
+    if (!motivoRecambio.trim()) {
+      setError("Debes ingresar el motivo del recambio");
+      return;
+    }
+    setError(null);
+    setShowRecambioModal(false);
+    setEstado("Recambio");
+    setTimeLeft(20);
+  };
+
+  const handleCancelRecambio = () => {
+    setError(null);
+    setShowRecambioModal(false);
     setEstado(estadoActual);
   };
 
@@ -156,6 +202,7 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
           <option value="A consultar" className="bg-slate-950 text-white">A consultar</option>
           <option value="En envío" className="bg-slate-950 text-white">En envío</option>
           <option value="Vendido" className="bg-slate-950 text-white">Vendido</option>
+          <option value="Recambio" className="bg-slate-950 text-white">Recambio</option>
         </select>
         
         {loading && !timeLeft && (
@@ -229,6 +276,81 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
               </button>
               <button 
                 onClick={handleConfirmVenta}
+                className="flex-1 px-4 py-2.5 bg-secondary text-slate-950 rounded-xl font-bold hover:bg-white transition-all text-sm shadow-lg shadow-secondary/20 cursor-pointer"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Modal de Selección de Recambio - Usando Portal para evitar recortes de la tabla */}
+      {showRecambioModal && mounted && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full space-y-4 animate-in zoom-in duration-200">
+            <div className="text-center space-y-2">
+              <span className="material-symbols-outlined text-secondary text-4xl">published_with_changes</span>
+              <h3 className="text-lg font-bold text-white">Registrar Recambio</h3>
+              <p className="text-slate-400 text-sm">Completa los datos para registrar la garantía del equipo.</p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Solicitado por</label>
+                <select 
+                  value={solicitadoPor}
+                  onChange={(e) => {
+                    setSolicitadoPor(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  className={`w-full bg-slate-950 border rounded-xl px-4 py-3 text-slate-100 focus:outline-none transition-all appearance-none cursor-pointer ${error && !solicitadoPor ? 'border-red-500/50 focus:border-red-500' : 'border-slate-800 focus:border-secondary'}`}
+                  style={{ colorScheme: 'dark' }}
+                >
+                  <option value="">Elegir solicitante...</option>
+                  {vendedoresList.map(v => {
+                    const name = v.username || 'Sin nombre';
+                    const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+                    return (
+                      <option key={v.id} value={v.id}>
+                        {v.role ? `[${v.role}]` : "[Closer]"} {capitalizedName}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Motivo del Recambio</label>
+                <textarea 
+                  value={motivoRecambio}
+                  onChange={(e) => {
+                    setMotivoRecambio(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  placeholder="Describa el motivo detalladamente..."
+                  className={`w-full bg-slate-950 border rounded-xl px-4 py-3 text-slate-100 focus:outline-none transition-all min-h-[100px] resize-none ${error && !motivoRecambio.trim() ? 'border-red-500/50 focus:border-red-500' : 'border-slate-800 focus:border-secondary'}`}
+                />
+              </div>
+              
+              {error && (
+                <div className="flex items-center gap-1.5 text-red-400 text-xs mt-1 animate-in fade-in slide-in-from-top-1">
+                  <span className="material-symbols-outlined text-sm">error</span>
+                  {error}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button 
+                onClick={handleCancelRecambio}
+                className="flex-1 px-4 py-2.5 bg-slate-800 text-slate-300 rounded-xl font-bold hover:bg-slate-700 hover:text-white transition-all text-sm cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleConfirmRecambio}
                 className="flex-1 px-4 py-2.5 bg-secondary text-slate-950 rounded-xl font-bold hover:bg-white transition-all text-sm shadow-lg shadow-secondary/20 cursor-pointer"
               >
                 Confirmar
