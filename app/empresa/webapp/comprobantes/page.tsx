@@ -86,13 +86,10 @@ export default async function ComprobantesPage() {
       const nombreNorm = zonaReparto.repartidores.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       if (
         // Filtros para agregar al select repartidores y ubicaciones especificas
-        nombreNorm.includes("humberto") ||
+        nombreNorm.includes("repartidor") ||   
         nombreNorm.includes("socio") ||
         nombreNorm.includes("local") ||
         nombreNorm.includes("cambaceo") ||
-        nombreNorm.includes("jonathan") ||
-        nombreNorm.includes("felix") ||
-        nombreNorm.includes("alezkar") ||
         nombreNorm.split(/\s+/).includes("ct")
       ) {
         uniqueRepartidoresMap.set(zonaReparto.repartidores.id, zonaReparto.repartidores.nombre);
