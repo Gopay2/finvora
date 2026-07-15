@@ -42,6 +42,34 @@ export default async function RegistrosPage() {
     `)
     .order("fecha_venta", { ascending: false });
 
+  // 1.5 Fetch de Garantías
+  const { data: garantiasRaw } = await supabase
+    .from("garantias")
+    .select(`
+      id,
+      imei,
+      precio_costo,
+      motivo,
+      fecha_ingreso,
+      fecha_garantia,
+      repartidor:repartidores!zona (
+        id,
+        nombre
+      ),
+      productos (
+        marca,
+        modelo,
+        color,
+        almacenamiento,
+        ram
+      ),
+      solicitante:perfiles!solicitado_por (
+        id,
+        username
+      )
+    `)
+    .order("fecha_garantia", { ascending: false });
+
   // 2. Fetch de Órdenes de Entrega
   const { data: ordenesRaw } = await supabase
     .from("ordenes_entrega")
@@ -94,6 +122,7 @@ export default async function RegistrosPage() {
     <RegistrosClientView
       ventas={(ventasRaw || []) as any}
       ordenes={(ordenesRaw || []) as any}
+      garantias={(garantiasRaw || []) as any}
       vendedores={(perfiles || []) as any}
       repartidores={(repartidores || []) as any}
     />
