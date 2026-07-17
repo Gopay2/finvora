@@ -222,6 +222,7 @@ export default function CalculadoraProveedoresClientPage({
                 }}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-secondary transition-all appearance-none cursor-pointer text-xs sm:text-sm h-[42px]"
                 style={{ colorScheme: 'dark' }}
+                suppressHydrationWarning
               >
                 <option value="">Elegir marca...</option>
                 {marcas.map((marca) => (
@@ -246,6 +247,7 @@ export default function CalculadoraProveedoresClientPage({
                 disabled={!selectedMarca}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-secondary transition-all appearance-none cursor-pointer text-xs sm:text-sm h-[42px] disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ colorScheme: 'dark' }}
+                suppressHydrationWarning
               >
                 {!selectedMarca ? (
                   <option value="">Selecciona una marca primero...</option>
@@ -282,6 +284,7 @@ export default function CalculadoraProveedoresClientPage({
                   }
                 }}
                 className="bg-slate-950 border border-slate-800 rounded-xl pl-6 pr-4 py-2.5 text-[16px] sm:text-sm text-slate-200 focus:outline-none focus:border-secondary transition-all h-[42px] w-full text-center"
+                suppressHydrationWarning
               />
             </div>
           </div>
@@ -326,14 +329,14 @@ export default function CalculadoraProveedoresClientPage({
         </div>
 
         <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full border-collapse text-left text-sm">
+          <table className="w-full min-w-[650px] border-collapse text-left text-sm">
             <thead className="bg-slate-950 border-b border-slate-800 text-slate-400 font-semibold uppercase text-xs tracking-wider">
               <tr>
-                <th className="px-6 py-4">Marca</th>
-                <th className="px-6 py-4">Modelo</th>
-                <th className="px-6 py-4">Especificación</th>
-                <th className="px-6 py-4 text-center" style={{ width: "20%" }}>Costo Equipo</th>
-                <th className="px-6 py-4 text-center" style={{ width: "15%" }}>Acciones</th>
+                <th className="px-6 py-4 min-w-[100px]">Marca</th>
+                <th className="px-6 py-4 min-w-[120px]">Modelo</th>
+                <th className="px-6 py-4 min-w-[160px]">Especificación</th>
+                <th className="px-6 py-4 text-center min-w-[160px]" style={{ width: "20%" }}>Costo Equipo</th>
+                <th className="px-6 py-4 text-center min-w-[90px]" style={{ width: "15%" }}>Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/40">
@@ -393,19 +396,30 @@ export default function CalculadoraProveedoresClientPage({
                                     ? "border-secondary/40"
                                     : "border-slate-800 focus:border-secondary"
                                 }`}
+                              suppressHydrationWarning
                             />
-                          </div>
-
-                          {/* Estado de guardado (Absolute right to prevent alignment shift) */}
-                          <div className="absolute right-0 sm:right-2 md:right-4 w-5 h-5 flex items-center justify-center pointer-events-none">
-                            {savingMap[c.id] && (
-                              <span className="animate-spin h-3.5 w-3.5 border-2 border-secondary border-t-transparent rounded-full" />
-                            )}
-                            {savedMap[c.id] && (
-                              <span className="material-symbols-outlined text-green-400 text-sm font-bold animate-bounce">
-                                check
-                              </span>
-                            )}
+                            {/* Estado de guardado y botón móvil (anclado de forma absoluta y centrada verticalmente al input para mantener el input perfectamente centrado con el encabezado) */}
+                            <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center whitespace-nowrap shrink-0">
+                              {savingMap[c.id] ? (
+                                <span className="animate-spin h-3.5 w-3.5 border-2 border-secondary border-t-transparent rounded-full pointer-events-none" />
+                              ) : savedMap[c.id] ? (
+                                <span className="material-symbols-outlined text-green-400 text-sm font-bold animate-bounce pointer-events-none">
+                                  check
+                                </span>
+                              ) : (
+                                // Mostrar botón de guardar solo en móviles si hay cambios pendientes
+                                editCosts[c.id] !== undefined && editCosts[c.id] !== c.costo.toString() && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveCosto(c.id, c.costo)}
+                                    className="sm:hidden flex items-center justify-center w-5 h-5 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-md cursor-pointer active:scale-95 transition-all"
+                                    title="Guardar costo"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px] font-black">done</span>
+                                  </button>
+                                )
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>

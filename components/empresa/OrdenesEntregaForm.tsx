@@ -31,10 +31,22 @@ interface StockItem {
   imei?: string;
 }
 
+interface CostoItem {
+  producto_id: string;
+  costo: number | string;
+}
+
+interface ConfigEngancheItem {
+  cliente_historial: string;
+  porcentajes: number[];
+}
+
 interface OrdenesEntregaFormProps {
   productos: Producto[];
   zonasReparto: RepartoZonaInfo[];
   stockItems: StockItem[];
+  costos: CostoItem[];
+  configEnganches: ConfigEngancheItem[];
 }
 
 const styles = {
@@ -57,7 +69,13 @@ const styles = {
   pickerIcon: "absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base"
 };
 
-export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems }: OrdenesEntregaFormProps) {
+export default function OrdenesEntregaForm({ 
+  productos, 
+  zonasReparto, 
+  stockItems, 
+  costos, 
+  configEnganches 
+}: OrdenesEntregaFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   
@@ -70,8 +88,31 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
   const [isIOS, setIsIOS] = useState(false);
   const [fechaEntrega, setFechaEntrega] = useState("");
   const [horaEntrega, setHoraEntrega] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState("");
+  const [clienteHistorial, setClienteHistorial] = useState("");
+  const [engancheValue, setEngancheValue] = useState("");
+
+  // 1.1. Obtener el costo del IMEI seleccionado
+  const selectedProductCost = useMemo(() => {
+    if (!selectedImei) return 0;
+    const stockItem = stockItems.find((s) => s.imei === selectedImei);
+    if (!stockItem) return 0;
+    const costoRecord = costos.find((c) => c.producto_id === stockItem.producto_id);
+    return costoRecord ? Number(costoRecord.costo) : 0;
+  }, [selectedImei, stockItems, costos]);
+
+  // 1.2. Obtener los porcentajes de enganche habilitados según el historial
+  const enganchePorcentajes = useMemo(() => {
+    if (!clienteHistorial) return [];
+    const config = configEnganches.find(
+      (c) => c.cliente_historial.toLowerCase() === clienteHistorial.toLowerCase()
+    );
+    return config ? config.porcentajes : [];
+  }, [clienteHistorial, configEnganches]);
 
   React.useEffect(() => {
+    setIsMounted(true);
     if (typeof window !== "undefined") {
       const ua = window.navigator.userAgent;
       const isIOSDevice = /iPhone|iPad|iPod/.test(ua);
@@ -81,6 +122,15 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
 
   const formRef = useRef<HTMLFormElement>(null);
   const lastPickerOpen = useRef(0);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFileName(file.name);
+    } else {
+      setSelectedFileName("");
+    }
+  };
 
   // 1. Filtrar stockItems según el repartidor seleccionado
   const stockFiltrado = useMemo(() => {
@@ -194,6 +244,63 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
     return repartidoresValidos.find(repartidor => repartidor.id === selectedRepartidorId)?.nombre || "";
   }, [selectedRepartidorId, repartidoresValidos]);
 
+  const isRepartidorCT = useMemo(() => {
+    return selectedRepartidorName.toLowerCase() === "repartidor ct";
+  }, [selectedRepartidorName]);
+
+  const tijuanaTime = useMemo(() => {
+    if (!isMounted) return { dateStr: "", hour: 0, minute: 0, timeStrFull: "" };
+    try {
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Tijuana",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      });
+
+      const parts = formatter.formatToParts(new Date());
+      const getVal = (type: string) => parts.find((p) => p.type === type)?.value || "";
+
+      const year = getVal("year");
+      const month = getVal("month");
+      const day = getVal("day");
+      const hourStr = getVal("hour");
+      const minuteStr = getVal("minute");
+
+      const dateStr = `${year}-${month}-${day}`;
+      const hour = parseInt(hourStr, 10);
+      const minute = parseInt(minuteStr, 10);
+      const timeStrFull = `${hourStr}:${minuteStr}`;
+
+      return { dateStr, hour, minute, timeStrFull };
+    } catch (e) {
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      return {
+        dateStr: now.toISOString().split("T")[0],
+        hour: now.getHours(),
+        minute: now.getMinutes(),
+        timeStrFull: `${pad(now.getHours())}:${pad(now.getMinutes())}`
+      };
+    }
+  }, [isMounted]);
+
+  const horasCTDisponibles = useMemo(() => {
+    const hoursRange = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+    if (!fechaEntrega) return [];
+    if (fechaEntrega < tijuanaTime.dateStr) {
+      return [];
+    }
+    if (fechaEntrega === tijuanaTime.dateStr) {
+      const minHour = tijuanaTime.minute > 0 ? tijuanaTime.hour + 3 : tijuanaTime.hour + 2;
+      return hoursRange.filter((h) => h >= minHour);
+    }
+    return hoursRange;
+  }, [fechaEntrega, tijuanaTime]);
+
   const handleModelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedModelKey(event.target.value);
     setSelectedColor("");
@@ -206,6 +313,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
     setSelectedModelKey("");
     setSelectedColor("");
     setSelectedImei("");
+    setHoraEntrega("");
   };
 
   const handleRepartidorChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -213,6 +321,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
     setSelectedModelKey("");
     setSelectedColor("");
     setSelectedImei("");
+    setHoraEntrega("");
   };
 
   const handleOpenPicker = (event: React.MouseEvent<HTMLInputElement>) => {
@@ -247,6 +356,7 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
     if (result.success) {
       setStatus({ type: 'success', message: `¡Orden de Entrega ${result.folio || ''} registrada y enviada a Discord!` });
       formRef.current?.reset();
+      setSelectedFileName("");
       setSelectedModelKey("");
       setSelectedColor("");
       setSelectedZona("");
@@ -254,6 +364,8 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
       setSelectedImei("");
       setFechaEntrega("");
       setHoraEntrega("");
+      setClienteHistorial("");
+      setEngancheValue("");
     } else {
       setStatus({ type: 'error', message: result.error || 'Error al procesar la orden.' });
     }
@@ -310,21 +422,6 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
           <label className={styles.label}>Dirección</label>
           <input type="text" name="direccion" className={styles.input} required placeholder="Enlace Google Maps" suppressHydrationWarning />
         </div>
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Enganche</label>
-          <div className={styles.relativeInputContainer}>
-            <span className={styles.enganchePrefix}>$</span>
-            <input
-              type="number"
-              name="enganche"
-              className={styles.engancheInput}
-              required
-              min="0"
-              placeholder="0.00"
-              suppressHydrationWarning
-            />
-          </div>
-        </div>
 
         <div className={styles.inputGroup}>
           <label className={styles.label}>¿Cuenta activa?</label>
@@ -338,22 +435,6 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
           >
             <option value="si" className="bg-slate-950 text-white">Sí</option>
             <option value="no" className="bg-slate-950 text-white">No</option>
-          </select>
-        </div>
-
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>¿Cliente con historial?</label>
-          <select
-            name="cliente_historial"
-            className={styles.selectInput}
-            style={{ colorScheme: 'dark' }}
-            required
-            defaultValue=""
-            suppressHydrationWarning
-          >
-            <option value="" disabled className="bg-slate-950 text-slate-500 italic">Seleccione...</option>
-            <option value="Si" className="bg-slate-950 text-white">Sí</option>
-            <option value="No" className="bg-slate-950 text-white">No</option>
           </select>
         </div>
 
@@ -512,7 +593,10 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
             style={{ colorScheme: 'dark' }}
             required
             disabled={!selectedColor}
-            onChange={(e) => setSelectedImei(e.target.value)}
+            onChange={(e) => {
+              setSelectedImei(e.target.value);
+              setEngancheValue(""); // Reset down payment on IMEI change
+            }}
             suppressHydrationWarning
           >
             <option value="" className="bg-slate-950 text-slate-500 italic">
@@ -527,6 +611,76 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
         </div>
 
         <div className={styles.inputGroup}>
+          <label className={styles.label}>¿Cliente con historial?</label>
+          <select
+            name="cliente_historial"
+            value={clienteHistorial}
+            className={styles.selectInput}
+            style={{ colorScheme: 'dark' }}
+            required
+            disabled={!selectedImei}
+            onChange={(e) => {
+              setClienteHistorial(e.target.value);
+              setEngancheValue(""); // Reset enganche if history changes
+            }}
+            suppressHydrationWarning
+          >
+            <option value="" className="bg-slate-950 text-slate-500 italic">
+              {!selectedImei ? "Primero elija un IMEI..." : "Seleccione..."}
+            </option>
+            <option value="Si" className="bg-slate-950 text-white">Sí</option>
+            <option value="No" className="bg-slate-950 text-white">No</option>
+          </select>
+        </div>
+
+        {selectedProductCost > 0 ? (
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Enganche</label>
+            <select
+              name="enganche"
+              value={engancheValue}
+              className={styles.selectInput}
+              style={{ colorScheme: 'dark' }}
+              required
+              disabled={!clienteHistorial}
+              onChange={(e) => setEngancheValue(e.target.value)}
+              suppressHydrationWarning
+            >
+              <option value="" className="bg-slate-950 text-slate-500 italic">
+                {!clienteHistorial ? "Primero elija historial" : "Seleccione..."}
+              </option>
+              {enganchePorcentajes.map((p) => {
+                const valorCalculado = (selectedProductCost * (p / 100)).toFixed(2);
+                return (
+                  <option key={p} value={valorCalculado} className="bg-slate-950 text-white">
+                    ${valorCalculado} ({p}%)
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        ) : (
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>Enganche</label>
+            <div className={styles.relativeInputContainer}>
+              <span className={styles.enganchePrefix}>$</span>
+              <input
+                type="number"
+                name="enganche"
+                value={engancheValue}
+                onChange={(e) => setEngancheValue(e.target.value)}
+                className={styles.engancheInput}
+                required
+                min="0"
+                placeholder={!clienteHistorial ? "Primero elija historial" : "0.00"}
+                disabled={!clienteHistorial}
+                suppressHydrationWarning
+              />
+            </div>
+          </div>
+        )}
+
+        <div className={styles.inputGroup}>
           <label className={styles.label}>Fecha de entrega</label>
           <div className={styles.relativeInputContainer}>
             <span className={styles.pickerIcon}>calendar_today</span>
@@ -534,7 +688,10 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
               type="date"
               name="fecha_entrega"
               value={fechaEntrega}
-              onChange={(e) => setFechaEntrega(e.target.value)}
+              onChange={(e) => {
+                setFechaEntrega(e.target.value);
+                setHoraEntrega("");
+              }}
               className={styles.pickerInput}
               style={{ paddingLeft: "40px" }}
               required
@@ -555,25 +712,107 @@ export default function OrdenesEntregaForm({ productos, zonasReparto, stockItems
           <label className={styles.label}>Hora de entrega</label>
           <div className={styles.relativeInputContainer}>
             <span className={styles.pickerIcon}>schedule</span>
+            {isMounted && isRepartidorCT ? (
+              <select
+                name="hora_entrega"
+                value={horaEntrega}
+                onChange={(e) => setHoraEntrega(e.target.value)}
+                className={styles.selectInput}
+                style={{ paddingLeft: "40px", colorScheme: 'dark' }}
+                required
+                disabled={!fechaEntrega}
+                suppressHydrationWarning
+              >
+                {!fechaEntrega ? (
+                  <option value="" className="bg-slate-950 text-slate-500 italic">
+                    Seleccione una fecha primero
+                  </option>
+                ) : horasCTDisponibles.length === 0 ? (
+                  <option value="" className="bg-slate-950 text-red-400 italic">
+                    {fechaEntrega < tijuanaTime.dateStr
+                      ? "La fecha no puede ser en el pasado"
+                      : "No hay horarios disponibles para hoy"}
+                  </option>
+                ) : (
+                  <>
+                    <option value="" className="bg-slate-950 text-slate-500 italic">
+                      Seleccione una hora...
+                    </option>
+                    {horasCTDisponibles.map((h) => {
+                      const formattedHour = `${h.toString().padStart(2, "0")}:00`;
+                      return (
+                        <option key={h} value={formattedHour} className="bg-slate-950 text-white">
+                          {h}hs
+                        </option>
+                      );
+                    })}
+                  </>
+                )}
+              </select>
+            ) : (
+              <>
+                <input
+                  type="time"
+                  name="hora_entrega"
+                  value={horaEntrega}
+                  onChange={(e) => setHoraEntrega(e.target.value)}
+                  className={styles.pickerInput}
+                  style={{ paddingLeft: "40px" }}
+                  required
+                  onClick={handleOpenPicker}
+                  suppressHydrationWarning
+                />
+                {!horaEntrega && isIOS && (
+                  <span
+                    className="absolute text-slate-500 text-base pointer-events-none select-none"
+                    style={{ left: "40px" }}
+                  >
+                    hh:mm
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {isMounted && isRepartidorCT && (
+          <div className="md:col-span-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 p-4 rounded-xl text-sm font-medium flex flex-col lg:flex-row items-center justify-between gap-3 text-center">
+            <span className="material-symbols-outlined text-amber-400 select-none">warning</span>
+            <div className="flex-1">
+              <div>Los horarios de entrega son aproximados con repartos de CT y son solicitados con 2hs de anticipación.</div>
+              <div className="font-semibold text-amber-300 mt-1">
+                Hora actual Tijuana: {tijuanaTime.timeStrFull || "--:--"} hs
+              </div>
+            </div>
+            <span className="hidden lg:block">
+              <span className="material-symbols-outlined text-amber-400 select-none">warning</span>
+            </span>
+          </div>
+        )}
+
+        <div className={styles.inputGroupFull}>
+          <label className={styles.label}>Verificación crediticia</label>
+          <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-secondary/40 rounded-xl p-3 bg-slate-950/20 transition-all group cursor-pointer h-[46px] select-none">
             <input
-              type="time"
-              name="hora_entrega"
-              value={horaEntrega}
-              onChange={(e) => setHoraEntrega(e.target.value)}
-              className={styles.pickerInput}
-              style={{ paddingLeft: "40px" }}
+              type="file"
+              name="verificacion_crediticia"
+              accept="image/*,application/pdf"
+              onChange={handleFileChange}
               required
-              onClick={handleOpenPicker}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               suppressHydrationWarning
             />
-            {!horaEntrega && isIOS && (
-              <span
-                className="absolute text-slate-500 text-base pointer-events-none select-none"
-                style={{ left: "40px" }}
-              >
-                hh:mm
+            <div className="flex items-center gap-2 text-center max-w-full px-2">
+              <span className="material-symbols-outlined text-slate-500 group-hover:text-secondary text-xl transition-colors shrink-0">
+                cloud_upload
               </span>
-            )}
+              <p
+                className="text-xs text-slate-300 font-medium truncate max-w-[150px] sm:max-w-[220px] md:max-w-[160px] lg:max-w-[240px]"
+                title={selectedFileName || "Subir Imagen o PDF"}
+              >
+                {selectedFileName ? selectedFileName : "Subir Imagen o PDF"}
+              </p>
+            </div>
           </div>
         </div>
 

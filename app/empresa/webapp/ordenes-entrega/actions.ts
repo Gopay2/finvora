@@ -56,6 +56,8 @@ export async function submitOrdenEntrega(formData: FormData) {
     comentarios: formData.get("comentarios") as string,
   };
 
+  const verificacionFile = formData.get("verificacion_crediticia") as any;
+
   // 3.5. PERSISTIR EN BASE DE DATOS Y OBTENER FOLIO ÚNICO
   const { data: dbData, error: insertError } = await supabase
     .from("ordenes_entrega")
@@ -155,13 +157,27 @@ export async function submitOrdenEntrega(formData: FormData) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://finvora.mx';
 
   // 7. DISEÑO ESTÉTICO DEL EMBED: Configuramos un color rojo llamativo y metadatos limpios
-  const embed = {
+  const embed: any = {
     title: `NUEVA ORDEN DE ENTREGA 🚀`,
     description: `Registrado a través de la app web.`,
     color: 0xef4444, // Rojo llamativo para llamar la atención del equipo de operaciones
     fields: fields,
     timestamp: new Date().toISOString(),
   };
+
+  const embeds = [embed];
+  const hasFile = verificacionFile && verificacionFile.size > 0;
+  const isImage = hasFile && verificacionFile.type.startsWith("image/");
+
+  if (isImage) {
+    // Si es imagen, la metemos al final del embed único y le creamos un field de título directamente arriba
+    fields.push({
+      name: "📄 Verificación Crediticia",
+      value: "", // El espacio de ancho cero oculta el valor en Discord, mostrando solo el título
+      inline: false
+    });
+    embed.image = { url: `attachment://${verificacionFile.name}` };
+  }
 
   // Mención opcional a un rol específico de Discord (ej. Coordinadores o Closers) si está configurado
   const isCambaceo = 
@@ -176,16 +192,59 @@ export async function submitOrdenEntrega(formData: FormData) {
 
   // 8. ENVÍO DEL MENSAJE: Realizamos la llamada HTTP POST al Webhook
   try {
-    const response = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    let response;
+
+    if (isImage) {
+      // Caso Imagen: Envío único con el embed y la imagen adjunta
+      const discordForm = new FormData();
+      
+      discordForm.append("payload_json", JSON.stringify({
         username: "Finvora Ventas",
         avatar_url: `${siteUrl}/brands/finvoralogo.webp`,
         content: content,
-        embeds: [embed]
-      }),
-    });
+        embeds: embeds
+      }));
+
+      discordForm.append("files[0]", verificacionFile, verificacionFile.name);
+
+      response = await fetch(webhookUrl, {
+        method: 'POST',
+        body: discordForm
+      });
+    } else {
+      // Caso PDF o Sin Archivo: Enviamos primero el embed como JSON
+      response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: "Finvora Ventas",
+          avatar_url: `${siteUrl}/brands/finvoralogo.webp`,
+          content: content,
+          embeds: embeds
+        }),
+      });
+
+      // Si es un PDF y la primera petición fue exitosa, enviamos el archivo en un segundo mensaje consecutivo
+      if (response.ok && hasFile) {
+        try {
+          const secondForm = new FormData();
+          secondForm.append("payload_json", JSON.stringify({
+            username: "Finvora Ventas",
+            avatar_url: `${siteUrl}/brands/finvoralogo.webp`,
+            content: `📄 Verificación crediticia adjunta para la orden **${generatedFolio}**:`
+          }));
+          secondForm.append("files[0]", verificacionFile, verificacionFile.name);
+
+          await fetch(webhookUrl, {
+            method: 'POST',
+            body: secondForm
+          });
+        } catch (secError) {
+          console.error("Error enviando el archivo PDF adjunto a Discord:", secError);
+          // No bloqueamos el flujo principal si el segundo mensaje falla por red
+        }
+      }
+    }
 
     if (!response.ok) {
       throw new Error(`Discord API responded with status ${response.status}`);
