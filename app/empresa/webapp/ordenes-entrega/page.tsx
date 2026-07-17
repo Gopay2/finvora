@@ -40,7 +40,17 @@ export default async function OrdenesEntregaPage() {
 
   const { data: stockItems } = await queryStock;
 
-  // 3. Obtenemos las zonas de reparto con sus repartidores asociados
+  // 3. Obtenemos los costos de productos por proveedor
+  const { data: costos } = await supabase
+    .from("producto_costos_proveedores")
+    .select("producto_id, costo");
+
+  // 4. Obtenemos las configuraciones de enganche
+  const { data: configEnganches } = await supabase
+    .from("configuracion_enganche")
+    .select("cliente_historial, porcentajes");
+
+  // 5. Obtenemos las zonas de reparto con sus repartidores asociados
   const { data: zonasRepartoRaw } = await supabase
     .from("zonas_reparto")
     .select(`
@@ -91,6 +101,8 @@ export default async function OrdenesEntregaPage() {
         productos={productos || []}
         zonasReparto={zonasReparto}
         stockItems={stockItems || []}
+        costos={costos || []}
+        configEnganches={configEnganches || []}
       />
     </div>
   );
