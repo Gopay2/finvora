@@ -61,6 +61,19 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
+      {/* Orden de Garantía - Acceso para todos */}
+      <Link href="/empresa/webapp/ordenes-garantia" className={styles.card}>
+        <div className={styles.cardGlow} />
+        <div className={styles.iconWrapper}>
+          <span className="material-symbols-outlined text-secondary" style={{ fontSize: '34px' }}>phonelink_setup</span>
+        </div>
+        <div>
+          <h2 className={styles.cardTitle}>Orden de Garantía</h2>
+          <p className={styles.cardDesc}>Registro de equipos reportados por clientes por fallas en garantía.</p>
+        </div>
+        <div className={styles.cardButton}>Acceder</div>
+      </Link>
+
       {/* Stock de Ventas - Bloqueado para Closer en la subpágina */}
       <Link href="/empresa/webapp/stock" className={styles.card}>
         <div className={styles.cardGlow} />
@@ -165,6 +178,32 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
+      {/* Próximamente 1 */}
+      <div className={styles.cardUpcoming}>
+        <div className={styles.cardGlow} />
+        <div className={styles.iconWrapper}>
+          <span className={styles.icon}>more_horiz</span>
+        </div>
+        <div>
+          <h2 className={styles.cardTitle}>Próximamente</h2>
+          <p className={styles.cardDesc}>Nueva sección en desarrollo.</p>
+        </div>
+        <div className={styles.cardButtonUpcoming}>Próximamente</div>
+      </div>
+
+      {/* Próximamente 2 */}
+      <div className={styles.cardUpcoming}>
+        <div className={styles.cardGlow} />
+        <div className={styles.iconWrapper}>
+          <span className={styles.icon}>more_horiz</span>
+        </div>
+        <div>
+          <h2 className={styles.cardTitle}>Próximamente</h2>
+          <p className={styles.cardDesc}>Nueva sección en desarrollo.</p>
+        </div>
+        <div className={styles.cardButtonUpcoming}>Próximamente</div>
+      </div>
+
       {/* Próximamente 3 */}
       <div className={styles.cardUpcoming}>
         <div className={styles.cardGlow} />
@@ -177,6 +216,6 @@ export default function WebAppPage() {
         </div>
         <div className={styles.cardButtonUpcoming}>Próximamente</div>
       </div>
-    </div>
+    </div>    
   );
 }

@@ -99,8 +99,6 @@ export async function submitOrdenEntrega(formData: FormData) {
 
   if (repartidorNormalizado.includes("ct") && process.env.DISCORD_WEBHOOK_URL_6) {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_6;
-  } else if (repartidorNormalizado.includes("cambaceo victor") && process.env.DISCORD_WEBHOOK_URL_3) {
-    webhookUrl = process.env.DISCORD_WEBHOOK_URL_3;
   } else if (repartidorNormalizado.includes("cambaceo angel") && process.env.DISCORD_WEBHOOK_URL_5) {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_5;
   } else if (repartidorNormalizado.includes("cambaceo brenda") && process.env.DISCORD_WEBHOOK_URL_7) {
@@ -181,7 +179,6 @@ export async function submitOrdenEntrega(formData: FormData) {
 
   // Mención opcional a un rol específico de Discord (ej. Coordinadores o Closers) si está configurado
   const isCambaceo = 
-    repartidorNormalizado.includes("cambaceo victor") || 
     repartidorNormalizado.includes("cambaceo angel") ||
     repartidorNormalizado.includes("cambaceo brenda");
   const isCT = repartidorNormalizado.includes("ct");
