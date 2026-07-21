@@ -95,12 +95,46 @@ interface Garantia {
   };
 }
 
+interface OrdenGarantia {
+  id: string;
+  folio: string;
+  consecutivo: number;
+  zona: string;
+  nombre_cliente: string;
+  telefono: string;
+  ubicacion: string;
+  tag?: string;
+  modelo: string;
+  imei: string;
+  fecha_entrega?: string;
+  costo_equipo?: number;
+  enganche_registrado?: number;
+  enganche_recibido?: number;
+  motivo_garantia: string;
+  descripcion_falla: string;
+  accesorios_entregados?: string;
+  estado_fisico?: string;
+  observaciones?: string;
+  created_at: string;
+  vendedor?: {
+    id: string;
+    username: string;
+  };
+}
+
+interface ZonaReparto {
+  nombre_zona: string;
+  repartidor_id: string;
+}
+
 interface RegistrosClientViewProps {
   ventas: Venta[];
   ordenes: OrdenEntrega[];
   garantias: Garantia[];
+  ordenesGarantia: OrdenGarantia[];
   vendedores: PerfilOption[];
   repartidores: RepartidorOption[];
+  zonasReparto: ZonaReparto[];
 }
 
 const ITEMS_PER_PAGE = 20;
@@ -109,11 +143,13 @@ export default function RegistrosClientView({
   ventas,
   ordenes,
   garantias,
+  ordenesGarantia,
   vendedores,
-  repartidores
+  repartidores,
+  zonasReparto
 }: RegistrosClientViewProps) {
   // Estados principales
-  const [activeTab, setActiveTab] = useState<"ventas" | "ordenes" | "garantias">("ventas");
+  const [activeTab, setActiveTab] = useState<"ventas" | "ordenes" | "garantias" | "ordenes_garantia">("ventas");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedVendedor, setSelectedVendedor] = useState("");
   const [selectedRepartidor, setSelectedRepartidor] = useState("");
@@ -131,7 +167,7 @@ export default function RegistrosClientView({
   }, []);
 
   // Limpiar filtros al cambiar de pestaña
-  const handleTabChange = (tab: "ventas" | "ordenes" | "garantias") => {
+  const handleTabChange = (tab: "ventas" | "ordenes" | "garantias" | "ordenes_garantia") => {
     setActiveTab(tab);
     setSearchQuery("");
     setSelectedVendedor("");
@@ -318,12 +354,71 @@ export default function RegistrosClientView({
     });
   }, [activeTab, garantias, searchQuery, selectedVendedor, selectedRepartidor, fechaDesde, fechaHasta]);
 
+  // Filtrado de Órdenes de Garantía en Memoria
+  const filteredOrdenesGarantia = useMemo(() => {
+    if (activeTab !== "ordenes_garantia") return [];
+
+    return ordenesGarantia.filter((orden) => {
+      // 1. Buscador General
+      if (searchQuery.trim() !== "") {
+        const query = searchQuery.toLowerCase();
+        const folioMatch = orden.folio?.toLowerCase().includes(query);
+        const clienteMatch = orden.nombre_cliente?.toLowerCase().includes(query);
+        const telefonoMatch = orden.telefono?.toLowerCase().includes(query);
+        const imeiMatch = orden.imei?.toLowerCase().includes(query);
+        const tagMatch = orden.tag?.toLowerCase().includes(query);
+        const modeloMatch = orden.modelo?.toLowerCase().includes(query);
+        const motivoMatch = orden.motivo_garantia?.toLowerCase().includes(query);
+        const fallaMatch = orden.descripcion_falla?.toLowerCase().includes(query);
+        const vendedorMatch = orden.vendedor?.username?.toLowerCase().includes(query);
+
+        if (
+          !folioMatch && !clienteMatch && !telefonoMatch && !imeiMatch &&
+          !tagMatch && !modeloMatch && !motivoMatch && !fallaMatch && !vendedorMatch
+        ) {
+          return false;
+        }
+      }
+
+      // 2. Filtro Vendedor
+      if (selectedVendedor && orden.vendedor?.id !== selectedVendedor) {
+        return false;
+      }
+
+      // 3. Filtro Repartidor / Ubicación (relacionando la zona con el repartidor)
+      if (selectedRepartidor) {
+        const zonasDeRepartidor = zonasReparto
+          .filter(zr => zr.repartidor_id === selectedRepartidor)
+          .map(zr => zr.nombre_zona.toLowerCase());
+        
+        if (!zonasDeRepartidor.includes(orden.zona.toLowerCase())) {
+          return false;
+        }
+      }
+
+      // 4. Fechas (Filtramos sobre created_at)
+      const fechaCreacion = new Date(orden.created_at);
+      if (fechaDesde) {
+        const desde = new Date(`${fechaDesde}T00:00:00`);
+        if (fechaCreacion < desde) return false;
+      }
+      if (fechaHasta) {
+        const hasta = new Date(`${fechaHasta}T23:59:59`);
+        if (fechaCreacion > hasta) return false;
+      }
+
+      return true;
+    });
+  }, [activeTab, ordenesGarantia, searchQuery, selectedVendedor, selectedRepartidor, fechaDesde, fechaHasta, zonasReparto]);
+
   const activeData = (
     activeTab === "ventas" 
       ? filteredVentas 
       : activeTab === "ordenes" 
         ? filteredOrdenes 
-        : filteredGarantias
+        : activeTab === "garantias"
+          ? filteredGarantias
+          : filteredOrdenesGarantia
   ) as any[];
 
   // Lógica de Paginación
@@ -348,11 +443,9 @@ export default function RegistrosClientView({
     btnHome: "flex items-center justify-center p-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl hover:bg-slate-700 hover:text-white transition-all cursor-pointer w-fit -translate-y-1.5 sm:translate-y-0",
 
     // Tabs
-    tabContainer: "grid grid-cols-2 sm:flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 w-full sm:w-fit gap-1.5 sm:gap-0",
-    tabButton: (active: boolean, isThird: boolean = false) =>
-      `flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none ${
-        isThird ? "col-span-2 sm:col-span-1" : "col-span-1"
-      } ${
+    tabContainer: "grid grid-cols-2 lg:flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 w-full lg:w-fit gap-1.5 lg:gap-0",
+    tabButton: (active: boolean) =>
+      `flex flex-col sm:flex-row items-center justify-center text-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer select-none col-span-1 ${
         active
           ? "bg-secondary text-slate-950 shadow-lg shadow-secondary/20"
           : "text-slate-400 hover:text-white"
@@ -429,7 +522,14 @@ export default function RegistrosClientView({
           Garantías
         </div>
         <div
-          className={styles.tabButton(activeTab === "ordenes", true)}
+          className={styles.tabButton(activeTab === "ordenes_garantia")}
+          onClick={() => handleTabChange("ordenes_garantia")}
+        >
+          <span className="material-symbols-outlined text-base sm:text-lg">build_circle</span>
+          Órdenes de Garantía
+        </div>
+        <div
+          className={styles.tabButton(activeTab === "ordenes")}
           onClick={() => handleTabChange("ordenes")}
         >
           <span className="material-symbols-outlined text-base sm:text-lg">local_shipping</span>
@@ -451,7 +551,9 @@ export default function RegistrosClientView({
                   ? "Buscar por IMEI, modelo..." 
                   : activeTab === "ordenes" 
                     ? "Buscar folio, cliente, IMEI..." 
-                    : "Buscar IMEI, modelo, solicitante, motivo..."
+                    : activeTab === "garantias"
+                      ? "Buscar IMEI, modelo, solicitante, motivo..."
+                      : "Buscar folio, cliente, IMEI, fallas..."
               }
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
@@ -559,9 +661,17 @@ export default function RegistrosClientView({
               <span className="material-symbols-outlined text-base">filter_alt_off</span>
               <span>Limpiar Filtros</span>
             </button>
-            <DownloadExcelButton
+             <DownloadExcelButton
               data={activeData}
-              type={activeTab === "ventas" ? "ventas" : activeTab === "garantias" ? "garantias" : "ordenes_entrega"}
+              type={
+                activeTab === "ventas" 
+                  ? "ventas" 
+                  : activeTab === "garantias" 
+                    ? "garantias" 
+                    : activeTab === "ordenes" 
+                      ? "ordenes_entrega" 
+                      : "ordenes_garantia"
+              }
             />
           </div>
         </div>
@@ -738,7 +848,7 @@ export default function RegistrosClientView({
                 )}
               </tbody>
             </table>
-          ) : (
+          ) : activeTab === "ordenes" ? (
             /* TABLA DE ÓRDENES DE ENTREGA */
             <table className={styles.table}>
               <thead>
@@ -828,6 +938,90 @@ export default function RegistrosClientView({
                   <tr>
                     <td colSpan={7} className="px-6 py-20 text-center text-slate-500 italic text-sm">
                       No se encontraron órdenes con los filtros seleccionados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          ) : (
+            /* TABLA DE ÓRDENES DE GARANTÍA */
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th className={`${styles.th} w-44 min-w-[170px] whitespace-nowrap`}>Folio</th>
+                  <th className={`${styles.th} w-32`}>Cliente / Teléfono</th>
+                  <th className={`${styles.th} w-36`}>Equipo</th>
+                  <th className={`${styles.th} w-20`}>Vendedor</th>
+                  <th className={`${styles.th} w-28`}>Zona</th>
+                  <th className={`${styles.th} w-56 min-w-[200px]`}>Motivo y Falla</th>
+                  <th className={`${styles.th} w-20`}>Creada</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedData.length > 0 ? (
+                  (paginatedData as OrdenGarantia[]).map((orden) => (
+                    <tr key={orden.id} className={styles.tr}>
+                      <td className={styles.td}>
+                        <span className={styles.folioBadge}>{orden.folio}</span>
+                      </td>
+                      <td className={styles.td}>
+                        <div className="flex flex-col items-center">
+                          <div className="font-bold text-white">{orden.nombre_cliente}</div>
+                          <div className="text-xs text-slate-500 font-mono mt-0.5">{orden.telefono}</div>
+                          {orden.tag && (
+                            <span className="mt-1.5 px-2.5 py-0.5 text-xs bg-slate-950 border border-slate-800 rounded font-mono text-secondary font-bold uppercase tracking-wider">
+                              TAG: {orden.tag}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        <div className="flex flex-col items-center">
+                          <div className="font-bold text-white">{orden.modelo}</div>
+                          {orden.imei && (
+                            <span className="mt-1 text-[9px] bg-slate-950 text-slate-400 px-1 py-0.5 rounded font-mono border border-slate-800">
+                              IMEI: {orden.imei}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        <div className={styles.userBadge}>
+                          <span className="material-symbols-outlined text-[10px]">person</span>
+                          {orden.vendedor?.username || "Desconocido"}
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        <span className={styles.zonaBadge}>{orden.zona}</span>
+                      </td>
+                      <td className={styles.td}>
+                        <div className="flex flex-col items-center">
+                          <div className="font-bold text-white text-xs line-clamp-1" title={orden.motivo_garantia}>
+                            {orden.motivo_garantia}
+                          </div>
+                          <div 
+                            className="text-[10px] text-slate-400 mt-1 line-clamp-2 hover:line-clamp-none transition-all duration-300 w-full text-center" 
+                            title={orden.descripcion_falla}
+                          >
+                            {orden.descripcion_falla}
+                          </div>
+                        </div>
+                      </td>
+                      <td className={styles.td}>
+                        <span className="text-xs text-slate-500">
+                          {new Date(orden.created_at).toLocaleDateString("es-MX", {
+                            timeZone: "America/Tijuana",
+                            day: "2-digit",
+                            month: "short"
+                          })}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-20 text-center text-slate-500 italic text-sm">
+                      No se encontraron órdenes de garantía con los filtros seleccionados.
                     </td>
                   </tr>
                 )}
