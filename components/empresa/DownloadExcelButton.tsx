@@ -3,7 +3,7 @@
 import React from "react";
 import * as XLSX from "xlsx";
 
-type DownloadPreset = 'stock' | 'ventas' | 'comprobantes' | 'ordenes_entrega' | 'garantias';
+type DownloadPreset = 'stock' | 'ventas' | 'comprobantes' | 'ordenes_entrega' | 'garantias' | 'ordenes_garantia';
 
 interface RepartidorOption {
   id: string;
@@ -145,6 +145,31 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
         "Fecha Garantía": new Date(garantiaItem.fecha_garantia).toLocaleDateString('es-AR') + " " + new Date(garantiaItem.fecha_garantia).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
       }));
     }
+    else if (type === 'ordenes_garantia') {
+      fileNamePrefix = "Ordenes_Garantia";
+      sheetName = "Órdenes de Garantía";
+      worksheetData = data.map(orden => ({
+        "Folio": orden.folio || "",
+        "Fecha Registro": new Date(orden.created_at).toLocaleDateString('es-AR') + " " + new Date(orden.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+        "Cliente": orden.nombre_cliente || "",
+        "Teléfono": orden.telefono || "",
+        "Ubicación / Maps": orden.ubicacion || "",
+        "Zona": orden.zona || "",
+        "Modelo Equipo": orden.modelo || "",
+        "IMEI": orden.imei || "",
+        "Tag": orden.tag || "",
+        "Vendedor": orden.vendedor?.username || "Desconocido",
+        "Fecha de Compra": orden.fecha_entrega ? new Date(orden.fecha_entrega).toLocaleDateString('es-AR') : "N/A",
+        "Costo Equipo": orden.costo_equipo || 0,
+        "Enganche Registrado": orden.enganche_registrado || 0,
+        "Enganche Recibido": orden.enganche_recibido || 0,
+        "Motivo Garantía": orden.motivo_garantia || "",
+        "Descripción de Falla": orden.descripcion_falla || "",
+        "Accesorios Entregados": orden.accesorios_entregados || "",
+        "Estado fisico del equipo al recibir": orden.estado_fisico || "",
+        "Observaciones": orden.observaciones || ""
+      }));
+    }
 
     // Proceso de generación de Excel
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
@@ -160,7 +185,8 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
     ventas: "Descargar Historial de Ventas",
     comprobantes: "Descargar Comprobantes en Excel",
     ordenes_entrega: "Descargar Órdenes de Entrega en Excel",
-    garantias: "Descargar Historial de Garantías en Excel"
+    garantias: "Descargar Historial de Garantías en Excel",
+    ordenes_garantia: "Descargar Órdenes de Garantía en Excel"
   };
 
   const isDisabled = !data || data.length === 0;

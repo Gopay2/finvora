@@ -107,6 +107,37 @@ export default async function RegistrosPage() {
     `)
     .order("created_at", { ascending: false });
 
+  // 2.5 Fetch de Órdenes de Garantía
+  const { data: ordenesGarantiaRaw } = await supabase
+    .from("ordenes_garantia")
+    .select(`
+      id,
+      folio,
+      consecutivo,
+      zona,
+      nombre_cliente,
+      telefono,
+      ubicacion,
+      tag,
+      modelo,
+      imei,
+      fecha_entrega,
+      costo_equipo,
+      enganche_registrado,
+      enganche_recibido,
+      motivo_garantia,
+      descripcion_falla,
+      accesorios_entregados,
+      estado_fisico,
+      observaciones,
+      created_at,
+      vendedor:perfiles!vendedor_id (
+        id,
+        username
+      )
+    `)
+    .order("created_at", { ascending: false });
+
   // 3. Fetch de Catálogos para filtros
   const { data: perfiles } = await supabase
     .from("perfiles")
@@ -118,13 +149,20 @@ export default async function RegistrosPage() {
     .select("id, nombre")
     .order("nombre");
 
+  const { data: zonasRepartoRaw } = await supabase
+    .from("zonas_reparto")
+    .select("nombre_zona, repartidor_id")
+    .order("nombre_zona");
+
   return (
     <RegistrosClientView
       ventas={(ventasRaw || []) as any}
       ordenes={(ordenesRaw || []) as any}
       garantias={(garantiasRaw || []) as any}
+      ordenesGarantia={(ordenesGarantiaRaw || []) as any}
       vendedores={(perfiles || []) as any}
       repartidores={(repartidores || []) as any}
+      zonasReparto={(zonasRepartoRaw || []) as any}
     />
   );
 }
