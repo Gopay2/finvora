@@ -180,7 +180,7 @@ export async function crearReparto(formData: {
   notas?: string;
 }) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer", "Repartidor"])) {
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer", "Repartidor", "Closer", "Cambaceador", "CambaCloser"])) {
     return { success: false, error: "No autorizado" };
   }
 
@@ -218,7 +218,7 @@ export async function crearReparto(formData: {
  */
 export async function eliminarReparto(repartoId: string) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer", "Repartidor"])) {
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer", "Repartidor", "Closer", "Cambaceador", "CambaCloser"])) {
     return { success: false, error: "No autorizado" };
   }
 

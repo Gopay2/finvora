@@ -35,3 +35,26 @@ export async function createClient() {
     }
   )
 }
+
+export async function createAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!url || !key) {
+    console.error('Supabase environment variables are missing.')
+    return null as any
+  }
+
+  return createServerClient(
+    url,
+    key,
+    {
+      cookies: {
+        getAll() {
+          return []
+        },
+        setAll() {},
+      },
+    }
+  )
+}

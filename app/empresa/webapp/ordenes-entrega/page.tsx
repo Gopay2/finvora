@@ -60,7 +60,8 @@ export default async function OrdenesEntregaPage() {
       repartidores (
         id,
         nombre,
-        activo
+        activo,
+        zona_horaria
       )
     `)
     .order("nombre_zona", { ascending: true });
@@ -73,6 +74,7 @@ export default async function OrdenesEntregaPage() {
       id: string;
       nombre: string;
       activo: boolean;
+      zona_horaria?: string;
     } | null;
   }
 
@@ -84,8 +86,30 @@ export default async function OrdenesEntregaPage() {
       nombre_zona: zonaInfo.nombre_zona,
       repartidor_id: zonaInfo.repartidor_id,
       repartidor_nombre: zonaInfo.repartidores!.nombre,
-      repartidor_activo: zonaInfo.repartidores!.activo
+      repartidor_activo: zonaInfo.repartidores!.activo,
+      repartidor_zona_horaria: zonaInfo.repartidores!.zona_horaria || "America/Mexico_City"
     }));
+
+  // 6. Obtenemos repartos existentes desde la fecha actual para bloquear horarios ocupados
+  const todayStr = new Date().toISOString().split("T")[0];
+  const { data: repartosExistentesRaw } = await supabase
+    .from("repartos")
+    .select("id, repartidor_id, fecha_reparto, horario")
+    .gte("fecha_reparto", todayStr);
+
+  interface RepartoRow {
+    id: string;
+    repartidor_id: string;
+    fecha_reparto: string;
+    horario: string;
+  }
+
+  const repartosExistentes = ((repartosExistentesRaw as unknown as RepartoRow[]) || []).map((r) => ({
+    id: r.id,
+    repartidor_id: r.repartidor_id,
+    fecha_reparto: r.fecha_reparto,
+    horario: r.horario
+  }));
 
   return (
     <div className={styles.container}>
@@ -103,6 +127,7 @@ export default async function OrdenesEntregaPage() {
         stockItems={stockItems || []}
         costos={costos || []}
         configEnganches={configEnganches || []}
+        repartosExistentes={repartosExistentes}
       />
     </div>
   );
