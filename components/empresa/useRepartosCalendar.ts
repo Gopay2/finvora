@@ -102,11 +102,11 @@ export function useRepartosCalendar(userRole?: string) {
   const [selectedRepartidorTab, setSelectedRepartidorTab] = useState<string | null>(null);
   const [timezoneDiffText, setTimezoneDiffText] = useState<string | null>(null);
 
-  // Filtrar repartidores de logística (excluir "local", "cambaceo" y "humberto" case-insensitive)
+  // Filtrar repartidores de logística (excluir "local", "cambaceo", "humberto" y "almacen/almacenamiento" case-insensitive)
   const repartidoresFiltradosLogistica = useMemo(() => {
-    return (formDataOptions?.repartidores || []).filter(rep => {
-      const name = (rep.nombre || "").toLowerCase();
-      return !name.includes("local") && !name.includes("cambaceo") && !name.includes("humberto");
+    return (formDataOptions?.repartidores || []).filter(repartidor => {
+      const name = (repartidor.nombre || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return !name.includes("local") && !name.includes("cambaceo") && !name.includes("humberto") && !name.includes("almacen");
     });
   }, [formDataOptions?.repartidores]);
 
@@ -244,6 +244,10 @@ export function useRepartosCalendar(userRole?: string) {
 
   const repartosDelDiaSeleccionado = repartos.filter(reparto => reparto.fecha_reparto === formattedSelectedDayStr);
 
+  /**
+   * Valida y procesa la creación manual de un nuevo reparto desde el formulario modal del calendario.
+   * Verifica margen de tiempo de anticipación respecto a la zona horaria del repartidor e IMEI de stock.
+   */
   const handleCrearReparto = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
@@ -254,8 +258,8 @@ export function useRepartosCalendar(userRole?: string) {
       const deliveryHour = parseInt(hoursStr, 10);
       const deliveryMinute = parseInt(minutesStr, 10);
       
-      const rep = repartidoresFiltradosLogistica.find(r => r.id === formRepartidor);
-      const tz = rep?.zona_horaria || 'America/Mexico_City';
+      const repartidorObj = repartidoresFiltradosLogistica.find(repartidor => repartidor.id === formRepartidor);
+      const tz = repartidorObj?.zona_horaria || 'America/Mexico_City';
       const driverNowString = new Date().toLocaleString('en-US', { timeZone: tz });
       const driverNow = new Date(driverNowString);
       const minAllowedTime = new Date(driverNow.getTime() + 60 * 60 * 1000); // 1 hora en el futuro
@@ -312,6 +316,10 @@ export function useRepartosCalendar(userRole?: string) {
     setActionLoading(false);
   };
 
+  /**
+   * Elimina un reparto programado existente de la base de datos y actualiza las listas en tiempo real.
+   * @param repartoId Identificador único UUID del reparto a eliminar
+   */
   const handleEliminarReparto = async (repartoId: string) => {
     setActionLoading(true);
     const res = await eliminarReparto(repartoId);

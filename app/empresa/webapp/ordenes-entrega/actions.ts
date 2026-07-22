@@ -58,6 +58,24 @@ export async function submitOrdenEntrega(formData: FormData) {
 
   const verificacionFile = formData.get("verificacion_crediticia") as any;
 
+  // 3.4. CONTROL DE SOBRECUPO / RACE CONDITION (Verificar disponibilidad inmediata)
+  if (data.fecha && data.hora && data.repartidor_id) {
+    const { data: repartoOcupado } = await supabase
+      .from("repartos")
+      .select("id")
+      .eq("repartidor_id", data.repartidor_id)
+      .eq("fecha_reparto", data.fecha)
+      .eq("horario", data.hora)
+      .maybeSingle();
+
+    if (repartoOcupado) {
+      return {
+        success: false,
+        error: `El horario de las ${data.hora} hs del día ${data.fecha} acaba de ser reservado por otro vendedor. Por favor seleccione otro horario.`
+      };
+    }
+  }
+
   // 3.5. PERSISTIR EN BASE DE DATOS Y OBTENER FOLIO ÚNICO
   const { data: dbData, error: insertError } = await supabase
     .from("ordenes_entrega")
@@ -91,6 +109,85 @@ export async function submitOrdenEntrega(formData: FormData) {
   }
 
   const generatedFolio = dbData?.folio || "SIN-FOLIO";
+
+  // 3.6. AGENDAMIENTO AUTOMÁTICO EN EL CALENDARIO DE REPARTOS
+  // Busca las relaciones relacionales de producto_id (vía IMEI) y zona_id para vincular la entrega automáticamente.
+  if (data.fecha && data.hora && data.repartidor_id) {
+    try {
+      let productoId: string | null = null;
+      if (data.imei) {
+        const { data: stockRow } = await supabase
+          .from("stock")
+          .select("producto_id")
+          .eq("imei", data.imei)
+          .maybeSingle();
+        if (stockRow) {
+          productoId = stockRow.producto_id;
+        }
+      }
+
+      let zonaId: string | null = null;
+      if (data.zona) {
+        const { data: zonaRow } = await supabase
+          .from("zonas_reparto")
+          .select("id")
+          .eq("nombre_zona", data.zona)
+          .eq("repartidor_id", data.repartidor_id)
+          .maybeSingle();
+        
+        if (zonaRow) {
+          zonaId = zonaRow.id;
+        } else {
+          const { data: zonaFallback } = await supabase
+            .from("zonas_reparto")
+            .select("id")
+            .eq("nombre_zona", data.zona)
+            .maybeSingle();
+          if (zonaFallback) zonaId = zonaFallback.id;
+        }
+      }
+
+      const clienteNotas = `${data.nombre}${data.telefono ? ` - Tel: ${data.telefono}` : ""}`;
+
+      const { error: repartoInsertErr } = await supabase.from("repartos").insert({
+        fecha_reparto: data.fecha,
+        horario: data.hora,
+        repartidor_id: data.repartidor_id,
+        zona_id: zonaId,
+        vendedor_id: user.id,
+        imei: data.imei || null,
+        producto_id: productoId,
+        notas: clienteNotas
+      });
+
+      if (repartoInsertErr) {
+        console.error("Error RLS/DB al insertar reparto en calendario:", repartoInsertErr);
+      }
+    } catch (repartoErr) {
+      console.error("Error al registrar reparto automático en el calendario:", repartoErr);
+    }
+  }
+
+  // 3.7. TRANSICIÓN AUTOMÁTICA DE ESTADO DE STOCK A "En envío"
+  // Remueve el IMEI del inventario disponible para evitar selecciones duplicadas en órdenes posteriores.
+  if (data.imei) {
+    try {
+      const { error: stockUpdateErr } = await supabase
+        .from("stock")
+        .update({ estado: "En envío" })
+        .eq("imei", data.imei);
+
+      if (stockUpdateErr) {
+        console.error("Error RLS/DB al actualizar estado de stock a 'En envío':", stockUpdateErr);
+      } else {
+        const { revalidatePath } = await import("next/cache");
+        revalidatePath("/empresa/webapp/stock");
+        revalidatePath("/empresa/webapp/ordenes-entrega");
+      }
+    } catch (stockErr) {
+      console.error("Error al actualizar estado de stock:", stockErr);
+    }
+  }
 
   // 4. CONFIGURACIÓN DEL WEBHOOK: Cargamos la URL del webhook de Discord según la zona elegida o el repartidor
   const zonaNormalizada = (data.zona || "").trim().toLowerCase();

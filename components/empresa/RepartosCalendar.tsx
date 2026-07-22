@@ -376,19 +376,13 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                             key={rep.id}
                             type="button"
                             onClick={() => setSelectedRepartidorTab(rep.id)}
-                            className={`
-                              ${styles.tabBtn}
-                              ${isActive ? styles.tabBtnActive : styles.tabBtnInactive}
-                            `}
+                            className={`${styles.tabBtn} ${isActive ? styles.tabBtnActive : styles.tabBtnInactive}`}
                           >
                             <span className="material-symbols-outlined text-sm">person</span>
                             <span>{rep.nombre}</span>
                             <span className="text-[10px] opacity-60 font-semibold">({tzShort})</span>
                             {countRepartos > 0 && (
-                              <span className={`
-                                ${styles.tabBadge}
-                                ${isActive ? styles.tabBadgeActive : styles.tabBadgeInactive}
-                              `}>
+                              <span className={`${styles.tabBadge} ${isActive ? styles.tabBadgeActive : styles.tabBadgeInactive}`}>
                                 {countRepartos}
                               </span>
                             )}
@@ -412,18 +406,24 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                 <div className={styles.repartosList}>
                   {selectedRepartidorTab ? (() => {
                     const driverReps = repartosDelDiaSeleccionado.filter(rep => rep.repartidores?.id === selectedRepartidorTab);
+                    const currentTabDriverObj = repartidoresFiltradosLogistica.find(r => r.id === selectedRepartidorTab);
+                    const isTabDriverCT = (currentTabDriverObj?.nombre || "").toLowerCase() === "repartidor ct";
+
+                    const minStandardHour = isTabDriverCT ? 10 : 9;
+                    const maxStandardHour = isTabDriverCT ? 17 : 19;
+
                     const extraHours = new Set<number>();
                     driverReps.forEach(rep => {
                       if (!rep.horario) return;
                       const match = rep.horario.match(/^(\d+)/);
                       if (match) {
                         const hour = parseInt(match[1], 10);
-                        if (hour < 8 || hour > 20) {
+                        if (hour < minStandardHour || hour > maxStandardHour) {
                           extraHours.add(hour);
                         }
                       }
                     });
-                    const standardHours = Array.from({ length: 13 }, (_, i) => i + 8);
+                    const standardHours = Array.from({ length: maxStandardHour - minStandardHour + 1 }, (_, i) => i + minStandardHour);
                     const allHours = Array.from(new Set([...standardHours, ...Array.from(extraHours)])).sort((a, b) => a - b);
 
                     return allHours.map((hour) => {
@@ -494,6 +494,12 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                                       </h4>
                                       
                                       <div className={styles.cardDetails}>
+                                        {rep.notas && (
+                                          <span className={styles.cardDetailItem}>
+                                            <span className="material-symbols-outlined text-sm text-secondary">account_circle</span>
+                                            Cliente: <strong className={styles.cardDetailVal}>{rep.notas}</strong>
+                                          </span>
+                                        )}
                                         <span className={styles.cardDetailItem}>
                                           <span className="material-symbols-outlined text-sm text-slate-500">local_shipping</span>
                                           Repartidor: <strong className={styles.cardDetailVal}>{rep.repartidores?.nombre || 'No asignado'}</strong>
@@ -696,28 +702,35 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                       style={{ colorScheme: 'dark' }}
                     >
                       <option value="">Seleccionar Hora</option>
-                      {Array.from({ length: 13 }, (_, i) => {
-                        const hour = i + 8;
-                        const formattedHour = `${String(hour).padStart(2, '0')}:00`;
-                        const rep = repartidoresFiltradosLogistica.find(r => r.id === formRepartidor);
-                        const tz = rep?.zona_horaria || 'America/Mexico_City';
-                        const driverNowString = new Date().toLocaleString('en-US', { timeZone: tz });
-                        const driverNow = new Date(driverNowString);
-                        const minAllowed = new Date(driverNow.getTime() + 60 * 60 * 1000);
-                        const slotDate = new Date(year, month, selectedDay || 1, hour, 0);
-                        const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor' || userRole === 'Repartidor';
-                        const isPastOrUnavailable = !isPrivileged && (slotDate < minAllowed);
-                        return (
-                          <option 
-                            key={formattedHour} 
-                            value={formattedHour} 
-                            disabled={isPastOrUnavailable}
-                            className={isPastOrUnavailable ? "text-slate-600 bg-slate-950" : "text-white bg-slate-950"}
-                          >
-                            {formattedHour} hs {isPastOrUnavailable ? "(No disponible)" : ""}
-                          </option>
-                        );
-                      })}
+                      {(() => {
+                        const selectedFormRep = repartidoresFiltradosLogistica.find(r => r.id === formRepartidor);
+                        const isFormRepCT = (selectedFormRep?.nombre || "").toLowerCase() === "repartidor ct";
+                        const startHour = isFormRepCT ? 10 : 9;
+                        const endHour = isFormRepCT ? 17 : 19;
+                        const hoursCount = endHour - startHour + 1;
+
+                        return Array.from({ length: hoursCount }, (_, i) => {
+                          const hour = i + startHour;
+                          const formattedHour = `${String(hour).padStart(2, '0')}:00`;
+                          const tz = selectedFormRep?.zona_horaria || 'America/Mexico_City';
+                          const driverNowString = new Date().toLocaleString('en-US', { timeZone: tz });
+                          const driverNow = new Date(driverNowString);
+                          const minAllowed = new Date(driverNow.getTime() + 60 * 60 * 1000);
+                          const slotDate = new Date(year, month, selectedDay || 1, hour, 0);
+                          const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor' || userRole === 'Repartidor';
+                          const isPastOrUnavailable = !isPrivileged && (slotDate < minAllowed);
+                          return (
+                            <option 
+                              key={formattedHour} 
+                              value={formattedHour} 
+                              disabled={isPastOrUnavailable}
+                              className={isPastOrUnavailable ? "text-slate-600 bg-slate-950" : "text-white bg-slate-950"}
+                            >
+                              {formattedHour} hs {isPastOrUnavailable ? "(No disponible)" : ""}
+                            </option>
+                          );
+                        });
+                      })()}
                     </select>
                   </div>
                 </div>

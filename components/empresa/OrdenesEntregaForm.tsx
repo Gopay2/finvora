@@ -1,6 +1,9 @@
 'use client';
 
-import React, { useState, useRef, useMemo } from "react";
+// 1. React & Next.js Core
+import React, { useState, useRef, useMemo, useEffect } from "react";
+
+// 2. Server Actions & Services
 import { submitOrdenEntrega } from "@/app/empresa/webapp/ordenes-entrega/actions";
 
 interface Producto {
@@ -22,6 +25,7 @@ interface RepartoZonaInfo {
   repartidor_id: string;
   repartidor_nombre: string;
   repartidor_activo: boolean;
+  repartidor_zona_horaria?: string;
 }
 
 interface StockItem {
@@ -41,12 +45,20 @@ interface ConfigEngancheItem {
   porcentajes: number[];
 }
 
+interface RepartoExistente {
+  id?: string;
+  repartidor_id?: string | null;
+  fecha_reparto?: string | null;
+  horario?: string | null;
+}
+
 interface OrdenesEntregaFormProps {
   productos: Producto[];
   zonasReparto: RepartoZonaInfo[];
   stockItems: StockItem[];
   costos: CostoItem[];
   configEnganches: ConfigEngancheItem[];
+  repartosExistentes?: RepartoExistente[];
 }
 
 const styles = {
@@ -66,7 +78,8 @@ const styles = {
   formGrid: "grid grid-cols-1 md:grid-cols-2 gap-6",
   relativeInputContainer: "relative flex items-center",
   enganchePrefix: "absolute left-4 text-slate-400 pointer-events-none",
-  pickerIcon: "absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base"
+  pickerIcon: "absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base",
+  warningBanner: "md:col-span-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 p-4 rounded-xl text-sm font-medium flex flex-col lg:flex-row items-center justify-between gap-3 text-center"
 };
 
 export default function OrdenesEntregaForm({ 
@@ -74,7 +87,8 @@ export default function OrdenesEntregaForm({
   zonasReparto, 
   stockItems, 
   costos, 
-  configEnganches 
+  configEnganches,
+  repartosExistentes = []
 }: OrdenesEntregaFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
@@ -132,13 +146,13 @@ export default function OrdenesEntregaForm({
     }
   };
 
-  // 1. Filtrar stockItems según el repartidor seleccionado
+  /** 1. Filtra los items de stock físico asignados al repartidor seleccionado */
   const stockFiltrado = useMemo(() => {
     if (!selectedRepartidorId) return [];
     return stockItems.filter(stockItem => stockItem.zona === selectedRepartidorId);
   }, [selectedRepartidorId, stockItems]);
 
-  // 2. Mapeamos y filtramos los productos que tienen stock asignado a este repartidor (cantidad > 0)
+  /** 2. Mapea los productos del catálogo calculando existencias 'Disponible' y 'A consultar' */
   const productosConStock = useMemo(() => {
     if (!selectedRepartidorId) return [];
     
@@ -162,7 +176,7 @@ export default function OrdenesEntregaForm({
       .filter(producto => producto.cantidadStock > 0); // Nos aseguramos de que solo pasen productos con stock positivo
   }, [selectedRepartidorId, productos, stockFiltrado]);
 
-  // 3. Agrupamos modelos únicos a partir de los productos con stock
+  /** 3. Agrupa modelos y variantes únicas a partir de los productos con existencia física */
   const modelosUnicos = useMemo(() => {
     const map = new Map();
     productosConStock.forEach(producto => {
@@ -201,7 +215,7 @@ export default function OrdenesEntregaForm({
       }));
   }, [selectedModelKey, productosConStock]);
 
-  // 4.5. IMEIs disponibles para el modelo y color seleccionados del stock del repartidor
+  /** 4.5. Filtra los IMEIs disponibles en stock físico para el modelo y color seleccionados */
   const imeisDisponibles = useMemo(() => {
     if (!selectedModelKey || !selectedColor) return [];
     const matchingProducts = productosConStock.filter(
@@ -224,35 +238,65 @@ export default function OrdenesEntregaForm({
     return Array.from(set).sort();
   }, [zonasReparto]);
 
-  // 6. Repartidores válidos según la zona seleccionada (excluyendo cambaceadores)
+  // 6. Repartidores válidos según la zona seleccionada (excluyendo cambaceadores y almacenamiento)
   const repartidoresValidos = useMemo(() => {
     if (!selectedZona) return [];
     const map = new Map<string, string>();
     (zonasReparto || [])
-      .filter(zonaInfo => 
-        zonaInfo.nombre_zona === selectedZona && 
-        zonaInfo.repartidor_nombre &&
-        !zonaInfo.repartidor_nombre.toLowerCase().includes("cambaceo")
-      )
+      .filter(zonaInfo => {
+        if (zonaInfo.nombre_zona !== selectedZona || !zonaInfo.repartidor_nombre) return false;
+        const norm = zonaInfo.repartidor_nombre
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
+        return !norm.includes("cambaceo") && !norm.includes("almacen");
+      })
       .forEach(zonaInfo => {
         map.set(zonaInfo.repartidor_id, zonaInfo.repartidor_nombre);
       });
     return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre }));
   }, [selectedZona, zonasReparto]);
 
+  const activeZoneInfo = useMemo(() => {
+    if (!selectedZona) return null;
+    if (selectedRepartidorId) {
+      const match = (zonasReparto || []).find(z => z.repartidor_id === selectedRepartidorId && z.nombre_zona === selectedZona);
+      if (match) return match;
+    }
+    return (zonasReparto || []).find(z => {
+      if (z.nombre_zona !== selectedZona || !z.repartidor_nombre) return false;
+      const norm = z.repartidor_nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return !norm.includes("cambaceo") && !norm.includes("almacen");
+    }) || null;
+  }, [selectedZona, selectedRepartidorId, zonasReparto]);
+
   const selectedRepartidorName = useMemo(() => {
-    return repartidoresValidos.find(repartidor => repartidor.id === selectedRepartidorId)?.nombre || "";
-  }, [selectedRepartidorId, repartidoresValidos]);
+    if (!selectedRepartidorId) return "";
+    return activeZoneInfo?.repartidor_nombre || repartidoresValidos.find(repartidor => repartidor.id === selectedRepartidorId)?.nombre || "";
+  }, [selectedRepartidorId, repartidoresValidos, activeZoneInfo]);
 
   const isRepartidorCT = useMemo(() => {
     return selectedRepartidorName.toLowerCase() === "repartidor ct";
   }, [selectedRepartidorName]);
 
-  const tijuanaTime = useMemo(() => {
+  const selectedTimeZone = useMemo(() => {
+    if (activeZoneInfo?.repartidor_zona_horaria) {
+      return activeZoneInfo.repartidor_zona_horaria;
+    }
+    if (selectedZona.toLowerCase().includes("tijuana")) return "America/Tijuana";
+    return "America/Mexico_City";
+  }, [activeZoneInfo, selectedZona]);
+
+  const selectedZoneDisplayName = useMemo(() => {
+    if (isRepartidorCT) return "Tijuana";
+    return selectedZona || "Tijuana";
+  }, [isRepartidorCT, selectedZona]);
+
+  const zoneTime = useMemo(() => {
     if (!isMounted) return { dateStr: "", hour: 0, minute: 0, timeStrFull: "" };
     try {
       const formatter = new Intl.DateTimeFormat("en-US", {
-        timeZone: "America/Tijuana",
+        timeZone: selectedTimeZone,
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
@@ -286,20 +330,38 @@ export default function OrdenesEntregaForm({
         timeStrFull: `${pad(now.getHours())}:${pad(now.getMinutes())}`
       };
     }
-  }, [isMounted]);
+  }, [isMounted, selectedTimeZone]);
 
-  const horasCTDisponibles = useMemo(() => {
-    const hoursRange = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+  const horasDisponibles = useMemo(() => {
+    const hoursRange = isRepartidorCT
+      ? [10, 11, 12, 13, 14, 15, 16, 17]
+      : [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
     if (!fechaEntrega) return [];
-    if (fechaEntrega < tijuanaTime.dateStr) {
+    if (fechaEntrega < zoneTime.dateStr) {
       return [];
     }
-    if (fechaEntrega === tijuanaTime.dateStr) {
-      const minHour = tijuanaTime.minute > 0 ? tijuanaTime.hour + 3 : tijuanaTime.hour + 2;
+    if (fechaEntrega === zoneTime.dateStr) {
+      const minHour = zoneTime.minute > 0 ? zoneTime.hour + 3 : zoneTime.hour + 2;
       return hoursRange.filter((h) => h >= minHour);
     }
     return hoursRange;
-  }, [fechaEntrega, tijuanaTime]);
+  }, [fechaEntrega, zoneTime, isRepartidorCT]);
+
+  const horariosOcupados = useMemo(() => {
+    if (!selectedRepartidorId || !fechaEntrega || !repartosExistentes || !repartosExistentes.length) {
+      return new Set<number>();
+    }
+    const occupied = new Set<number>();
+    repartosExistentes.forEach((reparto) => {
+      if (reparto.repartidor_id === selectedRepartidorId && reparto.fecha_reparto === fechaEntrega && reparto.horario) {
+        const match = reparto.horario.match(/^(\d+)/);
+        if (match) {
+          occupied.add(parseInt(match[1], 10));
+        }
+      }
+    });
+    return occupied;
+  }, [selectedRepartidorId, fechaEntrega, repartosExistentes]);
 
   const handleModelChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedModelKey(event.target.value);
@@ -328,16 +390,24 @@ export default function OrdenesEntregaForm({
     const now = Date.now();
     if (now - lastPickerOpen.current < 500) return;
 
-    if ('showPicker' in HTMLInputElement.prototype) {
+    const inputElement = event.currentTarget as HTMLInputElement & { showPicker?: () => void };
+    if (typeof inputElement.showPicker === 'function') {
       try {
         lastPickerOpen.current = now;
-        (event.currentTarget as any).showPicker();
-      } catch (err) {
+        inputElement.showPicker();
+      } catch {
         lastPickerOpen.current = 0;
       }
     }
   };
 
+  /**
+   * Procesa el envío del formulario de Orden de Entrega.
+   * Compila los datos seleccionados, invoca la Server Action submitOrdenEntrega
+   * y gestiona el reseteo de estados e indicadores de notificación.
+   * 
+   * @param event Evento de submit del formulario HTML
+   */
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
@@ -351,10 +421,12 @@ export default function OrdenesEntregaForm({
     }
     formData.set("color_celular", selectedColor);
 
+    // Enviar formulario a la Server Action
     const result = await submitOrdenEntrega(formData);
 
     if (result.success) {
       setStatus({ type: 'success', message: `¡Orden de Entrega ${result.folio || ''} registrada y enviada a Discord!` });
+      // Resetear campos del formulario y estados de selección
       formRef.current?.reset();
       setSelectedFileName("");
       setSelectedModelKey("");
@@ -712,76 +784,62 @@ export default function OrdenesEntregaForm({
           <label className={styles.label}>Hora de entrega</label>
           <div className={styles.relativeInputContainer}>
             <span className={styles.pickerIcon}>schedule</span>
-            {isMounted && isRepartidorCT ? (
-              <select
-                name="hora_entrega"
-                value={horaEntrega}
-                onChange={(e) => setHoraEntrega(e.target.value)}
-                className={styles.selectInput}
-                style={{ paddingLeft: "40px", colorScheme: 'dark' }}
-                required
-                disabled={!fechaEntrega}
-                suppressHydrationWarning
-              >
-                {!fechaEntrega ? (
+            <select
+              name="hora_entrega"
+              value={horaEntrega}
+              onChange={(e) => setHoraEntrega(e.target.value)}
+              className={styles.selectInput}
+              style={{ paddingLeft: "40px", colorScheme: 'dark' }}
+              required
+              disabled={!fechaEntrega}
+              suppressHydrationWarning
+            >
+              {!fechaEntrega ? (
+                <option value="" className="bg-slate-950 text-slate-500 italic">
+                  Seleccione una fecha primero
+                </option>
+              ) : horasDisponibles.length === 0 ? (
+                <option value="" className="bg-slate-950 text-red-400 italic">
+                  {fechaEntrega < zoneTime.dateStr
+                    ? "La fecha no puede ser en el pasado"
+                    : "No hay horarios disponibles para hoy"}
+                </option>
+              ) : (
+                <>
                   <option value="" className="bg-slate-950 text-slate-500 italic">
-                    Seleccione una fecha primero
+                    Seleccione una hora...
                   </option>
-                ) : horasCTDisponibles.length === 0 ? (
-                  <option value="" className="bg-slate-950 text-red-400 italic">
-                    {fechaEntrega < tijuanaTime.dateStr
-                      ? "La fecha no puede ser en el pasado"
-                      : "No hay horarios disponibles para hoy"}
-                  </option>
-                ) : (
-                  <>
-                    <option value="" className="bg-slate-950 text-slate-500 italic">
-                      Seleccione una hora...
-                    </option>
-                    {horasCTDisponibles.map((h) => {
-                      const formattedHour = `${h.toString().padStart(2, "0")}:00`;
-                      return (
-                        <option key={h} value={formattedHour} className="bg-slate-950 text-white">
-                          {h}hs
-                        </option>
-                      );
-                    })}
-                  </>
-                )}
-              </select>
-            ) : (
-              <>
-                <input
-                  type="time"
-                  name="hora_entrega"
-                  value={horaEntrega}
-                  onChange={(e) => setHoraEntrega(e.target.value)}
-                  className={styles.pickerInput}
-                  style={{ paddingLeft: "40px" }}
-                  required
-                  onClick={handleOpenPicker}
-                  suppressHydrationWarning
-                />
-                {!horaEntrega && isIOS && (
-                  <span
-                    className="absolute text-slate-500 text-base pointer-events-none select-none"
-                    style={{ left: "40px" }}
-                  >
-                    hh:mm
-                  </span>
-                )}
-              </>
-            )}
+                  {horasDisponibles.map((h) => {
+                    const formattedHour = `${h.toString().padStart(2, "0")}:00`;
+                    const isOccupied = horariosOcupados.has(h);
+                    return (
+                      <option 
+                        key={h} 
+                        value={formattedHour} 
+                        disabled={isOccupied}
+                        className={isOccupied ? "text-slate-500 bg-slate-950 italic" : "text-white bg-slate-950"}
+                      >
+                        {h}hs {isOccupied ? "(Ocupado)" : ""}
+                      </option>
+                    );
+                  })}
+                </>
+              )}
+            </select>
           </div>
         </div>
 
-        {isMounted && isRepartidorCT && (
-          <div className="md:col-span-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 p-4 rounded-xl text-sm font-medium flex flex-col lg:flex-row items-center justify-between gap-3 text-center">
+        {isMounted && selectedZona && (
+          <div className={styles.warningBanner}>
             <span className="material-symbols-outlined text-amber-400 select-none">warning</span>
             <div className="flex-1">
-              <div>Los horarios de entrega son aproximados con repartos de CT y son solicitados con 2hs de anticipación.</div>
+              {isRepartidorCT ? (
+                <div>Los horarios de entrega son aproximados con repartos de CT y son solicitados con 2hs de anticipación.</div>
+              ) : (
+                <div>Los horarios de entrega son solicitados con 2hs de anticipación.</div>
+              )}
               <div className="font-semibold text-amber-300 mt-1">
-                Hora actual Tijuana: {tijuanaTime.timeStrFull || "--:--"} hs
+                Hora actual {selectedZoneDisplayName}: {zoneTime.timeStrFull || "--:--"} hs
               </div>
             </div>
             <span className="hidden lg:block">

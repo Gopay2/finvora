@@ -126,15 +126,17 @@ export default function TaskboardClient({
       // Limpiar canal anterior si existe
       if (channel) {
         try {
-          supabase.removeChannel(channel);
+          await supabase.removeChannel(channel);
         } catch {}
+        channel = null;
       }
 
       await supabase.auth.getSession();
 
       try {
+        const channelName = `taskboard_realtime_${Date.now()}`;
         channel = supabase
-          .channel("taskboard_realtime_changes")
+          .channel(channelName)
           .on(
             "postgres_changes",
             { event: "*", schema: "public", table: "taskboard" },
