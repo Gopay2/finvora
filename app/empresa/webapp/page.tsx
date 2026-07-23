@@ -95,7 +95,7 @@ export default function WebAppPage() {
         </div>
         <div>
           <h2 className={styles.cardTitle}>Repartos</h2>
-          <p className={styles.cardDesc}>Calendario de entregas y logística.</p>
+          <p className={styles.cardDesc}>Calendario de repartos y logística.</p>
         </div>
         <div className={styles.cardButton}>Acceder</div>
       </Link>

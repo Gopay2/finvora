@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 // ─── Utilidades locales ─────────────────────────────────────────────────────
 import { createClient } from "@/utils/supabase/server";
 import { getUserProfile, isAllowed } from "@/utils/auth-check";
+import { registrarVenta } from "@/app/empresa/webapp/stock/stock-actions";
 
 export interface ComprobanteRecord {
   id: string;
@@ -288,7 +289,15 @@ export async function submitComprobante(formData: FormData) {
     return { success: false, error: `Error en la base de datos: ${error.message}` };
   }
 
-  // 3. Enviar notificación a Discord (asíncrona)
+  // 3. Si se seleccionó un IMEI, registrar la venta y dar de baja en la tabla de stock
+  if (imei && imei.trim()) {
+    const ventaResult = await registrarVenta(imei.trim(), vendedorId);
+    if (ventaResult.error) {
+      console.error("Error al registrar la venta de IMEI desde comprobantes:", ventaResult.error);
+    }
+  }
+
+  // 4. Enviar notificación a Discord (asíncrona)
   sendDiscordNotification({
     nombreCliente,
     vendedorId,

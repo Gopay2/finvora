@@ -272,7 +272,7 @@ export async function getVendedores() {
  */
 export async function registrarVenta(imei: string, vendedorId?: string) {
   const { role, id: currentUserId } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer", "Repartidor", "Cambaceador", "CambaCloser"])) {
     return { error: "No autorizado" };
   }
 
