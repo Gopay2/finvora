@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from "@/utils/supabase/server";
+import { getDriverRestDayInfo } from "@/utils/driver-schedule";
 
 /**
  * Server Action que procesa el registro y envío de una nueva orden de entrega a un canal de Discord.
@@ -57,6 +58,17 @@ export async function submitOrdenEntrega(formData: FormData) {
   };
 
   const verificacionFile = formData.get("verificacion_crediticia") as any;
+
+  // 3.35. CONTROL DE DÍA DE DESCANSO DEL REPARTIDOR
+  if (data.fecha && data.repartidor) {
+    const restDayInfo = getDriverRestDayInfo(data.repartidor, data.fecha);
+    if (restDayInfo.isRestDay) {
+      return {
+        success: false,
+        error: `El repartidor ${data.repartidor} no realiza entregas los días ${restDayInfo.restDayNames.join(", ")} (Día de descanso).`
+      };
+    }
+  }
 
   // 3.4. CONTROL DE SOBRECUPO / RACE CONDITION (Verificar disponibilidad inmediata)
   if (data.fecha && data.hora && data.repartidor_id) {

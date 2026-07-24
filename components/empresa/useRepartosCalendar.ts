@@ -7,6 +7,7 @@ import {
   crearReparto, 
   eliminarReparto 
 } from '@/app/empresa/webapp/repartos/repartos-actions';
+import { getDriverRestDayInfo } from '@/utils/driver-schedule';
 
 export interface Reparto {
   id: string;
@@ -253,12 +254,19 @@ export function useRepartosCalendar(userRole?: string) {
     setFormError(null);
     setActionLoading(true);
 
+    const repartidorObj = repartidoresFiltradosLogistica.find(repartidor => repartidor.id === formRepartidor);
+    const restDayInfo = getDriverRestDayInfo(repartidorObj?.nombre, formattedSelectedDayStr);
+    if (restDayInfo.isRestDay) {
+      setFormError(`El repartidor ${repartidorObj?.nombre || ''} no realiza entregas los días ${restDayInfo.restDayNames.join(", ")} (Día de descanso).`);
+      setActionLoading(false);
+      return;
+    }
+
     if (formHorario) {
       const [hoursStr, minutesStr] = formHorario.split(':');
       const deliveryHour = parseInt(hoursStr, 10);
       const deliveryMinute = parseInt(minutesStr, 10);
       
-      const repartidorObj = repartidoresFiltradosLogistica.find(repartidor => repartidor.id === formRepartidor);
       const tz = repartidorObj?.zona_horaria || 'America/Mexico_City';
       const driverNowString = new Date().toLocaleString('en-US', { timeZone: tz });
       const driverNow = new Date(driverNowString);
