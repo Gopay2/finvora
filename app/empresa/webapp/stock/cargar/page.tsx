@@ -1,8 +1,15 @@
+// 1. React Core
 import React from "react";
+
+// 2. Next.js Core
 import Link from "next/link";
-import { getUserProfile, isAllowed } from "@/utils/auth-check";
-import AccessDenied from "@/components/empresa/AccessDenied";
+
+// 3. Auth & Supabase Services
 import { createClient } from "@/utils/supabase/server";
+import { getUserProfile, isAllowed } from "@/utils/auth-check";
+
+// 4. Components
+import AccessDenied from "@/components/empresa/AccessDenied";
 import StockCargarForm from "@/components/empresa/StockCargarForm";
 
 const styles = {
@@ -35,6 +42,44 @@ export default async function CargarStockPage() {
     .eq("activo", true)
     .order("nombre", { ascending: true });
 
+  // Obtenemos las zonas de reparto con sus repartidores asociados y sus siglas
+  const { data: zonasRepartoRaw } = await supabase
+    .from("zonas_reparto")
+    .select(`
+      id,
+      nombre_zona,
+      sigla,
+      repartidor_id,
+      repartidores (
+        id,
+        nombre,
+        activo
+      )
+    `)
+    .order("nombre_zona", { ascending: true });
+
+  interface ZonaRepartoRaw {
+    id: string;
+    nombre_zona: string;
+    sigla?: string;
+    repartidor_id: string;
+    repartidores: {
+      id: string;
+      nombre: string;
+      activo: boolean;
+    } | null;
+  }
+
+  const zonasReparto = ((zonasRepartoRaw as unknown as ZonaRepartoRaw[]) || [])
+    .filter((zonaInfo) => zonaInfo.repartidores && zonaInfo.repartidores.activo)
+    .map((zonaInfo) => ({
+      id: zonaInfo.id,
+      nombre_zona: zonaInfo.nombre_zona,
+      sigla: zonaInfo.sigla,
+      repartidor_id: zonaInfo.repartidor_id,
+      repartidor_nombre: zonaInfo.repartidores!.nombre,
+    }));
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -49,8 +94,12 @@ export default async function CargarStockPage() {
       </header>
 
       <div className={styles.formCard}>
-        {/* Pasamos la lista de productos y repartidores al formulario de cliente */}
-        <StockCargarForm productos={productos || []} repartidores={repartidores || []} />
+        {/* Pasamos la lista de productos, repartidores y zonas de reparto al formulario de cliente */}
+        <StockCargarForm 
+          productos={productos || []} 
+          repartidores={repartidores || []} 
+          zonasReparto={zonasReparto}
+        />
       </div>
 
       <div className="bg-amber-500/5 border border-amber-500/10 p-6 rounded-2xl flex gap-4 items-start text-amber-400/80">
