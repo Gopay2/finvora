@@ -5,6 +5,7 @@ import React, { useState, useRef, useMemo, useEffect } from "react";
 
 // 2. Server Actions & Services
 import { submitOrdenEntrega } from "@/app/empresa/webapp/ordenes-entrega/actions";
+import { getDriverRestDayInfo } from "@/utils/driver-schedule";
 
 interface Producto {
   id: string;
@@ -332,32 +333,50 @@ export default function OrdenesEntregaForm({
     }
   }, [isMounted, selectedTimeZone]);
 
+  const driverRestDayInfo = useMemo(() => {
+    return getDriverRestDayInfo(selectedRepartidorName, fechaEntrega);
+  }, [selectedRepartidorName, fechaEntrega]);
+
   const horasDisponibles = useMemo(() => {
-    const hoursRange = isRepartidorCT
-      ? [10, 11, 12, 13, 14, 15, 16, 17]
-      : [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
     if (!fechaEntrega) return [];
+    if (driverRestDayInfo.isRestDay) return [];
     if (fechaEntrega < zoneTime.dateStr) {
       return [];
     }
-    if (fechaEntrega === zoneTime.dateStr) {
-      const minHour = zoneTime.minute > 0 ? zoneTime.hour + 3 : zoneTime.hour + 2;
-      return hoursRange.filter((h) => h >= minHour);
+
+    const startHour = isRepartidorCT ? 10 : 9;
+    const endHour = isRepartidorCT ? 17 : 19;
+    const allSlots: string[] = [];
+
+    for (let h = startHour; h <= endHour; h++) {
+      const hStr = h.toString().padStart(2, '0');
+      allSlots.push(`${hStr}:00`);
+      if (h < endHour) {
+        allSlots.push(`${hStr}:30`);
+      }
     }
-    return hoursRange;
-  }, [fechaEntrega, zoneTime, isRepartidorCT]);
+
+    if (fechaEntrega === zoneTime.dateStr) {
+      const minAllowedMinutes = (zoneTime.hour * 60 + zoneTime.minute) + 60; // 1 hora de anticipación
+      return allSlots.filter((slot) => {
+        const [sh, sm] = slot.split(':').map(Number);
+        const slotMinutes = sh * 60 + sm;
+        return slotMinutes >= minAllowedMinutes;
+      });
+    }
+
+    return allSlots;
+  }, [fechaEntrega, zoneTime, isRepartidorCT, driverRestDayInfo.isRestDay]);
 
   const horariosOcupados = useMemo(() => {
     if (!selectedRepartidorId || !fechaEntrega || !repartosExistentes || !repartosExistentes.length) {
-      return new Set<number>();
+      return new Set<string>();
     }
-    const occupied = new Set<number>();
+    const occupied = new Set<string>();
     repartosExistentes.forEach((reparto) => {
       if (reparto.repartidor_id === selectedRepartidorId && reparto.fecha_reparto === fechaEntrega && reparto.horario) {
-        const match = reparto.horario.match(/^(\d+)/);
-        if (match) {
-          occupied.add(parseInt(match[1], 10));
-        }
+        const timePart = reparto.horario.slice(0, 5);
+        occupied.add(timePart);
       }
     });
     return occupied;
@@ -800,26 +819,27 @@ export default function OrdenesEntregaForm({
                 </option>
               ) : horasDisponibles.length === 0 ? (
                 <option value="" className="bg-slate-950 text-red-400 italic">
-                  {fechaEntrega < zoneTime.dateStr
-                    ? "La fecha no puede ser en el pasado"
-                    : "No hay horarios disponibles para hoy"}
+                  {driverRestDayInfo.isRestDay
+                    ? "No disponible"
+                    : fechaEntrega < zoneTime.dateStr
+                      ? "La fecha no puede ser en el pasado"
+                      : "No hay horarios disponibles para hoy"}
                 </option>
               ) : (
                 <>
                   <option value="" className="bg-slate-950 text-slate-500 italic">
                     Seleccione una hora...
                   </option>
-                  {horasDisponibles.map((h) => {
-                    const formattedHour = `${h.toString().padStart(2, "0")}:00`;
-                    const isOccupied = horariosOcupados.has(h);
+                  {horasDisponibles.map((slot) => {
+                    const isOccupied = horariosOcupados.has(slot);
                     return (
                       <option 
-                        key={h} 
-                        value={formattedHour} 
+                        key={slot} 
+                        value={slot} 
                         disabled={isOccupied}
                         className={isOccupied ? "text-slate-500 bg-slate-950 italic" : "text-white bg-slate-950"}
                       >
-                        {h}hs {isOccupied ? "(Ocupado)" : ""}
+                        {slot} hs {isOccupied ? "(Ocupado)" : ""}
                       </option>
                     );
                   })}
@@ -830,22 +850,39 @@ export default function OrdenesEntregaForm({
         </div>
 
         {isMounted && selectedZona && (
-          <div className={styles.warningBanner}>
-            <span className="material-symbols-outlined text-amber-400 select-none">warning</span>
-            <div className="flex-1">
-              {isRepartidorCT ? (
-                <div>Los horarios de entrega son aproximados con repartos de CT y son solicitados con 2hs de anticipación.</div>
-              ) : (
-                <div>Los horarios de entrega son solicitados con 2hs de anticipación.</div>
-              )}
-              <div className="font-semibold text-amber-300 mt-1">
-                Hora actual {selectedZoneDisplayName}: {zoneTime.timeStrFull || "--:--"} hs
+          driverRestDayInfo.isRestDay ? (
+            <div className="md:col-span-2 bg-red-500/10 text-red-400 border border-red-500/20 p-4 rounded-xl text-sm font-medium flex flex-col lg:flex-row items-center justify-between gap-3 text-center">
+              <span className="material-symbols-outlined text-red-400 select-none">event_busy</span>
+              <div className="flex-1">
+                <div className="font-bold text-red-300">
+                   {selectedRepartidorName || "El repartidor"} no realiza entregas los días {driverRestDayInfo.restDayNames.join(", ")}.
+                </div>
+                <div className="text-xs text-red-400/80 mt-0.5">
+                  Por favor seleccione otra fecha.
+                </div>
               </div>
+              <span className="hidden lg:block">
+                <span className="material-symbols-outlined text-red-400 select-none">event_busy</span>
+              </span>
             </div>
-            <span className="hidden lg:block">
+          ) : (
+            <div className={styles.warningBanner}>
               <span className="material-symbols-outlined text-amber-400 select-none">warning</span>
-            </span>
-          </div>
+              <div className="flex-1">
+                {isRepartidorCT ? (
+                  <div>Los horarios de entrega son aproximados con repartos de CT y son solicitados con 1h de anticipación.</div>
+                ) : (
+                  <div>Los horarios de entrega son solicitados con 1h de anticipación.</div>
+                )}
+                <div className="font-semibold text-amber-300 mt-1">
+                  Hora actual {selectedZoneDisplayName}: {zoneTime.timeStrFull || "--:--"} hs
+                </div>
+              </div>
+              <span className="hidden lg:block">
+                <span className="material-symbols-outlined text-amber-400 select-none">warning</span>
+              </span>
+            </div>
+          )
         )}
 
         <div className={styles.inputGroupFull}>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useRepartosCalendar } from './useRepartosCalendar';
+import { getDriverRestDayInfo } from '@/utils/driver-schedule';
 
 const DAYS_OF_WEEK = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -409,166 +410,184 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                     const currentTabDriverObj = repartidoresFiltradosLogistica.find(r => r.id === selectedRepartidorTab);
                     const isTabDriverCT = (currentTabDriverObj?.nombre || "").toLowerCase() === "repartidor ct";
 
+                    const formattedDayStr = selectedDay !== null 
+                      ? `${year}-${String(month + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
+                      : '';
+                    const driverRestInfo = getDriverRestDayInfo(currentTabDriverObj?.nombre, formattedDayStr);
+
                     const minStandardHour = isTabDriverCT ? 10 : 9;
                     const maxStandardHour = isTabDriverCT ? 17 : 19;
 
-                    const extraHours = new Set<number>();
+                    const standardSlots: string[] = [];
+                    for (let h = minStandardHour; h <= maxStandardHour; h++) {
+                      const hStr = String(h).padStart(2, '0');
+                      standardSlots.push(`${hStr}:00`);
+                      if (h < maxStandardHour) {
+                        standardSlots.push(`${hStr}:30`);
+                      }
+                    }
+
+                    const extraSlots = new Set<string>();
                     driverReps.forEach(rep => {
                       if (!rep.horario) return;
-                      const match = rep.horario.match(/^(\d+)/);
-                      if (match) {
-                        const hour = parseInt(match[1], 10);
-                        if (hour < minStandardHour || hour > maxStandardHour) {
-                          extraHours.add(hour);
-                        }
+                      const timePart = rep.horario.slice(0, 5);
+                      if (timePart && !standardSlots.includes(timePart)) {
+                        extraSlots.add(timePart);
                       }
                     });
-                    const standardHours = Array.from({ length: maxStandardHour - minStandardHour + 1 }, (_, i) => i + minStandardHour);
-                    const allHours = Array.from(new Set([...standardHours, ...Array.from(extraHours)])).sort((a, b) => a - b);
 
-                    return allHours.map((hour) => {
-                      const formattedHour = `${String(hour).padStart(2, '0')}:00`;
-                      
-                      // Calcular si esta hora en el día seleccionado ya pasó o tiene menos de 1 hora de anticipación en la zona horaria del repartidor
-                      const rep = repartidoresFiltradosLogistica.find(r => r.id === selectedRepartidorTab);
-                      const tz = rep?.zona_horaria || 'America/Mexico_City';
-                      const driverNowString = new Date().toLocaleString('en-US', { timeZone: tz });
-                      const driverNow = new Date(driverNowString);
-                      const minAllowed = new Date(driverNow.getTime() + 60 * 60 * 1000);
-                      const slotDate = new Date(year, month, selectedDay || 1, hour, 0);
-                      const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor' || userRole === 'Repartidor';
-                      const isPastOrUnavailable = !isPrivileged && (slotDate < minAllowed);
-                      
-                      // Buscar repartos para esta hora asignados a este repartidor específico
-                      const repsInHour = driverReps.filter(rep => {
-                        if (!rep.horario) return false;
-                        if (rep.horario === formattedHour || rep.horario === `${hour}:00`) return true;
-                        const match = rep.horario.match(/^(\d+)/);
-                        if (match) {
-                          return parseInt(match[1], 10) === hour;
-                        }
-                        return false;
-                      });
+                    const allSlotStrings = Array.from(new Set([...standardSlots, ...Array.from(extraSlots)])).sort((a, b) => a.localeCompare(b));
 
-                      return (
-                        <div key={hour} className={styles.timeRow}>
-                          {/* Indicador de Hora (Local del Repartidor) */}
-                          <div className={styles.timeColumn}>
-                            <span className={styles.timeText}>
-                              {formattedHour}
-                            </span>
-                            <span className={styles.periodText}>
-                              {hour >= 12 ? 'pm' : 'am'}
-                            </span>
-                            {/* Línea vertical conectora */}
-                            <div className={styles.lineTop} />
-                            <div className={styles.lineBottom} />
-                            {/* Nodo central */}
-                            <div className={`
-                              ${styles.timeNode}
-                              ${repsInHour.length > 0 ? styles.timeNodeActive : styles.timeNodeEmpty}
-                            `} />
+                    return (
+                      <>
+                        {driverRestInfo.isRestDay && (
+                          <div className="p-3 mb-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold rounded-2xl flex items-center justify-center gap-2 text-center animate-in fade-in duration-300">
+                            <span className="material-symbols-outlined text-base select-none">event_busy</span>
+                            <span>{currentTabDriverObj?.nombre || 'El repartidor'} no realiza entregas los días {driverRestInfo.restDayNames.join(", ")} (Día de descanso).</span>
                           </div>
+                        )}
+                        {allSlotStrings.map((slotStr) => {
+                          const [hour, minute] = slotStr.split(':').map(Number);
+                          
+                          // Calcular si esta hora en el día seleccionado ya pasó o tiene menos de 1 hora de anticipación en la zona horaria del repartidor
+                          const rep = repartidoresFiltradosLogistica.find(r => r.id === selectedRepartidorTab);
+                          const tz = rep?.zona_horaria || 'America/Mexico_City';
+                          const driverNowString = new Date().toLocaleString('en-US', { timeZone: tz });
+                          const driverNow = new Date(driverNowString);
+                          const minAllowed = new Date(driverNow.getTime() + 60 * 60 * 1000);
+                          const slotDate = new Date(year, month, selectedDay || 1, hour, minute);
+                          const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor' || userRole === 'Repartidor';
+                          const isPastOrUnavailable = (!isPrivileged && slotDate < minAllowed) || driverRestInfo.isRestDay;
+                          
+                          // Buscar repartos para este slot específico asignados a este repartidor
+                          const repsInSlot = driverReps.filter(rep => {
+                            if (!rep.horario) return false;
+                            return rep.horario.slice(0, 5) === slotStr;
+                          });
 
-                          {/* Contenido (Tarjeta o Vacío) */}
-                          <div className={styles.contentCol}>
-                            {repsInHour.length > 0 ? (
-                              <div className="space-y-2">
-                                {repsInHour.map((rep) => (
-                                  <div 
-                                    key={rep.id} 
-                                    className={styles.card}
-                                  >
-                                    {/* Línea decorativa izquierda flúor */}
-                                    <div className={styles.cardActiveStrip} />
-
-                                    <div className={styles.cardContent}>
-                                      <div className={styles.cardBadgeRow}>
-                                        <span className={styles.cardZoneBadge}>
-                                          📍 {rep.zonas_reparto?.nombre_zona || 'Sin Zona'}
-                                        </span>
-                                      </div>
-                                      
-                                      <h4 className={styles.cardTitle}>
-                                        {rep.productos?.marca} {rep.productos?.modelo}
-                                      </h4>
-                                      
-                                      <div className={styles.cardDetails}>
-                                        {rep.notas && (
-                                          <span className={styles.cardDetailItem}>
-                                            <span className="material-symbols-outlined text-sm text-secondary">account_circle</span>
-                                            Cliente: <strong className={styles.cardDetailVal}>{rep.notas}</strong>
-                                          </span>
-                                        )}
-                                        <span className={styles.cardDetailItem}>
-                                          <span className="material-symbols-outlined text-sm text-slate-500">local_shipping</span>
-                                          Repartidor: <strong className={styles.cardDetailVal}>{rep.repartidores?.nombre || 'No asignado'}</strong>
-                                        </span>
-                                        <span className={styles.cardDetailItem}>
-                                          <span className="material-symbols-outlined text-sm text-slate-500">person</span>
-                                          Vendedor: <strong className={styles.cardDetailVal}>
-                                            {(() => {
-                                              const rawName = rep.vendedor?.username || rep.vendedor?.email || 'N/A';
-                                              return rawName !== 'N/A' ? rawName.charAt(0).toUpperCase() + rawName.slice(1) : 'N/A';
-                                            })()}
-                                          </strong>
-                                        </span>
-                                        {rep.imei && (
-                                          <span className={`${styles.cardDetailItem} font-mono text-[11px]`}>
-                                            <span className="material-symbols-outlined text-sm text-slate-500">tag</span>
-                                            IMEI: <strong className={styles.cardDetailVal}>{rep.imei}</strong>
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    
-                                    {canCreateOrDelete && (
-                                      <button
-                                        onClick={() => handleEliminarReparto(rep.id)}
-                                        disabled={actionLoading}
-                                        className={styles.cardDeleteBtn}
-                                        title="Eliminar Reparto"
-                                      >
-                                        <span className="material-symbols-outlined text-lg">delete</span>
-                                      </button>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              /* Slot Vacío */
-                              <button
-                                onClick={() => {
-                                  if (!canCreateOrDelete || isPastOrUnavailable) return;
-                                  setFormHorario(formattedHour);
-                                  setFormRepartidor(selectedRepartidorTab || '');
-                                  setIsFormOpen(true);
-                                  setFormError(null);
-                                }}
-                                disabled={!canCreateOrDelete || isPastOrUnavailable}
-                                className={`
-                                  ${styles.emptySlotBtn}
-                                  ${(!canCreateOrDelete || isPastOrUnavailable) ? styles.emptySlotDisabled : styles.emptySlotActive}
-                                `}
-                              >
-                                <span className={styles.emptySlotText}>
-                                  {!canCreateOrDelete
-                                    ? 'Sin repartos programados'
-                                    : isPastOrUnavailable
-                                      ? 'Horario no disponible (Pasado / Límite)'
-                                      : 'Sin repartos programados'}
+                          return (
+                            <div key={slotStr} className={styles.timeRow}>
+                              {/* Indicador de Hora (Local del Repartidor) */}
+                              <div className={styles.timeColumn}>
+                                <span className={styles.timeText}>
+                                  {slotStr}
                                 </span>
-                                {canCreateOrDelete && !isPastOrUnavailable && (
-                                  <span className={styles.emptySlotIcon}>
-                                    add_circle
-                                  </span>
+                                <span className={styles.periodText}>
+                                  {hour >= 12 ? 'pm' : 'am'}
+                                </span>
+                                {/* Línea vertical conectora */}
+                                <div className={styles.lineTop} />
+                                <div className={styles.lineBottom} />
+                                {/* Nodo central */}
+                                <div className={`
+                                  ${styles.timeNode}
+                                  ${repsInSlot.length > 0 ? styles.timeNodeActive : styles.timeNodeEmpty}
+                                `} />
+                              </div>
+
+                              {/* Contenido (Tarjeta o Vacío) */}
+                              <div className={styles.contentCol}>
+                                {repsInSlot.length > 0 ? (
+                                  <div className="space-y-2">
+                                    {repsInSlot.map((rep) => (
+                                      <div 
+                                        key={rep.id} 
+                                        className={styles.card}
+                                      >
+                                        {/* Línea decorativa izquierda flúor */}
+                                        <div className={styles.cardActiveStrip} />
+
+                                        <div className={styles.cardContent}>
+                                          <div className={styles.cardBadgeRow}>
+                                            <span className={styles.cardZoneBadge}>
+                                              📍 {rep.zonas_reparto?.nombre_zona || 'Sin Zona'}
+                                            </span>
+                                          </div>
+                                          
+                                          <h4 className={styles.cardTitle}>
+                                            {rep.productos?.marca} {rep.productos?.modelo}
+                                          </h4>
+                                          
+                                          <div className={styles.cardDetails}>
+                                            {rep.notas && (
+                                              <span className={styles.cardDetailItem}>
+                                                <span className="material-symbols-outlined text-sm text-secondary">account_circle</span>
+                                                Cliente: <strong className={styles.cardDetailVal}>{rep.notas}</strong>
+                                              </span>
+                                            )}
+                                            <span className={styles.cardDetailItem}>
+                                              <span className="material-symbols-outlined text-sm text-slate-500">local_shipping</span>
+                                              Repartidor: <strong className={styles.cardDetailVal}>{rep.repartidores?.nombre || 'No asignado'}</strong>
+                                            </span>
+                                            <span className={styles.cardDetailItem}>
+                                              <span className="material-symbols-outlined text-sm text-slate-500">person</span>
+                                              Vendedor: <strong className={styles.cardDetailVal}>
+                                                {(() => {
+                                                  const rawName = rep.vendedor?.username || rep.vendedor?.email || 'N/A';
+                                                  return rawName !== 'N/A' ? rawName.charAt(0).toUpperCase() + rawName.slice(1) : 'N/A';
+                                                })()}
+                                              </strong>
+                                            </span>
+                                            {rep.imei && (
+                                              <span className={`${styles.cardDetailItem} font-mono text-[11px]`}>
+                                                <span className="material-symbols-outlined text-sm text-slate-500">tag</span>
+                                                IMEI: <strong className={styles.cardDetailVal}>{rep.imei}</strong>
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                        
+                                        {canCreateOrDelete && (
+                                          <button
+                                            onClick={() => handleEliminarReparto(rep.id)}
+                                            disabled={actionLoading}
+                                            className={styles.cardDeleteBtn}
+                                            title="Eliminar Reparto"
+                                          >
+                                            <span className="material-symbols-outlined text-lg">delete</span>
+                                          </button>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  /* Slot Vacío */
+                                  <button
+                                    onClick={() => {
+                                      if (!canCreateOrDelete || isPastOrUnavailable) return;
+                                      setFormHorario(slotStr);
+                                      setFormRepartidor(selectedRepartidorTab || '');
+                                      setIsFormOpen(true);
+                                      setFormError(null);
+                                    }}
+                                    disabled={!canCreateOrDelete || isPastOrUnavailable}
+                                    className={`
+                                      ${styles.emptySlotBtn}
+                                      ${(!canCreateOrDelete || isPastOrUnavailable) ? styles.emptySlotDisabled : styles.emptySlotActive}
+                                    `}
+                                  >
+                                    <span className={styles.emptySlotText}>
+                                      {!canCreateOrDelete
+                                        ? 'Sin repartos programados'
+                                        : driverRestInfo.isRestDay
+                                          ? `Día de descanso (${driverRestInfo.restDayNames.join(", ")})`
+                                          : isPastOrUnavailable
+                                            ? 'Horario no disponible (Pasado / Límite)'
+                                            : 'Sin repartos programados'}
+                                    </span>
+                                    {canCreateOrDelete && !isPastOrUnavailable && (
+                                      <span className={styles.emptySlotIcon}>
+                                        add_circle
+                                      </span>
+                                    )}
+                                  </button>
                                 )}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    });
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    );
                   })()
                   : (
                     <div className={styles.emptyListState}>
@@ -705,28 +724,40 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                       {(() => {
                         const selectedFormRep = repartidoresFiltradosLogistica.find(r => r.id === formRepartidor);
                         const isFormRepCT = (selectedFormRep?.nombre || "").toLowerCase() === "repartidor ct";
+                        const formattedDayStr = selectedDay !== null 
+                          ? `${year}-${String(month + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
+                          : '';
+                        const formDriverRest = getDriverRestDayInfo(selectedFormRep?.nombre, formattedDayStr);
+
                         const startHour = isFormRepCT ? 10 : 9;
                         const endHour = isFormRepCT ? 17 : 19;
-                        const hoursCount = endHour - startHour + 1;
+                        
+                        const formSlots: string[] = [];
+                        for (let h = startHour; h <= endHour; h++) {
+                          const hStr = String(h).padStart(2, '0');
+                          formSlots.push(`${hStr}:00`);
+                          if (h < endHour) {
+                            formSlots.push(`${hStr}:30`);
+                          }
+                        }
 
-                        return Array.from({ length: hoursCount }, (_, i) => {
-                          const hour = i + startHour;
-                          const formattedHour = `${String(hour).padStart(2, '0')}:00`;
+                        return formSlots.map((slotStr) => {
+                          const [hour, minute] = slotStr.split(':').map(Number);
                           const tz = selectedFormRep?.zona_horaria || 'America/Mexico_City';
                           const driverNowString = new Date().toLocaleString('en-US', { timeZone: tz });
                           const driverNow = new Date(driverNowString);
                           const minAllowed = new Date(driverNow.getTime() + 60 * 60 * 1000);
-                          const slotDate = new Date(year, month, selectedDay || 1, hour, 0);
+                          const slotDate = new Date(year, month, selectedDay || 1, hour, minute);
                           const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor' || userRole === 'Repartidor';
-                          const isPastOrUnavailable = !isPrivileged && (slotDate < minAllowed);
+                          const isPastOrUnavailable = (!isPrivileged && slotDate < minAllowed) || formDriverRest.isRestDay;
                           return (
                             <option 
-                              key={formattedHour} 
-                              value={formattedHour} 
+                              key={slotStr} 
+                              value={slotStr} 
                               disabled={isPastOrUnavailable}
                               className={isPastOrUnavailable ? "text-slate-600 bg-slate-950" : "text-white bg-slate-950"}
                             >
-                              {formattedHour} hs {isPastOrUnavailable ? "(No disponible)" : ""}
+                              {slotStr} hs {formDriverRest.isRestDay ? "(Día de descanso)" : isPastOrUnavailable ? "(No disponible)" : ""}
                             </option>
                           );
                         });

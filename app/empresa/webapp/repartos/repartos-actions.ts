@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getUserProfile, isAllowed } from "@/utils/auth-check";
+import { getDriverRestDayInfo } from "@/utils/driver-schedule";
 
 
 /**
@@ -185,6 +186,24 @@ export async function crearReparto(formData: {
   }
 
   const supabase = await createClient();
+
+  if (formData.repartidor_id && formData.fecha_reparto) {
+    const { data: repartidorRow } = await supabase
+      .from('repartidores')
+      .select('nombre')
+      .eq('id', formData.repartidor_id)
+      .maybeSingle();
+
+    if (repartidorRow?.nombre) {
+      const restDayInfo = getDriverRestDayInfo(repartidorRow.nombre, formData.fecha_reparto);
+      if (restDayInfo.isRestDay) {
+        return {
+          success: false,
+          error: `El repartidor ${repartidorRow.nombre} no realiza entregas los días ${restDayInfo.restDayNames.join(", ")} (Día de descanso).`
+        };
+      }
+    }
+  }
 
   const { error } = await supabase
     .from('repartos')
