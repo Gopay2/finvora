@@ -83,6 +83,83 @@ const styles = {
   warningBanner: "md:col-span-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 p-4 rounded-xl text-sm font-medium flex flex-col lg:flex-row items-center justify-between gap-3 text-center"
 };
 
+/**
+ * Obtiene la fecha, hora y formato de tiempo formateado para una zona horaria dada.
+ */
+function getZoneTimeInfo(selectedTimeZone: string, isMounted: boolean) {
+  if (!isMounted) return { dateStr: "", hour: 0, minute: 0, timeStrFull: "" };
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: selectedTimeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    });
+
+    const parts = formatter.formatToParts(new Date());
+    const getVal = (type: string) => parts.find((part) => part.type === type)?.value || "";
+
+    const year = getVal("year");
+    const month = getVal("month");
+    const day = getVal("day");
+    const hourStr = getVal("hour");
+    const minuteStr = getVal("minute");
+
+    return {
+      dateStr: `${year}-${month}-${day}`,
+      hour: parseInt(hourStr, 10),
+      minute: parseInt(minuteStr, 10),
+      timeStrFull: `${hourStr}:${minuteStr}`
+    };
+  } catch {
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return {
+      dateStr: now.toISOString().split("T")[0],
+      hour: now.getHours(),
+      minute: now.getMinutes(),
+      timeStrFull: `${pad(now.getHours())}:${pad(now.getMinutes())}`
+    };
+  }
+}
+
+/**
+ * Calcula los slots de horarios disponibles para entrega según la fecha, zona horaria y estado del repartidor.
+ */
+function computeAvailableHours(
+  fechaEntrega: string,
+  isRestDay: boolean,
+  zoneTime: { dateStr: string; hour: number; minute: number },
+  isRepartidorCT: boolean
+): string[] {
+  if (!fechaEntrega || isRestDay || fechaEntrega < zoneTime.dateStr) return [];
+
+  const startHour = isRepartidorCT ? 10 : 9;
+  const endHour = isRepartidorCT ? 17 : 19;
+  const allSlots: string[] = [];
+
+  for (let h = startHour; h <= endHour; h++) {
+    const hStr = h.toString().padStart(2, '0');
+    allSlots.push(`${hStr}:00`);
+    if (h < endHour) {
+      allSlots.push(`${hStr}:30`);
+    }
+  }
+
+  if (fechaEntrega === zoneTime.dateStr) {
+    const minAllowedMinutes = (zoneTime.hour * 60 + zoneTime.minute) + 60; // 1 hora de anticipación
+    return allSlots.filter((slot) => {
+      const [sh, sm] = slot.split(':').map(Number);
+      return (sh * 60 + sm) >= minAllowedMinutes;
+    });
+  }
+
+  return allSlots;
+}
+
 export default function OrdenesEntregaForm({ 
   productos, 
   zonasReparto, 
@@ -261,12 +338,12 @@ export default function OrdenesEntregaForm({
   const activeZoneInfo = useMemo(() => {
     if (!selectedZona) return null;
     if (selectedRepartidorId) {
-      const match = (zonasReparto || []).find(z => z.repartidor_id === selectedRepartidorId && z.nombre_zona === selectedZona);
+      const match = (zonasReparto || []).find(zonaItem => zonaItem.repartidor_id === selectedRepartidorId && zonaItem.nombre_zona === selectedZona);
       if (match) return match;
     }
-    return (zonasReparto || []).find(z => {
-      if (z.nombre_zona !== selectedZona || !z.repartidor_nombre) return false;
-      const norm = z.repartidor_nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return (zonasReparto || []).find(zonaItem => {
+      if (zonaItem.nombre_zona !== selectedZona || !zonaItem.repartidor_nombre) return false;
+      const norm = zonaItem.repartidor_nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       return !norm.includes("cambaceo") && !norm.includes("almacen");
     }) || null;
   }, [selectedZona, selectedRepartidorId, zonasReparto]);
@@ -294,43 +371,7 @@ export default function OrdenesEntregaForm({
   }, [isRepartidorCT, selectedZona]);
 
   const zoneTime = useMemo(() => {
-    if (!isMounted) return { dateStr: "", hour: 0, minute: 0, timeStrFull: "" };
-    try {
-      const formatter = new Intl.DateTimeFormat("en-US", {
-        timeZone: selectedTimeZone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23",
-      });
-
-      const parts = formatter.formatToParts(new Date());
-      const getVal = (type: string) => parts.find((p) => p.type === type)?.value || "";
-
-      const year = getVal("year");
-      const month = getVal("month");
-      const day = getVal("day");
-      const hourStr = getVal("hour");
-      const minuteStr = getVal("minute");
-
-      const dateStr = `${year}-${month}-${day}`;
-      const hour = parseInt(hourStr, 10);
-      const minute = parseInt(minuteStr, 10);
-      const timeStrFull = `${hourStr}:${minuteStr}`;
-
-      return { dateStr, hour, minute, timeStrFull };
-    } catch (e) {
-      const now = new Date();
-      const pad = (n: number) => n.toString().padStart(2, "0");
-      return {
-        dateStr: now.toISOString().split("T")[0],
-        hour: now.getHours(),
-        minute: now.getMinutes(),
-        timeStrFull: `${pad(now.getHours())}:${pad(now.getMinutes())}`
-      };
-    }
+    return getZoneTimeInfo(selectedTimeZone, isMounted);
   }, [isMounted, selectedTimeZone]);
 
   const driverRestDayInfo = useMemo(() => {
@@ -338,34 +379,12 @@ export default function OrdenesEntregaForm({
   }, [selectedRepartidorName, fechaEntrega]);
 
   const horasDisponibles = useMemo(() => {
-    if (!fechaEntrega) return [];
-    if (driverRestDayInfo.isRestDay) return [];
-    if (fechaEntrega < zoneTime.dateStr) {
-      return [];
-    }
-
-    const startHour = isRepartidorCT ? 10 : 9;
-    const endHour = isRepartidorCT ? 17 : 19;
-    const allSlots: string[] = [];
-
-    for (let h = startHour; h <= endHour; h++) {
-      const hStr = h.toString().padStart(2, '0');
-      allSlots.push(`${hStr}:00`);
-      if (h < endHour) {
-        allSlots.push(`${hStr}:30`);
-      }
-    }
-
-    if (fechaEntrega === zoneTime.dateStr) {
-      const minAllowedMinutes = (zoneTime.hour * 60 + zoneTime.minute) + 60; // 1 hora de anticipación
-      return allSlots.filter((slot) => {
-        const [sh, sm] = slot.split(':').map(Number);
-        const slotMinutes = sh * 60 + sm;
-        return slotMinutes >= minAllowedMinutes;
-      });
-    }
-
-    return allSlots;
+    return computeAvailableHours(
+      fechaEntrega,
+      driverRestDayInfo.isRestDay,
+      zoneTime,
+      isRepartidorCT
+    );
   }, [fechaEntrega, zoneTime, isRepartidorCT, driverRestDayInfo.isRestDay]);
 
   const horariosOcupados = useMemo(() => {
@@ -566,9 +585,9 @@ export default function OrdenesEntregaForm({
             <option value="" className="bg-slate-950 text-slate-500 italic">
               {!selectedZona ? "Primero elija una zona" : "Seleccione un repartidor..."}
             </option>
-            {repartidoresValidos.map((rep) => (
-              <option key={rep.id} value={rep.id} className="bg-slate-950 text-white">
-                {rep.nombre}
+            {repartidoresValidos.map((repartidorItem) => (
+              <option key={repartidorItem.id} value={repartidorItem.id} className="bg-slate-950 text-white">
+                {repartidorItem.nombre}
               </option>
             ))}
           </select>
@@ -647,8 +666,8 @@ export default function OrdenesEntregaForm({
             style={{ colorScheme: 'dark' }}
             required
             disabled={!selectedModelKey}
-            onChange={(e) => {
-              setSelectedColor(e.target.value);
+            onChange={(event) => {
+              setSelectedColor(event.target.value);
               setSelectedImei("");
             }}
             suppressHydrationWarning
@@ -656,16 +675,16 @@ export default function OrdenesEntregaForm({
             <option value="" className="bg-slate-950 text-slate-500 italic">
               {!selectedModelKey ? "Primero elija un modelo" : "Seleccione un color..."}
             </option>
-            {variantesColor.map((v) => {
-              const isAConsultar = v.cantidadDisponible === 0 && v.cantidadAConsultar > 0;
+            {variantesColor.map((varianteItem) => {
+              const isAConsultar = varianteItem.cantidadDisponible === 0 && varianteItem.cantidadAConsultar > 0;
               return (
                 <option 
-                  key={v.color} 
-                  value={v.color} 
+                  key={varianteItem.color} 
+                  value={varianteItem.color} 
                   className={isAConsultar ? "text-slate-500 bg-slate-950 italic" : "text-white bg-slate-950"}
                   disabled={isAConsultar}
                 >
-                  {isAConsultar ? `${v.color} (A consultar)` : v.color}
+                  {isAConsultar ? `${varianteItem.color} (A consultar)` : varianteItem.color}
                 </option>
               );
             })}
@@ -684,8 +703,8 @@ export default function OrdenesEntregaForm({
             style={{ colorScheme: 'dark' }}
             required
             disabled={!selectedColor}
-            onChange={(e) => {
-              setSelectedImei(e.target.value);
+            onChange={(event) => {
+              setSelectedImei(event.target.value);
               setEngancheValue(""); // Reset down payment on IMEI change
             }}
             suppressHydrationWarning
@@ -710,8 +729,8 @@ export default function OrdenesEntregaForm({
             style={{ colorScheme: 'dark' }}
             required
             disabled={!selectedImei}
-            onChange={(e) => {
-              setClienteHistorial(e.target.value);
+            onChange={(event) => {
+              setClienteHistorial(event.target.value);
               setEngancheValue(""); // Reset enganche if history changes
             }}
             suppressHydrationWarning
@@ -734,17 +753,17 @@ export default function OrdenesEntregaForm({
               style={{ colorScheme: 'dark' }}
               required
               disabled={!clienteHistorial}
-              onChange={(e) => setEngancheValue(e.target.value)}
+              onChange={(event) => setEngancheValue(event.target.value)}
               suppressHydrationWarning
             >
               <option value="" className="bg-slate-950 text-slate-500 italic">
                 {!clienteHistorial ? "Primero elija historial" : "Seleccione..."}
               </option>
-              {enganchePorcentajes.map((p) => {
-                const valorCalculado = (selectedProductCost * (p / 100)).toFixed(2);
+              {enganchePorcentajes.map((porcentajeValue) => {
+                const valorCalculado = (selectedProductCost * (porcentajeValue / 100)).toFixed(2);
                 return (
-                  <option key={p} value={valorCalculado} className="bg-slate-950 text-white">
-                    ${valorCalculado} ({p}%)
+                  <option key={porcentajeValue} value={valorCalculado} className="bg-slate-950 text-white">
+                    ${valorCalculado} ({porcentajeValue}%)
                   </option>
                 );
               })}
@@ -759,7 +778,7 @@ export default function OrdenesEntregaForm({
                 type="number"
                 name="enganche"
                 value={engancheValue}
-                onChange={(e) => setEngancheValue(e.target.value)}
+                onChange={(event) => setEngancheValue(event.target.value)}
                 className={styles.engancheInput}
                 required
                 min="0"
@@ -779,8 +798,8 @@ export default function OrdenesEntregaForm({
               type="date"
               name="fecha_entrega"
               value={fechaEntrega}
-              onChange={(e) => {
-                setFechaEntrega(e.target.value);
+              onChange={(event) => {
+                setFechaEntrega(event.target.value);
                 setHoraEntrega("");
               }}
               className={styles.pickerInput}
@@ -806,7 +825,7 @@ export default function OrdenesEntregaForm({
             <select
               name="hora_entrega"
               value={horaEntrega}
-              onChange={(e) => setHoraEntrega(e.target.value)}
+              onChange={(event) => setHoraEntrega(event.target.value)}
               className={styles.selectInput}
               style={{ paddingLeft: "40px", colorScheme: 'dark' }}
               required

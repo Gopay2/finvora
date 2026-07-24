@@ -2,7 +2,15 @@ import React from "react";
 import { getUserProfile, isAllowed } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
 import { createClient } from "@/utils/supabase/server";
-import RegistrosClientView from "../../../../components/empresa/RegistrosClientView";
+import RegistrosClientView, {
+  type Venta,
+  type OrdenEntrega,
+  type Garantia,
+  type OrdenGarantia,
+  type PerfilOption,
+  type RepartidorOption,
+  type ZonaReparto
+} from "@/components/empresa/RegistrosClientView";
 
 export const revalidate = 0;
 
@@ -156,13 +164,13 @@ export default async function RegistrosPage() {
 
   return (
     <RegistrosClientView
-      ventas={(ventasRaw || []) as any}
-      ordenes={(ordenesRaw || []) as any}
-      garantias={(garantiasRaw || []) as any}
-      ordenesGarantia={(ordenesGarantiaRaw || []) as any}
-      vendedores={(perfiles || []) as any}
-      repartidores={(repartidores || []) as any}
-      zonasReparto={(zonasRepartoRaw || []) as any}
+      ventas={(ventasRaw as unknown as Venta[]) || []}
+      ordenes={(ordenesRaw as unknown as OrdenEntrega[]) || []}
+      garantias={(garantiasRaw as unknown as Garantia[]) || []}
+      ordenesGarantia={(ordenesGarantiaRaw as unknown as OrdenGarantia[]) || []}
+      vendedores={(perfiles as unknown as PerfilOption[]) || []}
+      repartidores={(repartidores as unknown as RepartidorOption[]) || []}
+      zonasReparto={(zonasRepartoRaw as unknown as ZonaReparto[]) || []}
     />
   );
 }

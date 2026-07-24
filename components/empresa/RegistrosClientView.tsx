@@ -5,7 +5,7 @@ import Link from "next/link";
 import DownloadExcelButton from "@/components/empresa/DownloadExcelButton";
 
 // Interfaces de tipos
-interface Venta {
+export interface Venta {
   id: string;
   imei: string;
   precio_costo: number;
@@ -28,7 +28,7 @@ interface Venta {
   };
 }
 
-interface OrdenEntrega {
+export interface OrdenEntrega {
   id: string;
   folio: string;
   consecutivo: number;
@@ -61,17 +61,17 @@ interface OrdenEntrega {
   };
 }
 
-interface PerfilOption {
+export interface PerfilOption {
   id: string;
   username: string;
 }
 
-interface RepartidorOption {
+export interface RepartidorOption {
   id: string;
   nombre: string;
 }
 
-interface Garantia {
+export interface Garantia {
   id: string;
   imei: string;
   precio_costo: number;
@@ -95,7 +95,7 @@ interface Garantia {
   };
 }
 
-interface OrdenGarantia {
+export interface OrdenGarantia {
   id: string;
   folio: string;
   consecutivo: number;
@@ -122,7 +122,7 @@ interface OrdenGarantia {
   };
 }
 
-interface ZonaReparto {
+export interface ZonaReparto {
   nombre_zona: string;
   repartidor_id: string;
 }
@@ -471,6 +471,9 @@ export default function RegistrosClientView({
     zonaBadge: "inline-block px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20 whitespace-nowrap",
     userBadge: "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 text-[10px] font-medium border border-slate-700 whitespace-nowrap",
     resetBtn: "flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-semibold rounded-xl hover:bg-red-500/20 transition-all cursor-pointer",
+    dateContainer: "relative flex items-center w-full",
+    dateIcon: "absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base",
+    dateInput: "w-full bg-slate-950 border border-slate-800 rounded-xl pr-4 py-2.5 text-base md:text-sm text-white focus:outline-none focus:border-secondary/40 transition-all [color-scheme:dark] cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden",
 
     // Paginación
     pagination: "flex items-center justify-between border-t border-slate-800/60 px-6 py-4",
@@ -572,8 +575,8 @@ export default function RegistrosClientView({
               suppressHydrationWarning
             >
               <option value="">Todos</option>
-              {vendedores.map(v => (
-                <option key={v.id} value={v.id}>{v.username}</option>
+              {vendedores.map(vendedorOption => (
+                <option key={vendedorOption.id} value={vendedorOption.id}>{vendedorOption.username}</option>
               ))}
             </select>
           </div>
@@ -588,8 +591,8 @@ export default function RegistrosClientView({
               suppressHydrationWarning
             >
               <option value="">Todos</option>
-              {repartidores.map(r => (
-                <option key={r.id} value={r.id}>{r.nombre}</option>
+              {repartidores.map(repartidorOption => (
+                <option key={repartidorOption.id} value={repartidorOption.id}>{repartidorOption.nombre}</option>
               ))}
             </select>
           </div>
@@ -600,14 +603,14 @@ export default function RegistrosClientView({
           {/* Desde */}
           <div className={`col-span-1 md:col-span-4 ${styles.filterGroup}`}>
             <label className={styles.label}>Desde</label>
-            <div className="relative flex items-center w-full">
-              <span className="absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base">calendar_today</span>
+            <div className={styles.dateContainer}>
+              <span className={styles.dateIcon}>calendar_today</span>
               <input
                 type="date"
                 value={fechaDesde}
                 onChange={(e) => { setFechaDesde(e.target.value); setCurrentPage(1); }}
                 onClick={handleOpenPicker}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pr-4 py-2.5 text-base md:text-sm text-white focus:outline-none focus:border-secondary/40 transition-all [color-scheme:dark] cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden"
+                className={styles.dateInput}
                 style={{ paddingLeft: "48px" }}
                 suppressHydrationWarning
               />
@@ -625,14 +628,14 @@ export default function RegistrosClientView({
           {/* Hasta */}
           <div className={`col-span-1 md:col-span-4 ${styles.filterGroup}`}>
             <label className={styles.label}>Hasta</label>
-            <div className="relative flex items-center w-full">
-              <span className="absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base">calendar_today</span>
+            <div className={styles.dateContainer}>
+              <span className={styles.dateIcon}>calendar_today</span>
               <input
                 type="date"
                 value={fechaHasta}
                 onChange={(e) => { setFechaHasta(e.target.value); setCurrentPage(1); }}
                 onClick={handleOpenPicker}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pr-4 py-2.5 text-base md:text-sm text-white focus:outline-none focus:border-secondary/40 transition-all [color-scheme:dark] cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden"
+                className={styles.dateInput}
                 style={{ paddingLeft: "48px" }}
                 suppressHydrationWarning
               />

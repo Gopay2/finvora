@@ -62,6 +62,7 @@ const styles = {
   
   // List details
   repartosList: "flex-1 overflow-y-auto py-2 md:py-4 space-y-2 pr-1 custom-scrollbar min-h-0 my-2",
+  restDayBanner: "p-3 mb-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold rounded-2xl flex items-center justify-center gap-2 text-center animate-in fade-in duration-300",
   timeRow: "flex gap-2 md:gap-4 items-stretch group/row min-h-12",
   timeColumn: "w-14 md:w-20 flex flex-col items-center justify-center shrink-0 border-r border-slate-800 pr-2 md:pr-3 relative",
   timeText: "text-xs font-black text-slate-300 font-mono tracking-tight",
@@ -441,7 +442,7 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                     return (
                       <>
                         {driverRestInfo.isRestDay && (
-                          <div className="p-3 mb-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold rounded-2xl flex items-center justify-center gap-2 text-center animate-in fade-in duration-300">
+                          <div className={styles.restDayBanner}>
                             <span className="material-symbols-outlined text-base select-none">event_busy</span>
                             <span>{currentTabDriverObj?.nombre || 'El repartidor'} no realiza entregas los días {driverRestInfo.restDayNames.join(", ")} (Día de descanso).</span>
                           </div>
