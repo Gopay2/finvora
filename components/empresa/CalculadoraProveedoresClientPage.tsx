@@ -11,6 +11,18 @@ import {
 } from "@/app/empresa/webapp/sueldos/proveedores/proveedores-actions";
 import type { CatalogProduct, SupplierCostRecord } from "@/app/empresa/webapp/sueldos/proveedores/page";
 
+const pageStyles = {
+  container: "max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500",
+  backLink: "flex items-center gap-1.5 text-slate-400 hover:text-slate-200 transition-colors text-sm font-semibold cursor-pointer w-fit",
+  headerTitle: "text-xl md:text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent",
+  switchContainer: "grid grid-cols-3 w-full sm:w-[390px] bg-slate-950/80 backdrop-blur p-1.5 border border-slate-800 rounded-2xl gap-1 shrink-0",
+  card: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl space-y-4 text-sm",
+  selectInput: "w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-secondary transition-all appearance-none cursor-pointer text-xs sm:text-sm h-[42px] disabled:opacity-50 disabled:cursor-not-allowed",
+  costInput: "bg-slate-950 border border-slate-800 rounded-xl pl-6 pr-4 py-2.5 text-[16px] sm:text-sm text-slate-200 focus:outline-none focus:border-secondary transition-all h-[42px] w-full text-center",
+  tableContainer: "bg-slate-900/30 backdrop-blur-xl border border-slate-800/85 rounded-3xl overflow-hidden shadow-2xl",
+  th: "px-6 py-4 text-slate-400 font-semibold uppercase text-xs tracking-wider",
+};
+
 interface CalculadoraProveedoresClientPageProps {
   catalogProducts: CatalogProduct[];
   initialAssignedCosts: SupplierCostRecord[];
@@ -21,7 +33,7 @@ export default function CalculadoraProveedoresClientPage({
   initialAssignedCosts,
 }: CalculadoraProveedoresClientPageProps) {
   const router = useRouter();
-  const [proveedorActive, setProveedorActive] = useState<"Tijuana" | "Monterrey">("Tijuana");
+  const [proveedorActive, setProveedorActive] = useState<"Tijuana" | "Monterrey" | "Guadalajara">("Tijuana");
 
   // Estados para agregar producto
   const [selectedMarca, setSelectedMarca] = useState("");
@@ -40,27 +52,39 @@ export default function CalculadoraProveedoresClientPage({
   const [deleteModal, setDeleteModal] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Sigla según el proveedor activo: Guadalajara -> GDL, Monterrey -> MTY, Tijuana -> TIJ
+  const targetSigla = useMemo(() => {
+    if (proveedorActive === "Guadalajara") return "GDL";
+    if (proveedorActive === "Monterrey") return "MTY";
+    return "TIJ";
+  }, [proveedorActive]);
+
   // Filtrar costos asignados al proveedor activo
   const activeAssignedCosts = useMemo(() => {
-    return initialAssignedCosts.filter((c) => c.proveedor === proveedorActive);
+    return initialAssignedCosts.filter((costoRecord) => costoRecord.proveedor === proveedorActive);
   }, [initialAssignedCosts, proveedorActive]);
 
   // IDs de productos ya asignados a este proveedor
   const assignedProductIds = useMemo(() => {
-    return activeAssignedCosts.map((c) => c.producto_id);
+    return activeAssignedCosts.map((costoRecord) => costoRecord.producto_id);
   }, [activeAssignedCosts]);
 
-  // Productos disponibles en el catálogo para ser asignados
+  // Productos disponibles en el catálogo para ser asignados que correspondan a la sigla del proveedor activo
   const selectableProducts = useMemo(() => {
-    return catalogProducts.filter((p) => !assignedProductIds.includes(p.id));
-  }, [catalogProducts, assignedProductIds]);
+    return catalogProducts.filter((productoItem) => {
+      const isNotAssigned = !assignedProductIds.includes(productoItem.id);
+      const searchContent = `${productoItem.modelo} ${productoItem.marca} ${productoItem.color}`.toUpperCase();
+      const matchesSigla = searchContent.includes(targetSigla);
+      return isNotAssigned && matchesSigla;
+    });
+  }, [catalogProducts, assignedProductIds, targetSigla]);
 
   // Obtener marcas únicas ordenadas de los productos seleccionables
   const marcas = useMemo(() => {
     const set = new Set<string>();
-    selectableProducts.forEach((p) => {
-      if (p.marca && p.marca.trim()) {
-        set.add(p.marca.trim().toUpperCase());
+    selectableProducts.forEach((productoItem) => {
+      if (productoItem.marca && productoItem.marca.trim()) {
+        set.add(productoItem.marca.trim().toUpperCase());
       }
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
@@ -70,7 +94,7 @@ export default function CalculadoraProveedoresClientPage({
   const filteredProducts = useMemo(() => {
     if (!selectedMarca) return [];
     return selectableProducts
-      .filter((p) => p.marca?.toUpperCase() === selectedMarca.toUpperCase())
+      .filter((productoItem) => productoItem.marca?.toUpperCase() === selectedMarca.toUpperCase())
       .sort((a, b) => {
         const compModelo = a.modelo.localeCompare(b.modelo, undefined, { numeric: true, sensitivity: 'base' });
         if (compModelo !== 0) return compModelo;
@@ -183,27 +207,31 @@ export default function CalculadoraProveedoresClientPage({
             </p>
           </div>
 
-          {/* Selector de Proveedor (Switch) */}
-          <div className="flex items-center bg-slate-950 p-1 border border-slate-800 rounded-xl gap-1 shrink-0 w-fit">
-            {(["Tijuana", "Monterrey"] as const).map((prov) => (
-              <button
-                key={prov}
-                type="button"
-                onClick={() => {
-                  setProveedorActive(prov);
-                  setSelectedMarca("");
-                  setSelectedProdId("");
-                  setErrorMsg("");
-                  setSuccessMsg("");
-                }}
-                className={`px-5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${proveedorActive === prov
-                    ? "bg-secondary text-slate-950 shadow-md shadow-secondary/10"
-                    : "bg-transparent text-slate-400 hover:text-slate-200"
+          {/* Selector de Proveedor (Switch Segmentado) */}
+          <div className="grid grid-cols-3 w-full sm:w-[390px] bg-slate-950/80 backdrop-blur p-1.5 border border-slate-800 rounded-2xl gap-1 shrink-0">
+            {(["Tijuana", "Monterrey", "Guadalajara"] as const).map((prov) => {
+              const isActive = proveedorActive === prov;
+              return (
+                <button
+                  key={prov}
+                  type="button"
+                  onClick={() => {
+                    setProveedorActive(prov);
+                    setSelectedMarca("");
+                    setSelectedProdId("");
+                    setErrorMsg("");
+                    setSuccessMsg("");
+                  }}
+                  className={`w-full text-center px-2 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center select-none ${
+                    isActive
+                      ? "bg-secondary text-slate-950 shadow-md shadow-secondary/15"
+                      : "bg-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
                   }`}
-              >
-                Proveedor {prov}
-              </button>
-            ))}
+                >
+                  <span className="truncate">{prov}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </header>
@@ -230,12 +258,18 @@ export default function CalculadoraProveedoresClientPage({
                 style={{ colorScheme: 'dark' }}
                 suppressHydrationWarning
               >
-                <option value="">Elegir marca...</option>
-                {marcas.map((marca) => (
-                  <option key={marca} value={marca}>
-                    {marca}
-                  </option>
-                ))}
+                {marcas.length === 0 ? (
+                  <option value="" className="italic text-slate-500">No hay productos disponibles con sigla ({targetSigla})...</option>
+                ) : (
+                  <>
+                    <option value="">Elegir marca...</option>
+                    {marcas.map((marca) => (
+                      <option key={marca} value={marca}>
+                        {marca}
+                      </option>
+                    ))}
+                  </>
+                )}
               </select>
               <span className="material-symbols-outlined absolute right-4 pointer-events-none text-slate-500 text-base">
                 keyboard_arrow_down
@@ -283,8 +317,22 @@ export default function CalculadoraProveedoresClientPage({
                 type="text"
                 inputMode="numeric"
                 value={costoInput}
+                onFocus={(e) => {
+                  if (costoInput === "0") {
+                    setCostoInput("");
+                  }
+                  e.target.select();
+                }}
+                onBlur={() => {
+                  if (!costoInput || costoInput.trim() === "") {
+                    setCostoInput("0");
+                  }
+                }}
                 onChange={(e) => {
-                  const val = e.target.value;
+                  let val = e.target.value;
+                  if (/^0\d+$/.test(val)) {
+                    val = val.replace(/^0+/, "");
+                  }
                   if (val === "" || /^\d*$/.test(val)) {
                     setCostoInput(val);
                   }
@@ -353,12 +401,12 @@ export default function CalculadoraProveedoresClientPage({
                   </td>
                 </tr>
               ) : (
-                activeAssignedCosts.map((c) => {
-                  const productInfo = c.producto;
+                activeAssignedCosts.map((costoRecord) => {
+                  const productInfo = costoRecord.producto;
                   const name = productInfo ? `${productInfo.marca} ${productInfo.modelo}` : "Producto Desconocido";
 
                   return (
-                    <tr key={c.id} className="hover:bg-slate-900/10 transition-colors">
+                    <tr key={costoRecord.id} className="hover:bg-slate-900/10 transition-colors">
                       <td className="px-6 py-4 text-slate-200 font-medium">
                         {productInfo ? productInfo.marca : "—"}
                       </td>
@@ -382,23 +430,39 @@ export default function CalculadoraProveedoresClientPage({
                             <input
                               type="text"
                               inputMode="numeric"
-                              value={editCosts[c.id] !== undefined ? editCosts[c.id] : c.costo.toString()}
+                              value={editCosts[costoRecord.id] !== undefined ? editCosts[costoRecord.id] : costoRecord.costo.toString()}
+                              onFocus={(e) => {
+                                const currentVal = editCosts[costoRecord.id] !== undefined ? editCosts[costoRecord.id] : costoRecord.costo.toString();
+                                if (currentVal === "0") {
+                                  setEditCosts((prev) => ({ ...prev, [costoRecord.id]: "" }));
+                                }
+                                e.target.select();
+                              }}
                               onChange={(e) => {
-                                const val = e.target.value;
+                                let val = e.target.value;
+                                if (/^0\d+$/.test(val)) {
+                                  val = val.replace(/^0+/, "");
+                                }
                                 if (val === "" || /^\d*$/.test(val)) {
-                                  setEditCosts((prev) => ({ ...prev, [c.id]: val }));
+                                  setEditCosts((prev) => ({ ...prev, [costoRecord.id]: val }));
                                 }
                               }}
-                              onBlur={() => handleSaveCosto(c.id, c.costo)}
+                              onBlur={() => {
+                                const currentVal = editCosts[costoRecord.id];
+                                if (currentVal !== undefined && (currentVal === "" || currentVal.trim() === "")) {
+                                  setEditCosts((prev) => ({ ...prev, [costoRecord.id]: "0" }));
+                                }
+                                handleSaveCosto(costoRecord.id, costoRecord.costo);
+                              }}
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") {
-                                  handleSaveCosto(c.id, c.costo);
+                                  handleSaveCosto(costoRecord.id, costoRecord.costo);
                                   e.currentTarget.blur();
                                 }
                               }}
-                              className={`bg-slate-950 border rounded-xl pl-6 pr-4 py-1.5 text-[16px] sm:text-xs text-center text-slate-200 w-32 focus:outline-none transition-all ${savedMap[c.id]
+                              className={`bg-slate-950 border rounded-xl pl-6 pr-4 py-1.5 text-[16px] sm:text-xs text-center text-slate-200 w-32 focus:outline-none transition-all ${savedMap[costoRecord.id]
                                   ? "border-green-500/60 shadow-[0_0_8px_rgba(34,197,94,0.15)] bg-green-500/5"
-                                  : savingMap[c.id]
+                                  : savingMap[costoRecord.id]
                                     ? "border-secondary/40"
                                     : "border-slate-800 focus:border-secondary"
                                 }`}
@@ -406,18 +470,18 @@ export default function CalculadoraProveedoresClientPage({
                             />
                             {/* Estado de guardado y botón móvil (anclado de forma absoluta y centrada verticalmente al input para mantener el input perfectamente centrado con el encabezado) */}
                             <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center whitespace-nowrap shrink-0">
-                              {savingMap[c.id] ? (
+                              {savingMap[costoRecord.id] ? (
                                 <span className="animate-spin h-3.5 w-3.5 border-2 border-secondary border-t-transparent rounded-full pointer-events-none" />
-                              ) : savedMap[c.id] ? (
+                              ) : savedMap[costoRecord.id] ? (
                                 <span className="material-symbols-outlined text-green-400 text-sm font-bold animate-bounce pointer-events-none">
                                   check
                                 </span>
                               ) : (
                                 // Mostrar botón de guardar solo en móviles si hay cambios pendientes
-                                editCosts[c.id] !== undefined && editCosts[c.id] !== c.costo.toString() && (
+                                editCosts[costoRecord.id] !== undefined && editCosts[costoRecord.id] !== costoRecord.costo.toString() && (
                                   <button
                                     type="button"
-                                    onClick={() => handleSaveCosto(c.id, c.costo)}
+                                    onClick={() => handleSaveCosto(costoRecord.id, costoRecord.costo)}
                                     className="sm:hidden flex items-center justify-center w-5 h-5 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-md cursor-pointer active:scale-95 transition-all"
                                     title="Guardar costo"
                                   >
@@ -432,7 +496,7 @@ export default function CalculadoraProveedoresClientPage({
                       <td className="px-6 py-4 text-center">
                         <button
                           type="button"
-                          onClick={() => handleEliminar(c.id, name)}
+                          onClick={() => handleEliminar(costoRecord.id, name)}
                           className="p-2 text-slate-500 hover:text-red-400 transition-colors hover:bg-red-500/10 rounded-xl cursor-pointer"
                           title="Eliminar asignación"
                         >

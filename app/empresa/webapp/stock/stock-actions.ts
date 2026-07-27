@@ -295,7 +295,7 @@ export async function registrarVenta(imei: string, vendedorId?: string) {
       producto_id: item.producto_id,
       vendedor_id: vendedorId || currentUserId,
       zona: item.zona,
-      precio_costo: (item.productos as any)?.precio || 0,
+      precio_costo: (item.productos as unknown as { precio: number } | null)?.precio || 0,
       fecha_ingreso: item.fecha_ingreso
     });
 
@@ -354,7 +354,7 @@ export async function registrarRecambio(imei: string, solicitadoPorId: string, m
       producto_id: item.producto_id,
       solicitado_por: solicitadoPorId,
       zona: item.zona,
-      precio_costo: (item.productos as any)?.precio || 0,
+      precio_costo: (item.productos as unknown as { precio: number } | null)?.precio || 0,
       motivo: motivo,
       fecha_ingreso: item.fecha_ingreso
     });
@@ -435,9 +435,9 @@ export async function getDistinctBrands(): Promise<string[]> {
   if (!data) return [];
   // Retornamos marcas únicas limpiando duplicados en mayúsculas y filtrando nulos/vacíos
   const set = new Set<string>();
-  data.forEach((p: any) => {
-    if (p.marca && p.marca.trim()) {
-      set.add(p.marca.trim().toUpperCase());
+  ((data as unknown as { marca: string | null }[]) || []).forEach((productoItem) => {
+    if (productoItem.marca && productoItem.marca.trim()) {
+      set.add(productoItem.marca.trim().toUpperCase());
     }
   });
   return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));

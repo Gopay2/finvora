@@ -77,8 +77,28 @@ async function uploadComprobanteFile(
   supabase: any
 ): Promise<{ success: boolean; publicUrl?: string; error?: string }> {
   try {
-    const fileExt = file.name.split('.').pop() || 'png';
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+    // 1. Validar tipo MIME (lista blanca estricta)
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    if (!allowedMimeTypes.includes(file.type)) {
+      return {
+        success: false,
+        error: "Formato no permitido. Solo se aceptan imágenes (JPG, PNG, WEBP) o archivos PDF."
+      };
+    }
+
+    // 2. Validar tamaño máximo (5MB)
+    const maxSizeBytes = 5 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      return {
+        success: false,
+        error: "El archivo excede el tamaño máximo permitido de 5MB."
+      };
+    }
+
+    // 3. Sanitizar extensión
+    const rawExt = file.name.split('.').pop()?.toLowerCase() || 'png';
+    const safeExt = ['jpg', 'jpeg', 'png', 'webp', 'pdf'].includes(rawExt) ? rawExt : 'png';
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${safeExt}`;
     const filePath = `comprobantes/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
@@ -91,7 +111,7 @@ async function uploadComprobanteFile(
 
     if (uploadError) {
       console.error("Error al subir archivo a storage:", uploadError);
-      return { success: false, error: uploadError.message };
+      return { success: false, error: "Error al subir el comprobante a almacenamiento." };
     }
 
     const { data: { publicUrl } } = supabase.storage
@@ -99,7 +119,7 @@ async function uploadComprobanteFile(
       .getPublicUrl(filePath);
 
     return { success: true, publicUrl };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Excepción en la carga del archivo:", error);
     return { success: false, error: "Ocurrió un error inesperado al subir el comprobante." };
   }
@@ -286,7 +306,7 @@ export async function submitComprobante(formData: FormData) {
     } catch (cleanupError) {
       console.error("Error al limpiar archivo de storage tras fallo en DB:", cleanupError);
     }
-    return { success: false, error: `Error en la base de datos: ${error.message}` };
+    return { success: false, error: "Ocurrió un error al guardar el registro en la base de datos." };
   }
 
   // 3. Si se seleccionó un IMEI, registrar la venta y dar de baja en la tabla de stock
