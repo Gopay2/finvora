@@ -150,6 +150,25 @@ export default function ComprobantesForm({
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // 1. Validar tamaño máximo (5MB)
+      const maxSizeBytes = 5 * 1024 * 1024;
+      if (file.size > maxSizeBytes) {
+        setOperationStatus({ type: 'error', message: "El comprobante excede el tamaño máximo permitido de 5MB." });
+        event.target.value = "";
+        setSelectedFileName("");
+        return;
+      }
+
+      // 2. Validar tipos permitidos
+      const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+      if (!allowedMimeTypes.includes(file.type)) {
+        setOperationStatus({ type: 'error', message: "Formato no permitido. Solo se aceptan imágenes (JPG, PNG, WEBP) o PDF." });
+        event.target.value = "";
+        setSelectedFileName("");
+        return;
+      }
+
+      setOperationStatus(null);
       setSelectedFileName(file.name);
     } else {
       setSelectedFileName("");

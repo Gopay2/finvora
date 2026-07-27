@@ -2,9 +2,10 @@
 
 import React, { useState, useMemo } from "react";
 import CatalogoCardCompacta from "./CatalogoCardCompacta";
+import type { CatalogoCelular } from "@/types/catalogo";
 
 interface CatalogoClienteProps {
-  celulares: any[];
+  celulares: CatalogoCelular[];
   whatsappPhone: string;
 }
 
@@ -14,9 +15,9 @@ export default function CatalogoCliente({ celulares, whatsappPhone }: CatalogoCl
   // 1. Obtener de forma dinámica todas las marcas únicas presentes en el catálogo
   const marcasDisponibles = useMemo(() => {
     const set = new Set<string>();
-    celulares.forEach(c => {
-      if (c.marca && c.marca.trim()) {
-        set.add(c.marca.trim().toUpperCase());
+    celulares.forEach((celularItem) => {
+      if (celularItem.marca && celularItem.marca.trim()) {
+        set.add(celularItem.marca.trim().toUpperCase());
       }
     });
     const sorted = Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
@@ -28,7 +29,11 @@ export default function CatalogoCliente({ celulares, whatsappPhone }: CatalogoCl
     if (marcaSeleccionada === "Todas") {
       return celulares;
     }
-    return celulares.filter(c => c.marca && c.marca.trim().toUpperCase() === marcaSeleccionada.trim().toUpperCase());
+    return celulares.filter(
+      (celularItem) =>
+        celularItem.marca &&
+        celularItem.marca.trim().toUpperCase() === marcaSeleccionada.trim().toUpperCase()
+    );
   }, [celulares, marcaSeleccionada]);
 
   return (

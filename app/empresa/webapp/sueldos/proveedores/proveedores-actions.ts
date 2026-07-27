@@ -4,12 +4,25 @@ import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getUserProfile, isAllowed } from "@/utils/auth-check";
 
+export interface ActionResult {
+  success?: boolean;
+  error?: string;
+}
+
 /**
  * Agrega una asociación de producto y costo a un proveedor.
  * 
  * @security Permisos requeridos: Admin, Supervisor, Developer
+ * @param productoId - ID del producto a asociar
+ * @param proveedor - Nombre de la plaza/proveedor ('Tijuana', 'Monterrey', 'Guadalajara')
+ * @param costo - Costo numérico de compra
+ * @returns Objeto ActionResult indicando éxito o mensaje de error
  */
-export async function agregarProductoProveedor(productoId: string, proveedor: string, costo: number) {
+export async function agregarProductoProveedor(
+  productoId: string,
+  proveedor: string,
+  costo: number
+): Promise<ActionResult> {
   const { role } = await getUserProfile();
   if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
     return { error: "No tienes permisos para realizar esta acción" };
@@ -34,7 +47,7 @@ export async function agregarProductoProveedor(productoId: string, proveedor: st
     if (error.code === '23505') {
       return { error: "Este producto ya está asignado a este proveedor." };
     }
-    return { error: "No se pudo asociar el producto." };
+    return { error: error.message ? `No se pudo asociar: ${error.message}` : "No se pudo asociar el producto." };
   }
 
   revalidatePath('/empresa/webapp/sueldos/proveedores');
@@ -45,8 +58,14 @@ export async function agregarProductoProveedor(productoId: string, proveedor: st
  * Actualiza el costo de un producto para un proveedor.
  * 
  * @security Permisos requeridos: Admin, Supervisor, Developer
+ * @param id - ID del registro de costo a actualizar
+ * @param costo - Nuevo costo numérico
+ * @returns Objeto ActionResult indicando éxito o mensaje de error
  */
-export async function actualizarCostoProveedor(id: string, costo: number) {
+export async function actualizarCostoProveedor(
+  id: string,
+  costo: number
+): Promise<ActionResult> {
   const { role } = await getUserProfile();
   if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
     return { error: "No tienes permisos para realizar esta acción" };
@@ -79,8 +98,12 @@ export async function actualizarCostoProveedor(id: string, costo: number) {
  * Remueve la asociación de un producto con un proveedor.
  * 
  * @security Permisos requeridos: Admin, Supervisor, Developer
+ * @param id - ID del registro de costo a eliminar
+ * @returns Objeto ActionResult indicando éxito o mensaje de error
  */
-export async function eliminarProductoProveedor(id: string) {
+export async function eliminarProductoProveedor(
+  id: string
+): Promise<ActionResult> {
   const { role } = await getUserProfile();
   if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
     return { error: "No tienes permisos para realizar esta acción" };

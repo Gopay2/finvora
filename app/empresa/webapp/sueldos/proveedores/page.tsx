@@ -2,7 +2,7 @@ import React from "react";
 import { getUserProfile } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
 import { createClient } from "@/utils/supabase/server";
-import CalculadoraProveedoresClientPage from "../../../../../components/empresa/CalculadoraProveedoresClientPage";
+import CalculadoraProveedoresClientPage from "@/components/empresa/CalculadoraProveedoresClientPage";
 
 export const revalidate = 0;
 
@@ -29,6 +29,24 @@ export interface SupplierCostRecord {
     almacenamiento: string;
     ram: string | null;
   } | null;
+}
+
+interface ProductoRaw {
+  id: string;
+  marca: string;
+  modelo: string;
+  color: string;
+  almacenamiento: string;
+  ram?: string | null;
+  precio?: number | string | null;
+}
+
+interface CostoProveedorRaw {
+  id: string;
+  producto_id: string;
+  proveedor: string;
+  costo: number | string;
+  producto: ProductoRaw | ProductoRaw[] | null;
 }
 
 export default async function ProveedoresPage() {
@@ -75,24 +93,24 @@ export default async function ProveedoresPage() {
     console.error("Error al obtener costos de proveedores:", costosError);
   }
 
-  const catalogProducts: CatalogProduct[] = (productosData || []).map((p: any) => ({
-    id: p.id,
-    marca: p.marca,
-    modelo: p.modelo,
-    color: p.color,
-    almacenamiento: p.almacenamiento,
-    ram: p.ram || null,
-    precio: Number(p.precio) || 0,
+  const catalogProducts: CatalogProduct[] = ((productosData as unknown as ProductoRaw[]) || []).map((productoItem) => ({
+    id: productoItem.id,
+    marca: productoItem.marca,
+    modelo: productoItem.modelo,
+    color: productoItem.color,
+    almacenamiento: productoItem.almacenamiento,
+    ram: productoItem.ram || null,
+    precio: Number(productoItem.precio) || 0,
   }));
 
-  const initialAssignedCosts: SupplierCostRecord[] = (costosData || []).map((c: any) => {
+  const initialAssignedCosts: SupplierCostRecord[] = ((costosData as unknown as CostoProveedorRaw[]) || []).map((costoRecord) => {
     // Manejar caso donde el join devuelva un arreglo o un objeto único
-    const prod = Array.isArray(c.producto) ? c.producto[0] : c.producto;
+    const prod = Array.isArray(costoRecord.producto) ? costoRecord.producto[0] : costoRecord.producto;
     return {
-      id: c.id,
-      producto_id: c.producto_id,
-      proveedor: c.proveedor,
-      costo: Number(c.costo) || 0,
+      id: costoRecord.id,
+      producto_id: costoRecord.producto_id,
+      proveedor: costoRecord.proveedor,
+      costo: Number(costoRecord.costo) || 0,
       producto: prod ? {
         id: prod.id,
         marca: prod.marca,
