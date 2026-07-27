@@ -433,9 +433,14 @@ export async function getDistinctBrands(): Promise<string[]> {
   }
   
   if (!data) return [];
-  // Retornamos marcas únicas limpiando duplicados y filtrando nulos/vacíos
-  const marcas = data.map((p: any) => p.marca).filter(Boolean);
-  return Array.from(new Set(marcas));
+  // Retornamos marcas únicas limpiando duplicados en mayúsculas y filtrando nulos/vacíos
+  const set = new Set<string>();
+  data.forEach((p: any) => {
+    if (p.marca && p.marca.trim()) {
+      set.add(p.marca.trim().toUpperCase());
+    }
+  });
+  return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 }
 
 

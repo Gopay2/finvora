@@ -13,18 +13,14 @@ export default function CatalogoCliente({ celulares, whatsappPhone }: CatalogoCl
 
   // 1. Obtener de forma dinámica todas las marcas únicas presentes en el catálogo
   const marcasDisponibles = useMemo(() => {
-    const marcasUnicas = new Set<string>();
+    const set = new Set<string>();
     celulares.forEach(c => {
-      if (c.marca) {
-        // Normalizamos la marca para evitar duplicados por minúsculas/mayúsculas (ej: 'Apple' vs 'apple')
-        // pero conservamos el formato de título (ej: 'Apple')
-        const normalized = c.marca.trim();
-        if (normalized) {
-          marcasUnicas.add(normalized);
-        }
+      if (c.marca && c.marca.trim()) {
+        set.add(c.marca.trim().toUpperCase());
       }
     });
-    return ["Todas", ...Array.from(marcasUnicas).sort()];
+    const sorted = Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    return ["Todas", ...sorted];
   }, [celulares]);
 
   // 2. Filtrar celulares basados en la marca seleccionada
@@ -32,7 +28,7 @@ export default function CatalogoCliente({ celulares, whatsappPhone }: CatalogoCl
     if (marcaSeleccionada === "Todas") {
       return celulares;
     }
-    return celulares.filter(c => c.marca.trim() === marcaSeleccionada);
+    return celulares.filter(c => c.marca && c.marca.trim().toUpperCase() === marcaSeleccionada.trim().toUpperCase());
   }, [celulares, marcaSeleccionada]);
 
   return (

@@ -57,14 +57,20 @@ export default function CalculadoraProveedoresClientPage({
 
   // Obtener marcas únicas ordenadas de los productos seleccionables
   const marcas = useMemo(() => {
-    return Array.from(new Set(selectableProducts.map((p) => p.marca).filter(Boolean))).sort();
+    const set = new Set<string>();
+    selectableProducts.forEach((p) => {
+      if (p.marca && p.marca.trim()) {
+        set.add(p.marca.trim().toUpperCase());
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   }, [selectableProducts]);
 
   // Filtrar productos seleccionables por marca
   const filteredProducts = useMemo(() => {
     if (!selectedMarca) return [];
     return selectableProducts
-      .filter((p) => p.marca === selectedMarca)
+      .filter((p) => p.marca?.toUpperCase() === selectedMarca.toUpperCase())
       .sort((a, b) => {
         const compModelo = a.modelo.localeCompare(b.modelo, undefined, { numeric: true, sensitivity: 'base' });
         if (compModelo !== 0) return compModelo;
