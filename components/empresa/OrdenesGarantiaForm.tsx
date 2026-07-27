@@ -82,17 +82,17 @@ export default function OrdenesGarantiaForm({ zonasReparto = [], productos = [] 
     const set = new Set<string>();
     (productos || []).forEach((p) => {
       if (p.marca && p.marca.trim() !== "") {
-        set.add(p.marca.trim());
+        set.add(p.marca.trim().toUpperCase());
       }
     });
-    return Array.from(set).sort();
+    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   }, [productos]);
 
   // Filtrar los productos por la marca seleccionada y ordenarlos por modelo, color y almacenamiento
   const productosFiltrados = useMemo(() => {
     if (!selectedMarca) return [];
     return (productos || [])
-      .filter((p) => p.marca === selectedMarca)
+      .filter((p) => p.marca?.toUpperCase() === selectedMarca.toUpperCase())
       .sort((a, b) => {
         // Ordenar por modelo
         const compModelo = a.modelo.localeCompare(b.modelo, undefined, { numeric: true, sensitivity: 'base' });

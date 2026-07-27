@@ -80,14 +80,20 @@ export default function StockCargarForm({ productos, repartidores, zonasReparto 
 
   // Obtener marcas únicas ordenadas alfabéticamente a partir de los productos filtrados por la zona
   const marcas = useMemo(() => {
-    return Array.from(new Set(productosPorZona.map(productoItem => productoItem.marca).filter(Boolean))).sort();
+    const set = new Set<string>();
+    productosPorZona.forEach((p) => {
+      if (p.marca && p.marca.trim()) {
+        set.add(p.marca.trim().toUpperCase());
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   }, [productosPorZona]);
 
   // Filtrar los productos por la marca seleccionada y ordenarlos por modelo, color y almacenamiento
   const filteredProductos = useMemo(() => {
     if (!selectedMarca) return [];
     return productosPorZona
-      .filter(productoItem => productoItem.marca === selectedMarca)
+      .filter(productoItem => productoItem.marca?.toUpperCase() === selectedMarca.toUpperCase())
       .sort((a, b) => {
         const compModelo = a.modelo.localeCompare(b.modelo, undefined, { numeric: true, sensitivity: 'base' });
         if (compModelo !== 0) return compModelo;

@@ -87,7 +87,7 @@ export default function StockClientView({
 
   // Filtrado instantáneo en el cliente
   const filteredUnidades = unidades.filter((item) => {
-    const matchMarca = !selectedMarca || item.productos?.marca === selectedMarca;
+    const matchMarca = !selectedMarca || (item.productos?.marca ? item.productos.marca.toUpperCase() === selectedMarca.toUpperCase() : false);
     const matchEstado = !selectedEstado || item.estado === selectedEstado;
     const matchUbicacion = !selectedUbicacion || item.zona === selectedUbicacion;
     return matchMarca && matchEstado && matchUbicacion;
