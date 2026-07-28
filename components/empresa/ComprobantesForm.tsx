@@ -42,6 +42,7 @@ export default function ComprobantesForm({
   const [selectedModelKey, setSelectedModelKey] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [selectedImei, setSelectedImei] = useState<string>("");
+  const [selectedPlazo, setSelectedPlazo] = useState<string>("");
 
   // Estados para autocompletado de vendedores
   const [vendedorSearch, setVendedorSearch] = useState("");
@@ -210,6 +211,12 @@ export default function ComprobantesForm({
       return;
     }
 
+    if (!selectedPlazo) {
+      setOperationStatus({ type: 'error', message: 'Por favor, selecciona un plazo.' });
+      setIsSubmitting(false);
+      return;
+    }
+
     const formData = new FormData(event.currentTarget);
     const submitResponse = await submitComprobante(formData);
 
@@ -223,6 +230,7 @@ export default function ComprobantesForm({
       setSelectedModelKey("");
       setSelectedColor("");
       setSelectedImei("");
+      setSelectedPlazo("");
 
       // Obtener la lista actualizada de forma instantánea sin refrescar página completa
       if (showTable) {
@@ -454,10 +462,91 @@ export default function ComprobantesForm({
           </div>
         </div>
 
+        {/* PAGO SEMANAL */}
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>Pago Semanal</label>
+          <div className={styles.relativeInputContainer}>
+            <span className={styles.prefix}>$</span>
+            <input
+              type="text"
+              name="pago_semanal"
+              className={styles.input}
+              required
+              placeholder="0.00"
+              inputMode="decimal"
+              pattern="^[0-9]+([.,][0-9]+)?$"
+              title="Ingrese un número válido (ej. 100 o 100.50)"
+              onInput={handleNumericInput}
+              onBlur={handleNumericBlur}
+              suppressHydrationWarning
+            />
+          </div>
+        </div>
+
+        {/* PLAZOS */}
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>Plazos</label>
+          <DropdownSelect
+            placeholder="Seleccione plazo..."
+            valueDisplay={selectedPlazo}
+            items={[
+              { id: "13", display: "13" },
+              { id: "26", display: "26" },
+              { id: "39", display: "39" },
+              { id: "52", display: "52" }
+            ]}
+            onSelect={(plazo) => {
+              setSelectedPlazo(plazo.id);
+            }}
+            getItemKey={(plazo) => plazo.id}
+            getItemDisplay={(plazo) => plazo.display}
+          />
+          <input
+            type="hidden"
+            name="plazos"
+            value={selectedPlazo}
+          />
+        </div>
+
+        {/* PRECIO TOTAL */}
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>Precio Total</label>
+          <div className={styles.relativeInputContainer}>
+            <span className={styles.prefix}>$</span>
+            <input
+              type="text"
+              name="precio_total"
+              className={styles.input}
+              required
+              placeholder="0.00"
+              inputMode="decimal"
+              pattern="^[0-9]+([.,][0-9]+)?$"
+              title="Ingrese un número válido (ej. 100 o 100.50)"
+              onInput={handleNumericInput}
+              onBlur={handleNumericBlur}
+              suppressHydrationWarning
+            />
+          </div>
+        </div>
+
+        {/* TAG */}
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>Tag</label>
+          <input
+            type="text"
+            name="tag"
+            placeholder="Escribe el tag..."
+            className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all"
+            required
+            autoComplete="off"
+            suppressHydrationWarning
+          />
+        </div>
+
         {/* DOCUMENTO / FOTO */}
-        <div className="space-y-2 md:col-span-3">
+        <div className={`${styles.inputGroup} md:col-span-2`}>
           <label className={styles.label}>Comprobante (Imagen o PDF)</label>
-          <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-secondary/40 rounded-xl p-3 bg-slate-950/20 transition-all group cursor-pointer h-[46px] select-none">
+          <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-secondary/40 rounded-xl px-4 bg-slate-950/20 transition-all group cursor-pointer h-[50px] select-none">
             <input
               type="file"
               name="comprobante"
@@ -472,7 +561,7 @@ export default function ComprobantesForm({
                 cloud_upload
               </span>
               <p
-                className="text-xs text-slate-300 font-medium truncate max-w-[150px] sm:max-w-[220px] md:max-w-[160px] lg:max-w-[240px]"
+                className="text-xs text-slate-300 font-medium truncate max-w-[200px] sm:max-w-[300px] md:max-w-[400px]"
                 title={selectedFileName || "Subir comprobante"}
               >
                 {selectedFileName ? selectedFileName : "Subir comprobante"}
