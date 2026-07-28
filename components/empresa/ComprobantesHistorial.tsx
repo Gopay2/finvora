@@ -15,6 +15,8 @@ interface ComprobantesHistorialProps {
   onDeleteRequest: (item: ComprobanteRecord) => void;
 }
 
+const ITEMS_PER_PAGE = 15;
+
 export default function ComprobantesHistorial({
   comprobantes,
   vendedores,
@@ -29,9 +31,17 @@ export default function ComprobantesHistorial({
     filterRepartidor: ""
   });
 
+  // Estado de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+
   // Estados para descarga masiva de archivos
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState("");
+
+  // Reset a página 1 si cambian los filtros
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
 
   // Filtrado en memoria por rango de fechas, vendedor y repartidor/ubicación
   const filteredList = useMemo(() => {
@@ -56,6 +66,19 @@ export default function ComprobantesHistorial({
       return true;
     });
   }, [comprobantes, filters]);
+
+  // Lógica de Paginación
+  const totalPages = Math.max(1, Math.ceil(filteredList.length / ITEMS_PER_PAGE));
+  const paginatedList = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredList.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredList, currentPage]);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
 
   // Descarga en lote empaquetada en un solo archivo ZIP para soportar dispositivos móviles
   const handleDownloadAllFiles = async () => {
@@ -170,7 +193,7 @@ export default function ComprobantesHistorial({
                 </td>
               </tr>
             ) : (
-              filteredList.map((item) => (
+              paginatedList.map((item) => (
                 <tr key={item.id} className={styles.tr}>
                   <td className={styles.td}>
                     <span className="text-slate-100">{formatTijuanaDate(item.created_at)}</span>
@@ -239,6 +262,39 @@ export default function ComprobantesHistorial({
           </tbody>
         </table>
       </div>
+
+      {/* PAGINACIÓN */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-slate-800/80 px-6 py-4 bg-slate-950/60">
+          <button
+            type="button"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={`px-3 py-1.5 bg-slate-800 text-slate-200 border border-slate-700 rounded-lg text-xs font-bold transition-all ${
+              currentPage === 1
+                ? "opacity-30 cursor-not-allowed text-slate-500"
+                : "hover:bg-slate-700 hover:text-white cursor-pointer"
+            }`}
+          >
+            Anterior
+          </button>
+          <span className="text-slate-400 text-xs font-semibold">
+            Página {currentPage} de {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className={`px-3 py-1.5 bg-slate-800 text-slate-200 border border-slate-700 rounded-lg text-xs font-bold transition-all ${
+              currentPage === totalPages
+                ? "opacity-30 cursor-not-allowed text-slate-500"
+                : "hover:bg-slate-700 hover:text-white cursor-pointer"
+            }`}
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
     </div>
   );
 }
