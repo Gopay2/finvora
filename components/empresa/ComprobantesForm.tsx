@@ -411,11 +411,17 @@ export default function ComprobantesForm({
         <div className={styles.inputGroup}>
           <label className={styles.label}>Fecha del próximo pago</label>
           <div className="relative flex items-center">
-            <span className="absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base z-10">
+            <span
+              className="absolute text-slate-400 pointer-events-none material-symbols-outlined text-base z-10 leading-none"
+              style={{ left: "16px", top: "50%", transform: "translateY(-50%)" }}
+            >
               calendar_today
             </span>
             {!fechaProximoPago && (
-              <span className="absolute left-11 text-slate-500 text-sm pointer-events-none z-10 select-none">
+              <span
+                className="absolute text-slate-500 text-sm pointer-events-none z-10 select-none leading-none"
+                style={{ left: "44px", top: "50%", transform: "translateY(-50%)" }}
+              >
                 dd/mm/aaaa
               </span>
             )}
@@ -430,10 +436,10 @@ export default function ComprobantesForm({
                   e.currentTarget.showPicker();
                 } catch (error) {}
               }}
-              className={`w-full bg-slate-950/50 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
+              className={`w-full bg-slate-950/50 border border-slate-800 rounded-xl pr-4 py-3 text-sm focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
                 fechaProximoPago ? "text-slate-100" : "text-transparent"
               }`}
-              style={{ colorScheme: 'dark' }}
+              style={{ colorScheme: 'dark', paddingLeft: '44px' }}
               required
               suppressHydrationWarning
             />
