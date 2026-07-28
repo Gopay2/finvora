@@ -95,6 +95,7 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
         "Celular": item.celular || "",
         "Color": item.color_celular || "",
         "IMEI": item.imei || "",
+        "Fecha Próximo Pago": item.fecha_proximo_pago || "",
         "Precio Compra": item.precio_compra,
         "Pago Inicial": item.pago_inicial,
         "Pago Recibido": item.pago_recibido,

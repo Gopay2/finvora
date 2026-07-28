@@ -22,6 +22,7 @@ export interface ComprobanteRecord {
   celular: string | null;
   color_celular: string | null;
   imei: string | null;
+  fecha_proximo_pago?: string | null;
   comprobante_url: string;
   created_at: string;
   costo_equipo?: number;
@@ -66,6 +67,7 @@ interface ComprobanteRawResponse {
   celular: string | null;
   color_celular: string | null;
   imei: string | null;
+  fecha_proximo_pago?: string | null;
   comprobante_url: string;
   created_at: string;
   vendedor: PerfilSubQuery | PerfilSubQuery[] | null;
@@ -147,6 +149,7 @@ interface DiscordNotificationParams {
   celular: string | null;
   colorCelular: string | null;
   imei: string | null;
+  fechaProximoPago?: string | null;
   comentarios: string | null;
   comprobanteUrl: string;
   userRole: string;
@@ -186,33 +189,21 @@ async function sendDiscordNotification(params: DiscordNotificationParams) {
       : "Desconocido";
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://finvora.mx';
+    const cleanCelular = params.celular ? params.celular.replace(/ - \d+GB.*$/, "") : "";
+
     const fields = [
       { name: "👤 Cliente", value: `**${params.nombreCliente.trim()}**`, inline: false },
       { name: "👤 Vendedor", value: `**${vendedorName}**`, inline: false },
       { name: "👤 Repartidor/Cambaceador", value: `**${repartidorName}**`, inline: false },
+      { name: "📅 Fecha Próximo Pago", value: `**${params.fechaProximoPago}**`, inline: false },
       { name: "💵 Pago Recibido", value: `**$${params.pagoRecibido.toFixed(2)}**`, inline: false },
+      { name: "💵 Pago Semanal", value: `**$${(params.pagoSemanal ?? 0).toFixed(2)}**`, inline: false },
+      { name: "📅 Plazos", value: `**${params.plazos}**`, inline: false },
+      { name: "💰 Precio Total", value: `**$${(params.precioTotal ?? 0).toFixed(2)}**`, inline: false },
+      { name: "📱 Equipo", value: `**${cleanCelular}** ${params.colorCelular ? `(${params.colorCelular})` : ""}`, inline: false },
+      { name: "🏷️ Tag", value: `**${params.tag ? params.tag.trim() : ""}**`, inline: false },
+      { name: "🆔 IMEI", value: `\`${params.imei}\``, inline: false },
     ];
-
-    if (params.pagoSemanal !== undefined && params.pagoSemanal !== null && !isNaN(params.pagoSemanal)) {
-      fields.push({ name: "💵 Pago Semanal", value: `**$${params.pagoSemanal.toFixed(2)}**`, inline: false });
-    }
-    if (params.plazos) {
-      fields.push({ name: "📅 Plazos", value: `**${params.plazos}**`, inline: false });
-    }
-    if (params.precioTotal !== undefined && params.precioTotal !== null && !isNaN(params.precioTotal)) {
-      fields.push({ name: "💰 Precio Total", value: `**$${params.precioTotal.toFixed(2)}**`, inline: false });
-    }
-    if (params.tag && params.tag.trim()) {
-      fields.push({ name: "🏷️ Tag", value: `**${params.tag.trim()}**`, inline: false });
-    }
-
-    if (params.celular) {
-      const cleanCelular = params.celular.replace(/ - \d+GB.*$/, "");
-      fields.push({ name: "📱 Equipo", value: `**${cleanCelular}** ${params.colorCelular ? `(${params.colorCelular})` : ""}`, inline: false });
-    }
-    if (params.imei) {
-      fields.push({ name: "🆔 IMEI", value: `\`${params.imei}\``, inline: false });
-    }
 
     if (params.comentarios && params.comentarios.trim()) {
       fields.push({ name: "📝 Comentarios", value: params.comentarios.trim(), inline: false });
@@ -274,6 +265,7 @@ export async function submitComprobante(formData: FormData) {
   const celular = formData.get("celular") as string;
   const colorCelular = formData.get("color_celular") as string;
   const imei = formData.get("imei") as string;
+  const fechaProximoPagoRaw = formData.get("fecha_proximo_pago") as string | null;
   const file = formData.get("comprobante") as File | null;
 
   if (
@@ -287,6 +279,7 @@ export async function submitComprobante(formData: FormData) {
     !plazosRaw || !plazosRaw.trim() ||
     !precioTotalRaw || !precioTotalRaw.trim() ||
     !tagRaw || !tagRaw.trim() ||
+    !fechaProximoPagoRaw || !fechaProximoPagoRaw.trim() ||
     !file || file.size === 0
   ) {
     return { success: false, error: "Todos los campos son obligatorios y el comprobante." };
@@ -299,6 +292,7 @@ export async function submitComprobante(formData: FormData) {
   const precioTotal = parseFloat(precioTotalRaw.replace(',', '.'));
   const plazos = plazosRaw.trim();
   const tag = tagRaw.trim();
+  const fechaProximoPago = fechaProximoPagoRaw.trim();
 
   if (isNaN(precioCompra) || precioCompra < 0) {
     return { success: false, error: "El precio de compra debe ser un número válido mayor o igual a cero." };
@@ -344,6 +338,7 @@ export async function submitComprobante(formData: FormData) {
       celular: celular || null,
       color_celular: colorCelular || null,
       imei: imei || null,
+      fecha_proximo_pago: fechaProximoPago,
       comprobante_url: comprobanteUrl,
       creado_por: currentUserId
     }]);
@@ -387,6 +382,7 @@ export async function submitComprobante(formData: FormData) {
     celular,
     colorCelular,
     imei,
+    fechaProximoPago,
     comentarios,
     comprobanteUrl,
     userRole,
@@ -431,6 +427,7 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
       celular,
       color_celular,
       imei,
+      fecha_proximo_pago,
       comprobante_url,
       created_at,
       vendedor:perfiles!vendedor_id (id, username, role),
@@ -461,6 +458,7 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
     celular: comprobanteRaw.celular || null,
     color_celular: comprobanteRaw.color_celular || null,
     imei: comprobanteRaw.imei || null,
+    fecha_proximo_pago: comprobanteRaw.fecha_proximo_pago || null,
     comprobante_url: comprobanteRaw.comprobante_url,
     created_at: comprobanteRaw.created_at,
     vendedor: Array.isArray(comprobanteRaw.vendedor) ? comprobanteRaw.vendedor[0] : (comprobanteRaw.vendedor as PerfilSubQuery | null),
