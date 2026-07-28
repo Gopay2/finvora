@@ -42,6 +42,7 @@ export default function ComprobantesForm({
   const [selectedModelKey, setSelectedModelKey] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [selectedImei, setSelectedImei] = useState<string>("");
+  const [fechaProximoPago, setFechaProximoPago] = useState<string>("");
   const [selectedPlazo, setSelectedPlazo] = useState<string>("");
 
   // Estados para autocompletado de vendedores
@@ -211,6 +212,12 @@ export default function ComprobantesForm({
       return;
     }
 
+    if (!fechaProximoPago) {
+      setOperationStatus({ type: 'error', message: 'Por favor, selecciona la fecha del próximo pago.' });
+      setIsSubmitting(false);
+      return;
+    }
+
     if (!selectedPlazo) {
       setOperationStatus({ type: 'error', message: 'Por favor, selecciona un plazo.' });
       setIsSubmitting(false);
@@ -230,6 +237,7 @@ export default function ComprobantesForm({
       setSelectedModelKey("");
       setSelectedColor("");
       setSelectedImei("");
+      setFechaProximoPago("");
       setSelectedPlazo("");
 
       // Obtener la lista actualizada de forma instantánea sin refrescar página completa
@@ -399,6 +407,39 @@ export default function ComprobantesForm({
           <input type="hidden" name="imei" value={selectedImei} />
         </div>
 
+        {/* FECHA DEL PROXIMO PAGO */}
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>Fecha del próximo pago</label>
+          <div className="relative flex items-center">
+            <span className="absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base z-10">
+              calendar_today
+            </span>
+            {!fechaProximoPago && (
+              <span className="absolute left-11 text-slate-500 text-sm pointer-events-none z-10 select-none">
+                dd/mm/aaaa
+              </span>
+            )}
+            <input
+              type="date"
+              name="fecha_proximo_pago"
+              value={fechaProximoPago}
+              onChange={(e) => setFechaProximoPago(e.target.value)}
+              onKeyDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                try {
+                  e.currentTarget.showPicker();
+                } catch (error) {}
+              }}
+              className={`w-full bg-slate-950/50 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
+                fechaProximoPago ? "text-slate-100" : "text-transparent"
+              }`}
+              style={{ colorScheme: 'dark' }}
+              required
+              suppressHydrationWarning
+            />
+          </div>
+        </div>
+
         {/* PRECIO DE COMPRA */}
         <div className={styles.inputGroup}>
           <label className={styles.label}>Precio de Compra</label>
@@ -544,7 +585,7 @@ export default function ComprobantesForm({
         </div>
 
         {/* DOCUMENTO / FOTO */}
-        <div className={`${styles.inputGroup} md:col-span-2`}>
+        <div className={styles.inputGroup}>
           <label className={styles.label}>Comprobante (Imagen o PDF)</label>
           <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-secondary/40 rounded-xl px-4 bg-slate-950/20 transition-all group cursor-pointer h-[50px] select-none">
             <input
@@ -561,7 +602,7 @@ export default function ComprobantesForm({
                 cloud_upload
               </span>
               <p
-                className="text-xs text-slate-300 font-medium truncate max-w-[200px] sm:max-w-[300px] md:max-w-[400px]"
+                className="text-xs text-slate-300 font-medium truncate max-w-[150px] sm:max-w-[200px]"
                 title={selectedFileName || "Subir comprobante"}
               >
                 {selectedFileName ? selectedFileName : "Subir comprobante"}
