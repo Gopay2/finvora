@@ -98,6 +98,10 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
         "Precio Compra": item.precio_compra,
         "Pago Inicial": item.pago_inicial,
         "Pago Recibido": item.pago_recibido,
+        "Pago Semanal": item.pago_semanal ?? "",
+        "Plazos": item.plazos ?? "",
+        "Precio Total": item.precio_total ?? "",
+        "Tag": item.tag || "",
         "Cargado Por": item.creador?.username || "Desconocido",
         "URL Comprobante": item.comprobante_url
       }));

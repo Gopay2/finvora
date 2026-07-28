@@ -15,6 +15,10 @@ export interface ComprobanteRecord {
   precio_compra: number;
   pago_inicial: number;
   pago_recibido: number;
+  pago_semanal?: number | null;
+  plazos?: string | number | null;
+  precio_total?: number | null;
+  tag?: string | null;
   celular: string | null;
   color_celular: string | null;
   imei: string | null;
@@ -55,6 +59,10 @@ interface ComprobanteRawResponse {
   precio_compra: string | number;
   pago_inicial: string | number;
   pago_recibido: string | number;
+  pago_semanal?: string | number | null;
+  plazos?: string | number | null;
+  precio_total?: string | number | null;
+  tag?: string | null;
   celular: string | null;
   color_celular: string | null;
   imei: string | null;
@@ -132,6 +140,10 @@ interface DiscordNotificationParams {
   precioCompra: number;
   pagoInicial: number;
   pagoRecibido: number;
+  pagoSemanal?: number | null;
+  plazos?: string | null;
+  precioTotal?: number | null;
+  tag?: string | null;
   celular: string | null;
   colorCelular: string | null;
   imei: string | null;
@@ -178,8 +190,21 @@ async function sendDiscordNotification(params: DiscordNotificationParams) {
       { name: "👤 Cliente", value: `**${params.nombreCliente.trim()}**`, inline: false },
       { name: "👤 Vendedor", value: `**${vendedorName}**`, inline: false },
       { name: "👤 Repartidor/Cambaceador", value: `**${repartidorName}**`, inline: false },
-      { name: "💵 Pago Recibido", value: `**$${params.pagoRecibido.toFixed(2)}**`, inline: true },
+      { name: "💵 Pago Recibido", value: `**$${params.pagoRecibido.toFixed(2)}**`, inline: false },
     ];
+
+    if (params.pagoSemanal !== undefined && params.pagoSemanal !== null && !isNaN(params.pagoSemanal)) {
+      fields.push({ name: "💵 Pago Semanal", value: `**$${params.pagoSemanal.toFixed(2)}**`, inline: false });
+    }
+    if (params.plazos) {
+      fields.push({ name: "📅 Plazos", value: `**${params.plazos}**`, inline: false });
+    }
+    if (params.precioTotal !== undefined && params.precioTotal !== null && !isNaN(params.precioTotal)) {
+      fields.push({ name: "💰 Precio Total", value: `**$${params.precioTotal.toFixed(2)}**`, inline: false });
+    }
+    if (params.tag && params.tag.trim()) {
+      fields.push({ name: "🏷️ Tag", value: `**${params.tag.trim()}**`, inline: false });
+    }
 
     if (params.celular) {
       const cleanCelular = params.celular.replace(/ - \d+GB.*$/, "");
@@ -242,18 +267,38 @@ export async function submitComprobante(formData: FormData) {
   const precioCompraRaw = formData.get("precio_compra") as string;
   const pagoInicialRaw = formData.get("pago_inicial") as string;
   const pagoRecibidoRaw = formData.get("pago_recibido") as string;
+  const pagoSemanalRaw = formData.get("pago_semanal") as string | null;
+  const plazosRaw = formData.get("plazos") as string | null;
+  const precioTotalRaw = formData.get("precio_total") as string | null;
+  const tagRaw = formData.get("tag") as string | null;
   const celular = formData.get("celular") as string;
   const colorCelular = formData.get("color_celular") as string;
   const imei = formData.get("imei") as string;
   const file = formData.get("comprobante") as File | null;
 
-  if (!nombreCliente || !nombreCliente.trim() || !vendedorId || !repartidorId || !precioCompraRaw || !pagoInicialRaw || !pagoRecibidoRaw || !file || file.size === 0) {
-    return { success: false, error: "Todos los campos son obligatorios, incluyendo el comprobante." };
+  if (
+    !nombreCliente || !nombreCliente.trim() ||
+    !vendedorId ||
+    !repartidorId ||
+    !precioCompraRaw ||
+    !pagoInicialRaw ||
+    !pagoRecibidoRaw ||
+    !pagoSemanalRaw || !pagoSemanalRaw.trim() ||
+    !plazosRaw || !plazosRaw.trim() ||
+    !precioTotalRaw || !precioTotalRaw.trim() ||
+    !tagRaw || !tagRaw.trim() ||
+    !file || file.size === 0
+  ) {
+    return { success: false, error: "Todos los campos son obligatorios y el comprobante." };
   }
 
   const precioCompra = parseFloat(precioCompraRaw.replace(',', '.'));
   const pagoInicial = parseFloat(pagoInicialRaw.replace(',', '.'));
   const pagoRecibido = parseFloat(pagoRecibidoRaw.replace(',', '.'));
+  const pagoSemanal = parseFloat(pagoSemanalRaw.replace(',', '.'));
+  const precioTotal = parseFloat(precioTotalRaw.replace(',', '.'));
+  const plazos = plazosRaw.trim();
+  const tag = tagRaw.trim();
 
   if (isNaN(precioCompra) || precioCompra < 0) {
     return { success: false, error: "El precio de compra debe ser un número válido mayor o igual a cero." };
@@ -263,6 +308,12 @@ export async function submitComprobante(formData: FormData) {
   }
   if (isNaN(pagoRecibido) || pagoRecibido < 0) {
     return { success: false, error: "El pago recibido debe ser un número válido mayor o igual a cero." };
+  }
+  if (isNaN(pagoSemanal) || pagoSemanal < 0) {
+    return { success: false, error: "El pago semanal debe ser un número válido mayor o igual a cero." };
+  }
+  if (isNaN(precioTotal) || precioTotal < 0) {
+    return { success: false, error: "El precio total debe ser un número válido mayor o igual a cero." };
   }
 
   const supabase = await createClient();
@@ -286,6 +337,10 @@ export async function submitComprobante(formData: FormData) {
       precio_compra: precioCompra,
       pago_inicial: pagoInicial,
       pago_recibido: pagoRecibido,
+      pago_semanal: pagoSemanal,
+      plazos: plazos,
+      precio_total: precioTotal,
+      tag: tag,
       celular: celular || null,
       color_celular: colorCelular || null,
       imei: imei || null,
@@ -325,6 +380,10 @@ export async function submitComprobante(formData: FormData) {
     precioCompra,
     pagoInicial,
     pagoRecibido,
+    pagoSemanal,
+    plazos,
+    precioTotal,
+    tag,
     celular,
     colorCelular,
     imei,
@@ -365,6 +424,10 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
       precio_compra,
       pago_inicial,
       pago_recibido,
+      pago_semanal,
+      plazos,
+      precio_total,
+      tag,
       celular,
       color_celular,
       imei,
@@ -391,6 +454,10 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
     precio_compra: Number(comprobanteRaw.precio_compra),
     pago_inicial: Number(comprobanteRaw.pago_inicial),
     pago_recibido: Number(comprobanteRaw.pago_recibido),
+    pago_semanal: comprobanteRaw.pago_semanal != null ? Number(comprobanteRaw.pago_semanal) : null,
+    plazos: comprobanteRaw.plazos || null,
+    precio_total: comprobanteRaw.precio_total != null ? Number(comprobanteRaw.precio_total) : null,
+    tag: comprobanteRaw.tag || null,
     celular: comprobanteRaw.celular || null,
     color_celular: comprobanteRaw.color_celular || null,
     imei: comprobanteRaw.imei || null,
