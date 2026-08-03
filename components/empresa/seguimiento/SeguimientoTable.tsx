@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import type { SeguimientoPagoRecord, EstadoCuota } from '@/app/empresa/webapp/seguimiento-pagos/seguimiento-actions';
 import { ESTADOS_DISPONIBLES } from '@/constants/seguimiento-estados';
-import { calculateSaldoRestante, calculateSemanasTranscurridas, formatFechaDDMMYYYY } from '@/utils/date-tijuana';
+import { calculateSaldoRestante, calculateSemanasTranscurridas, formatFechaDDMMYYYY, addWeeksToDate } from '@/utils/date-tijuana';
 
 interface SeguimientoTableProps {
   paginatedData: SeguimientoPagoRecord[];
@@ -101,6 +101,9 @@ export function SeguimientoTable({
 
                 const totalSemanas = item.plazos || 0;
                 const semanaActualIndice = calculateSemanasTranscurridas(item.fecha_proximo_pago, totalSemanas);
+                const fechaProximoPagoDinamica = item.fecha_proximo_pago
+                  ? addWeeksToDate(item.fecha_proximo_pago, Math.max(0, (semanaActualIndice || 1) - 1))
+                  : null;
                 const semanaKey = `semana_${semanaActualIndice || 1}`;
                 const estadoActualSemana: EstadoCuota = (item.estados_semanales?.[semanaKey] as EstadoCuota) || 'En revisión';
                 const estadoConfig = ESTADOS_DISPONIBLES.find(e => e.value === estadoActualSemana) || ESTADOS_DISPONIBLES[0];
@@ -160,9 +163,9 @@ export function SeguimientoTable({
 
                     {/* Próximo Pago */}
                     <td className="px-4 py-4 whitespace-nowrap text-center">
-                      {item.fecha_proximo_pago ? (
+                      {fechaProximoPagoDinamica ? (
                         <span className="text-xs sm:text-sm font-semibold text-slate-300">
-                          {formatFechaDDMMYYYY(item.fecha_proximo_pago)}
+                          {formatFechaDDMMYYYY(fechaProximoPagoDinamica)}
                         </span>
                       ) : (
                         <span className="inline-block px-2 py-0.5 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">

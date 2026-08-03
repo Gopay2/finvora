@@ -104,24 +104,40 @@ export function isFechaEnSemanaActual(fechaStr: string | null | undefined): bool
 }
 
 /**
- * Calcula las semanas transcurridas entre la fecha de próximo pago y el día de hoy en Tijuana.
- * Si hoy es anterior a fecha_proximo_pago, retorna 0 (aún no vence la 1ra semana).
- * Si hoy es igual o posterior, la semana 1 arranca en fecha_proximo_pago.
+ * Obtiene la fecha Date (UTC) correspondiente al Lunes de la semana calendario que contiene a `dateStr` (YYYY-MM-DD).
+ */
+export function getMondayOfDate(dateStr: string): Date {
+  const clean = dateStr.split('T')[0];
+  const date = parseDateUTC(clean);
+  const dayOfWeek = date.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  date.setUTCDate(date.getUTCDate() + diffToMonday);
+  return date;
+}
+
+/**
+ * Calcula el número de la semana actual correspondiente a un crédito tomando como referencia
+ * la zona horaria Tijuana y semanas calendario (Lunes a Domingo).
+ * 
+ * - Si el día de hoy cae dentro de la misma semana calendario (Lunes a Domingo) que la fecha_proximo_pago inicial (o antes), retorna 1.
+ * - Si transcurren semanas calendario posteriores, incrementa (2, 3, etc.).
  */
 export function calculateSemanasTranscurridas(
   fechaProximoPagoStr: string | null | undefined,
   maxPlazos: number | null | undefined
 ): number {
-  if (!fechaProximoPagoStr) return 0;
-  
+  if (!fechaProximoPagoStr) return 1;
+
   const todayStr = getTijuanaTodayString();
-  if (todayStr < fechaProximoPagoStr) return 0;
+  const mondayToday = getMondayOfDate(todayStr);
+  const mondayInicio = getMondayOfDate(fechaProximoPagoStr);
 
-  const today = parseDateUTC(todayStr);
-  const inicio = parseDateUTC(fechaProximoPagoStr);
+  if (mondayToday.getTime() <= mondayInicio.getTime()) {
+    return 1;
+  }
 
-  const diffTime = today.getTime() - inicio.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
+  const diffTime = mondayToday.getTime() - mondayInicio.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 3600 * 24));
   
   const semanas = Math.floor(diffDays / 7) + 1;
 
