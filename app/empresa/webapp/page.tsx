@@ -121,7 +121,7 @@ export default function WebAppPage() {
         </div>
         <div>
           <h2 className={styles.cardTitle}>Seguimiento de Pagos</h2>
-          <p className={styles.cardDesc}>Control de saldos restantes y cuotas semanales cliente por cliente.</p>
+          <p className={styles.cardDesc}>Control de saldos restantes y cuotas semanales de los clientes.</p>
         </div>
         <div className={styles.cardButton}>Acceder</div>
       </Link>
