@@ -2,8 +2,9 @@
 
 import React from "react";
 import * as XLSX from "xlsx";
+import { calculateSaldoRestante, calculateSemanasTranscurridas, formatFechaDDMMYYYY } from "@/utils/date-tijuana";
 
-type DownloadPreset = 'stock' | 'ventas' | 'comprobantes' | 'ordenes_entrega' | 'garantias' | 'ordenes_garantia';
+type DownloadPreset = 'stock' | 'ventas' | 'comprobantes' | 'ordenes_entrega' | 'garantias' | 'ordenes_garantia' | 'seguimiento_pagos';
 
 interface RepartidorOption {
   id: string;
@@ -14,9 +15,11 @@ interface DownloadExcelButtonProps {
   data: any[];
   type: DownloadPreset;
   repartidores?: RepartidorOption[];
+  label?: string;
+  className?: string;
 }
 
-export default function DownloadExcelButton({ data, type, repartidores }: DownloadExcelButtonProps) {
+export default function DownloadExcelButton({ data, type, repartidores, label, className }: DownloadExcelButtonProps) {
 
   const downloadExcel = () => {
     if (!data || data.length === 0) return;
@@ -25,12 +28,10 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
     let fileNamePrefix = "Data";
     let sheetName = "Hoja 1";
 
-    // Centralizamos aquí las "recetas" de transformación
     if (type === 'stock') {
       fileNamePrefix = "Stock";
       sheetName = "Stock";
       worksheetData = data.map(stockItem => {
-        // Mapear el UUID zona al nombre del repartidor
         const nombreUbicacion = repartidores
           ? (repartidores.find(repartidor => repartidor.id === stockItem.zona)?.nombre || "Sin Asignar")
           : (stockItem.zona || "Sin Asignar");
@@ -81,7 +82,7 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
             second: '2-digit',
             hour12: false
           }).format(new Date(dateStr));
-        } catch (e) {
+        } catch {
           return dateStr;
         }
       };
@@ -175,8 +176,42 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
         "Observaciones": orden.observaciones || ""
       }));
     }
+    else if (type === 'seguimiento_pagos') {
+      fileNamePrefix = "Seguimiento_Pagos";
+      sheetName = "Seguimiento de Pagos";
+      worksheetData = data.map(item => {
+        const totalSemanas = item.plazos || 0;
+        const semanaActualIndice = calculateSemanasTranscurridas(item.fecha_proximo_pago, totalSemanas);
+        const semanaKey = `semana_${semanaActualIndice || 1}`;
+        const estadoActual = item.estados_semanales?.[semanaKey] || 'En revisión';
+        const saldoRestante = calculateSaldoRestante(
+          item.precio_total,
+          item.pago_inicial,
+          item.pago_semanal,
+          item.fecha_proximo_pago,
+          item.plazos
+        );
 
-    // Proceso de generación de Excel
+        return {
+          "Cliente": item.nombre_cliente || "",
+          "Celular": item.celular || "—",
+          "Color": item.color_celular || "—",
+          "IMEI": item.imei || "—",
+          "Vendedor": item.vendedor?.username || "—",
+          "Repartidor": item.repartidor?.nombre || "—",
+          "Tag": item.tag || "",
+          "Próximo Pago": item.fecha_proximo_pago ? formatFechaDDMMYYYY(item.fecha_proximo_pago) : "Sin fecha",
+          "Saldo Restante": saldoRestante,
+          "Semana Actual": semanaActualIndice ? `Semana ${semanaActualIndice} de ${totalSemanas}` : "",
+          "Estado Semana": estadoActual,
+          "Pago Semanal": item.pago_semanal || 0,
+          "Precio Total": item.precio_total || 0,
+          "Pago Inicial": item.pago_inicial || 0,
+          "Plazos": item.plazos || 0
+        };
+      });
+    }
+
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
@@ -185,28 +220,31 @@ export default function DownloadExcelButton({ data, type, repartidores }: Downlo
     XLSX.writeFile(workbook, fileName);
   };
 
-  const titles = {
+  const titles: Record<DownloadPreset, string> = {
     stock: "Descargar Stock en Excel",
     ventas: "Descargar Historial de Ventas",
     comprobantes: "Descargar Comprobantes en Excel",
     ordenes_entrega: "Descargar Órdenes de Entrega en Excel",
     garantias: "Descargar Historial de Garantías en Excel",
-    ordenes_garantia: "Descargar Órdenes de Garantía en Excel"
+    ordenes_garantia: "Descargar Órdenes de Garantía en Excel",
+    seguimiento_pagos: "Descargar Seguimiento de Pagos en Excel"
   };
 
   const isDisabled = !data || data.length === 0;
+
+  const defaultClassName = `flex items-center justify-center px-3 md:px-4 py-2 md:py-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl transition-all ${
+    isDisabled ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-700 hover:text-white cursor-pointer"
+  }`;
 
   return (
     <button
       onClick={downloadExcel}
       disabled={isDisabled}
-      className={`flex items-center justify-center px-3 md:px-4 py-2 md:py-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl transition-all ${isDisabled
-        ? "opacity-40 cursor-not-allowed"
-        : "hover:bg-slate-700 hover:text-white cursor-pointer"
-        }`}
+      className={className || defaultClassName}
       title={titles[type]}
     >
-      <span className="material-symbols-outlined text-base md:text-xl">download</span>
+      <span className="material-symbols-outlined text-base md:text-xl shrink-0">download</span>
+      {label && <span className="text-xs md:text-sm font-semibold">{label}</span>}
     </button>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import type { OptionItem } from "./comprobantes-types";
-import { styles } from "./comprobantes-types";
+import { DateRangeFilter } from "./filtros/DateRangeFilter";
 
 interface FiltrosHistorialProps {
   vendedores: OptionItem[];
@@ -38,7 +38,6 @@ export default function FiltrosHistorial({
     filterVendedorRefState.current = filterVendedor;
   }, [filterVendedor]);
 
-  // Propagar filtros al padre cuando cambian
   useEffect(() => {
     onFilterChange({
       dateFrom,
@@ -48,7 +47,6 @@ export default function FiltrosHistorial({
     });
   }, [dateFrom, dateTo, filterVendedor, filterRepartidor, onFilterChange]);
 
-  // Cerrar sugerencias al hacer clic fuera
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (filterVendedorRef.current && !filterVendedorRef.current.contains(event.target as Node)) {
@@ -83,62 +81,15 @@ export default function FiltrosHistorial({
 
   return (
     <div className="bg-slate-900/50 p-6 border-b border-slate-800/60 flex flex-col gap-4 text-sm">
-      {/* Fila 1: Fechas */}
+      {/* Fila 1: Fechas con DateRangeFilter */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-slate-400 text-base">calendar_month</span>
-            <span className="text-slate-300 font-semibold text-sm">Fechas:</span>
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <label className="text-xs sm:text-sm text-slate-400 font-semibold min-w-[85px] sm:min-w-0 shrink-0">Desde:</label>
-            <div className="relative flex items-center flex-1 sm:flex-initial">
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(event) => setDateFrom(event.target.value)}
-                onKeyDown={(event) => event.preventDefault()}
-                onClick={(event) => {
-                  try {
-                    event.currentTarget.showPicker();
-                  } catch (error) { }
-                }}
-                className={`${styles.dateInput} ${dateFrom ? "text-slate-200" : "text-transparent"}`}
-                style={{ colorScheme: 'dark' }}
-                suppressHydrationWarning
-              />
-              {!dateFrom && (
-                <span className="absolute inset-0 flex items-center justify-center text-xs text-slate-500 pointer-events-none">
-                  dd/mm/aaaa
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <label className="text-xs sm:text-sm text-slate-400 font-semibold min-w-[85px] sm:min-w-0 shrink-0">Hasta:</label>
-            <div className="relative flex items-center flex-1 sm:flex-initial">
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(event) => setDateTo(event.target.value)}
-                onKeyDown={(event) => event.preventDefault()}
-                onClick={(event) => {
-                  try {
-                    event.currentTarget.showPicker();
-                  } catch (error) { }
-                }}
-                className={`${styles.dateInput} ${dateTo ? "text-slate-200" : "text-transparent"}`}
-                style={{ colorScheme: 'dark' }}
-                suppressHydrationWarning
-              />
-              {!dateTo && (
-                <span className="absolute inset-0 flex items-center justify-center text-xs text-slate-500 pointer-events-none">
-                  dd/mm/aaaa
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+        <DateRangeFilter
+          dateFrom={dateFrom}
+          setDateFrom={setDateFrom}
+          dateTo={dateTo}
+          setDateTo={setDateTo}
+          label="Fechas:"
+        />
       </div>
 
       {/* Fila 2: Vendedor y Repartidor/Ubicación */}

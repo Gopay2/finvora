@@ -1,57 +1,21 @@
 'use client';
 
-// 1. React & Next.js Core
 import React, { useState, useRef, useMemo, useEffect } from "react";
-
-// 2. Server Actions & Services
 import { submitOrdenEntrega } from "@/app/empresa/webapp/ordenes-entrega/actions";
 import { getDriverRestDayInfo } from "@/utils/driver-schedule";
+import type {
+  Producto,
+  RepartoZonaInfo,
+  StockItem,
+  CostoItem,
+  ConfigEngancheItem,
+  RepartoExistente
+} from "@/types/ordenes-entrega";
+import { FormDatosCliente } from "./ordenes-entrega/FormDatosCliente";
+import { FormSeleccionEquipo } from "./ordenes-entrega/FormSeleccionEquipo";
+import { FormProgramacionEntrega } from "./ordenes-entrega/FormProgramacionEntrega";
 
-interface Producto {
-  id: string;
-  marca: string;
-  modelo: string;
-  almacenamiento: string;
-  ram: string;
-  color: string;
-}
-
-interface ProductoConStock extends Producto {
-  cantidadStock: number;
-}
-
-interface RepartoZonaInfo {
-  id: string;
-  nombre_zona: string;
-  repartidor_id: string;
-  repartidor_nombre: string;
-  repartidor_activo: boolean;
-  repartidor_zona_horaria?: string;
-}
-
-interface StockItem {
-  producto_id: string;
-  estado: string;
-  zona: string | null;
-  imei?: string;
-}
-
-interface CostoItem {
-  producto_id: string;
-  costo: number | string;
-}
-
-interface ConfigEngancheItem {
-  cliente_historial: string;
-  porcentajes: number[];
-}
-
-interface RepartoExistente {
-  id?: string;
-  repartidor_id?: string | null;
-  fecha_reparto?: string | null;
-  horario?: string | null;
-}
+export type { Producto, RepartoZonaInfo, StockItem, CostoItem, ConfigEngancheItem, RepartoExistente };
 
 interface OrdenesEntregaFormProps {
   productos: Producto[];
@@ -64,23 +28,11 @@ interface OrdenesEntregaFormProps {
 
 const styles = {
   formCard: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl space-y-6",
-  inputGroup: "space-y-2",
-  inputGroupFull: "space-y-2 md:col-span-2",
-  label: "text-sm font-medium text-slate-300 ml-1",
-  input: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed",
-  selectInput: "w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed appearance-none cursor-pointer",
-  engancheInput: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed pl-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-  pickerInput: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed pl-10 [color-scheme:dark] cursor-pointer [&::-webkit-calendar-picker-indicator]:hidden",
-  textarea: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed min-h-[100px] resize-none",
   button: "w-full bg-secondary text-slate-950 font-bold py-4 rounded-xl hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/20 cursor-pointer flex items-center justify-center gap-2",
   buttonDisabled: "w-full bg-secondary text-slate-950 font-bold py-4 rounded-xl hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/20 cursor-not-allowed flex items-center justify-center gap-2 opacity-70",
   statusSuccess: "p-4 rounded-xl text-sm font-medium flex items-center gap-3 animate-peek bg-green-500/10 text-green-400 border border-green-500/20",
   statusError: "p-4 rounded-xl text-sm font-medium flex items-center gap-3 animate-peek bg-red-500/10 text-red-400 border border-red-500/20",
   formGrid: "grid grid-cols-1 md:grid-cols-2 gap-6",
-  relativeInputContainer: "relative flex items-center",
-  enganchePrefix: "absolute left-4 text-slate-400 pointer-events-none",
-  pickerIcon: "absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base",
-  warningBanner: "md:col-span-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 p-4 rounded-xl text-sm font-medium flex flex-col lg:flex-row items-center justify-between gap-3 text-center"
 };
 
 /**
@@ -185,7 +137,6 @@ export default function OrdenesEntregaForm({
   const [clienteHistorial, setClienteHistorial] = useState("");
   const [engancheValue, setEngancheValue] = useState("");
 
-  // 1.1. Obtener el costo del IMEI seleccionado
   const selectedProductCost = useMemo(() => {
     if (!selectedImei) return 0;
     const stockItem = stockItems.find((s) => s.imei === selectedImei);
@@ -194,7 +145,6 @@ export default function OrdenesEntregaForm({
     return costoRecord ? Number(costoRecord.costo) : 0;
   }, [selectedImei, stockItems, costos]);
 
-  // 1.2. Obtener los porcentajes de enganche habilitados según el historial
   const enganchePorcentajes = useMemo(() => {
     if (!clienteHistorial) return [];
     const config = configEnganches.find(
@@ -203,7 +153,7 @@ export default function OrdenesEntregaForm({
     return config ? config.porcentajes : [];
   }, [clienteHistorial, configEnganches]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setIsMounted(true);
     if (typeof window !== "undefined") {
       const ua = window.navigator.userAgent;
@@ -224,17 +174,14 @@ export default function OrdenesEntregaForm({
     }
   };
 
-  /** 1. Filtra los items de stock físico asignados al repartidor seleccionado */
   const stockFiltrado = useMemo(() => {
     if (!selectedRepartidorId) return [];
     return stockItems.filter(stockItem => stockItem.zona === selectedRepartidorId);
   }, [selectedRepartidorId, stockItems]);
 
-  /** 2. Mapea los productos del catálogo calculando existencias 'Disponible' y 'A consultar' */
   const productosConStock = useMemo(() => {
     if (!selectedRepartidorId) return [];
     
-    // Obtenemos los IDs de productos del catálogo que tienen stock físico con el repartidor
     const idsConStock = new Set(stockFiltrado.map(stockItem => stockItem.producto_id));
 
     return productos
@@ -251,14 +198,12 @@ export default function OrdenesEntregaForm({
           cantidadStock: cantidadDisponible + cantidadAConsultar
         };
       })
-      .filter(producto => producto.cantidadStock > 0); // Nos aseguramos de que solo pasen productos con stock positivo
+      .filter(producto => producto.cantidadStock > 0);
   }, [selectedRepartidorId, productos, stockFiltrado]);
 
-  /** 3. Agrupa modelos y variantes únicas a partir de los productos con existencia física */
   const modelosUnicos = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, any>();
     productosConStock.forEach(producto => {
-      // Formato: MARCA MODELO - 256GB - 8GB
       const display = `${producto.marca} ${producto.modelo} - ${producto.almacenamiento} - ${producto.ram}`;
       const existing = map.get(display);
       
@@ -280,7 +225,6 @@ export default function OrdenesEntregaForm({
     return Array.from(map.entries());
   }, [productosConStock]);
 
-  // 4. Colores disponibles para el modelo seleccionado de los productos con stock
   const variantesColor = useMemo(() => {
     if (!selectedModelKey) return [];
     return productosConStock
@@ -293,7 +237,6 @@ export default function OrdenesEntregaForm({
       }));
   }, [selectedModelKey, productosConStock]);
 
-  /** 4.5. Filtra los IMEIs disponibles en stock físico para el modelo y color seleccionados */
   const imeisDisponibles = useMemo(() => {
     if (!selectedModelKey || !selectedColor) return [];
     const matchingProducts = productosConStock.filter(
@@ -305,7 +248,6 @@ export default function OrdenesEntregaForm({
     );
   }, [selectedModelKey, selectedColor, productosConStock, stockFiltrado]);
 
-  // 5. Zonas únicas configuradas
   const zonasUnicas = useMemo(() => {
     const set = new Set<string>();
     (zonasReparto || []).forEach(zonaInfo => {
@@ -316,7 +258,6 @@ export default function OrdenesEntregaForm({
     return Array.from(set).sort();
   }, [zonasReparto]);
 
-  // 6. Repartidores válidos según la zona seleccionada (excluyendo cambaceadores y almacenamiento)
   const repartidoresValidos = useMemo(() => {
     if (!selectedZona) return [];
     const map = new Map<string, string>();
@@ -439,13 +380,6 @@ export default function OrdenesEntregaForm({
     }
   };
 
-  /**
-   * Procesa el envío del formulario de Orden de Entrega.
-   * Compila los datos seleccionados, invoca la Server Action submitOrdenEntrega
-   * y gestiona el reseteo de estados e indicadores de notificación.
-   * 
-   * @param event Evento de submit del formulario HTML
-   */
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
@@ -459,12 +393,10 @@ export default function OrdenesEntregaForm({
     }
     formData.set("color_celular", selectedColor);
 
-    // Enviar formulario a la Server Action
     const result = await submitOrdenEntrega(formData);
 
     if (result.success) {
       setStatus({ type: 'success', message: `¡Orden de Entrega ${result.folio || ''} registrada y enviada a Discord!` });
-      // Resetear campos del formulario y estados de selección
       formRef.current?.reset();
       setSelectedFileName("");
       setSelectedModelKey("");
@@ -494,451 +426,55 @@ export default function OrdenesEntregaForm({
       )}
 
       <div className={styles.formGrid}>
-        <div className={styles.inputGroupFull}>
-          <label className={styles.label}>Nombre de cliente</label>
-          <input type="text" name="nombre_cliente" className={styles.input} required placeholder="Nombre completo" suppressHydrationWarning />
-        </div>
+        {/* 1. Datos del cliente */}
+        <FormDatosCliente />
 
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>¿Cuenta con Identificación?</label>
-          <select
-            name="identificacion_fisica"
-            className={styles.selectInput}
-            style={{ colorScheme: 'dark' }}
-            required
-            suppressHydrationWarning
-          >
-            <option value="Si" className="bg-slate-950 text-white">Sí cuenta con INE/Residencia</option>
-            <option value="No" className="bg-slate-950 text-white">No cuenta con INE/Residencia</option>
-          </select>
-        </div>
+        {/* 2. Selección de equipo y stock */}
+        <FormSeleccionEquipo
+          selectedZona={selectedZona}
+          handleZonaChange={handleZonaChange}
+          zonasUnicas={zonasUnicas}
+          selectedRepartidorId={selectedRepartidorId}
+          handleRepartidorChange={handleRepartidorChange}
+          repartidoresValidos={repartidoresValidos}
+          selectedRepartidorName={selectedRepartidorName}
+          selectedModelKey={selectedModelKey}
+          handleModelChange={handleModelChange}
+          modelosUnicos={modelosUnicos}
+          selectedColor={selectedColor}
+          setSelectedColor={setSelectedColor}
+          variantesColor={variantesColor}
+          selectedImei={selectedImei}
+          setSelectedImei={setSelectedImei}
+          imeisDisponibles={imeisDisponibles}
+          clienteHistorial={clienteHistorial}
+          setClienteHistorial={setClienteHistorial}
+          selectedProductCost={selectedProductCost}
+          engancheValue={engancheValue}
+          setEngancheValue={setEngancheValue}
+          enganchePorcentajes={enganchePorcentajes}
+        />
 
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>CURP</label>
-          <input
-            type="text"
-            name="curp"
-            className={styles.input}
-            required
-            placeholder="Ingrese los 18 caracteres de la CURP"
-            suppressHydrationWarning
-          />
-        </div>
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Número de teléfono</label>
-          <input type="tel" name="telefono" className={styles.input} required placeholder="Ej: 5212345678900" suppressHydrationWarning />
-        </div>
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Dirección</label>
-          <input type="text" name="direccion" className={styles.input} required placeholder="Enlace Google Maps" suppressHydrationWarning />
-        </div>
-
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>¿Cuenta activa?</label>
-          <select
-            name="cuenta_activa"
-            className={styles.selectInput}
-            style={{ colorScheme: 'dark' }}
-            required
-            defaultValue="si"
-            suppressHydrationWarning
-          >
-            <option value="si" className="bg-slate-950 text-white">Sí</option>
-            <option value="no" className="bg-slate-950 text-white">No</option>
-          </select>
-        </div>
-
-        {/* SELECTOR DE ZONA */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Zona de reparto</label>
-          <select
-            name="zona"
-            value={selectedZona}
-            className={styles.selectInput}
-            style={{ colorScheme: 'dark' }}
-            required
-            onChange={handleZonaChange}
-            suppressHydrationWarning
-          >
-            <option value="" className="bg-slate-950 text-slate-500 italic">Seleccione una zona...</option>
-            {zonasUnicas.map((zona) => (
-              <option key={zona} value={zona} className="bg-slate-950 text-white">
-                {zona}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* SELECTOR DE REPARTIDOR */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Repartidor</label>
-          <select
-            name="repartidor_id"
-            value={selectedRepartidorId}
-            className={styles.selectInput}
-            style={{ colorScheme: 'dark' }}
-            required
-            disabled={!selectedZona}
-            onChange={handleRepartidorChange}
-            suppressHydrationWarning
-          >
-            <option value="" className="bg-slate-950 text-slate-500 italic">
-              {!selectedZona ? "Primero elija una zona" : "Seleccione un repartidor..."}
-            </option>
-            {repartidoresValidos.map((repartidorItem) => (
-              <option key={repartidorItem.id} value={repartidorItem.id} className="bg-slate-950 text-white">
-                {repartidorItem.nombre}
-              </option>
-            ))}
-          </select>
-          <input 
-            type="hidden" 
-            name="repartidor" 
-            value={repartidoresValidos.find(repartidor => repartidor.id === selectedRepartidorId)?.nombre || ""} 
-            suppressHydrationWarning
-          />
-        </div>
-
-        {/* ESPECIFICAR LOCAL (Solo si se selecciona "Local CT") */}
-        {selectedRepartidorName === "Local CT" && (
-          <div className={styles.inputGroup}>
-            <label className={styles.label}>Especificar local</label>
-            <select
-              name="especificar_local"
-              className={styles.selectInput}
-              style={{ colorScheme: 'dark' }}
-              required
-              suppressHydrationWarning
-            >
-              <option value="" className="bg-slate-950 text-slate-500 italic">Seleccione un local...</option>
-              <option value="Península" className="bg-slate-950 text-white">Península</option>
-              <option value="Landmark" className="bg-slate-950 text-white">Landmark</option>
-              <option value="Río" className="bg-slate-950 text-white">Río</option>
-              <option value="Tecnología" className="bg-slate-950 text-white">Tecnología</option>
-              <option value="Brisas" className="bg-slate-950 text-white">Brisas</option>
-              <option value="Carpas carrusel" className="bg-slate-950 text-white">Carpas carrusel</option>
-              <option value="Plaza carrusel" className="bg-slate-950 text-white">Plaza carrusel</option>
-            </select>
-          </div>
-        )}
-
-        {/* SELECTOR DE MODELO CON NUEVO FORMATO */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Modelo de Celular</label>
-          <select
-            value={selectedModelKey}
-            className={styles.selectInput}
-            style={{ colorScheme: 'dark' }}
-            required
-            disabled={!selectedRepartidorId}
-            onChange={handleModelChange}
-            suppressHydrationWarning
-          >
-            <option value="" className="bg-slate-950 text-slate-500 italic">
-              {!selectedRepartidorId ? "Primero elija un repartidor..." : "Seleccione un modelo..."}
-            </option>
-            {modelosUnicos.map(([key, info]) => {
-              const isAConsultar = info.totalDisponible === 0 && info.totalAConsultar > 0;
-              return (
-                <option 
-                  key={key} 
-                  value={key} 
-                  className={isAConsultar ? "text-slate-500 bg-slate-950 italic" : "text-white bg-slate-950"}
-                  disabled={isAConsultar}
-                >
-                  {isAConsultar 
-                    ? `${info.display} (A consultar)` 
-                    : `${info.display} (${info.totalDisponible} disponible${info.totalDisponible > 1 ? "s" : ""})`
-                  }
-                </option>
-              );
-            })}
-          </select>
-        </div>
-
-        {/* SELECTOR DE COLOR */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Color disponible</label>
-          <select
-            name="color_celular_select"
-            value={selectedColor}
-            className={styles.selectInput}
-            style={{ colorScheme: 'dark' }}
-            required
-            disabled={!selectedModelKey}
-            onChange={(event) => {
-              setSelectedColor(event.target.value);
-              setSelectedImei("");
-            }}
-            suppressHydrationWarning
-          >
-            <option value="" className="bg-slate-950 text-slate-500 italic">
-              {!selectedModelKey ? "Primero elija un modelo" : "Seleccione un color..."}
-            </option>
-            {variantesColor.map((varianteItem) => {
-              const isAConsultar = varianteItem.cantidadDisponible === 0 && varianteItem.cantidadAConsultar > 0;
-              return (
-                <option 
-                  key={varianteItem.color} 
-                  value={varianteItem.color} 
-                  className={isAConsultar ? "text-slate-500 bg-slate-950 italic" : "text-white bg-slate-950"}
-                  disabled={isAConsultar}
-                >
-                  {isAConsultar ? `${varianteItem.color} (A consultar)` : varianteItem.color}
-                </option>
-              );
-            })}
-          </select>
-          <input type="hidden" name="celular" value={selectedModelKey} suppressHydrationWarning />
-          <input type="hidden" name="color_celular" value={selectedColor} suppressHydrationWarning />
-        </div>
-
-        {/* SELECTOR DE IMEI */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>IMEI</label>
-          <select
-            name="imei"
-            value={selectedImei}
-            className={styles.selectInput}
-            style={{ colorScheme: 'dark' }}
-            required
-            disabled={!selectedColor}
-            onChange={(event) => {
-              setSelectedImei(event.target.value);
-              setEngancheValue(""); // Reset down payment on IMEI change
-            }}
-            suppressHydrationWarning
-          >
-            <option value="" className="bg-slate-950 text-slate-500 italic">
-              {!selectedColor ? "Primero elija un color" : "Seleccione un IMEI..."}
-            </option>
-            {imeisDisponibles.map((item) => (
-              <option key={item.imei} value={item.imei} className="bg-slate-950 text-white">
-                {item.imei}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>¿Cliente con historial?</label>
-          <select
-            name="cliente_historial"
-            value={clienteHistorial}
-            className={styles.selectInput}
-            style={{ colorScheme: 'dark' }}
-            required
-            disabled={!selectedImei}
-            onChange={(event) => {
-              setClienteHistorial(event.target.value);
-              setEngancheValue(""); // Reset enganche if history changes
-            }}
-            suppressHydrationWarning
-          >
-            <option value="" className="bg-slate-950 text-slate-500 italic">
-              {!selectedImei ? "Primero elija un IMEI..." : "Seleccione..."}
-            </option>
-            <option value="Si" className="bg-slate-950 text-white">Sí</option>
-            <option value="No" className="bg-slate-950 text-white">No</option>
-          </select>
-        </div>
-
-        {selectedProductCost > 0 ? (
-          <div className={styles.inputGroup}>
-            <label className={styles.label}>Enganche</label>
-            <select
-              name="enganche"
-              value={engancheValue}
-              className={styles.selectInput}
-              style={{ colorScheme: 'dark' }}
-              required
-              disabled={!clienteHistorial}
-              onChange={(event) => setEngancheValue(event.target.value)}
-              suppressHydrationWarning
-            >
-              <option value="" className="bg-slate-950 text-slate-500 italic">
-                {!clienteHistorial ? "Primero elija historial" : "Seleccione..."}
-              </option>
-              {enganchePorcentajes.map((porcentajeValue) => {
-                const valorCalculado = (selectedProductCost * (porcentajeValue / 100)).toFixed(2);
-                return (
-                  <option key={porcentajeValue} value={valorCalculado} className="bg-slate-950 text-white">
-                    ${valorCalculado} ({porcentajeValue}%)
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-        ) : (
-          <div className={styles.inputGroup}>
-            <label className={styles.label}>Enganche</label>
-            <div className={styles.relativeInputContainer}>
-              <span className={styles.enganchePrefix}>$</span>
-              <input
-                type="number"
-                name="enganche"
-                value={engancheValue}
-                onChange={(event) => setEngancheValue(event.target.value)}
-                className={styles.engancheInput}
-                required
-                min="0"
-                placeholder={!clienteHistorial ? "Primero elija historial" : "0.00"}
-                disabled={!clienteHistorial}
-                suppressHydrationWarning
-              />
-            </div>
-          </div>
-        )}
-
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Fecha de entrega</label>
-          <div className={styles.relativeInputContainer}>
-            <span className={styles.pickerIcon}>calendar_today</span>
-            <input
-              type="date"
-              name="fecha_entrega"
-              value={fechaEntrega}
-              onChange={(event) => {
-                setFechaEntrega(event.target.value);
-                setHoraEntrega("");
-              }}
-              className={styles.pickerInput}
-              style={{ paddingLeft: "40px" }}
-              required
-              onClick={handleOpenPicker}
-              suppressHydrationWarning
-            />
-            {!fechaEntrega && isIOS && (
-              <span
-                className="absolute text-slate-500 text-base pointer-events-none select-none"
-                style={{ left: "40px" }}
-              >
-                dd/mm/aaaa
-              </span>
-            )}
-          </div>
-        </div>
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Hora de entrega</label>
-          <div className={styles.relativeInputContainer}>
-            <span className={styles.pickerIcon}>schedule</span>
-            <select
-              name="hora_entrega"
-              value={horaEntrega}
-              onChange={(event) => setHoraEntrega(event.target.value)}
-              className={styles.selectInput}
-              style={{ paddingLeft: "40px", colorScheme: 'dark' }}
-              required
-              disabled={!fechaEntrega}
-              suppressHydrationWarning
-            >
-              {!fechaEntrega ? (
-                <option value="" className="bg-slate-950 text-slate-500 italic">
-                  Seleccione una fecha primero
-                </option>
-              ) : horasDisponibles.length === 0 ? (
-                <option value="" className="bg-slate-950 text-red-400 italic">
-                  {driverRestDayInfo.isRestDay
-                    ? "No disponible"
-                    : fechaEntrega < zoneTime.dateStr
-                      ? "La fecha no puede ser en el pasado"
-                      : "No hay horarios disponibles para hoy"}
-                </option>
-              ) : (
-                <>
-                  <option value="" className="bg-slate-950 text-slate-500 italic">
-                    Seleccione una hora...
-                  </option>
-                  {horasDisponibles.map((slot) => {
-                    const isOccupied = horariosOcupados.has(slot);
-                    return (
-                      <option 
-                        key={slot} 
-                        value={slot} 
-                        disabled={isOccupied}
-                        className={isOccupied ? "text-slate-500 bg-slate-950 italic" : "text-white bg-slate-950"}
-                      >
-                        {slot} hs {isOccupied ? "(Ocupado)" : ""}
-                      </option>
-                    );
-                  })}
-                </>
-              )}
-            </select>
-          </div>
-        </div>
-
-        {isMounted && selectedZona && (
-          driverRestDayInfo.isRestDay ? (
-            <div className="md:col-span-2 bg-red-500/10 text-red-400 border border-red-500/20 p-4 rounded-xl text-sm font-medium flex flex-col lg:flex-row items-center justify-between gap-3 text-center">
-              <span className="material-symbols-outlined text-red-400 select-none">event_busy</span>
-              <div className="flex-1">
-                <div className="font-bold text-red-300">
-                   {selectedRepartidorName || "El repartidor"} no realiza entregas los días {driverRestDayInfo.restDayNames.join(", ")}.
-                </div>
-                <div className="text-xs text-red-400/80 mt-0.5">
-                  Por favor seleccione otra fecha.
-                </div>
-              </div>
-              <span className="hidden lg:block">
-                <span className="material-symbols-outlined text-red-400 select-none">event_busy</span>
-              </span>
-            </div>
-          ) : (
-            <div className={styles.warningBanner}>
-              <span className="material-symbols-outlined text-amber-400 select-none">warning</span>
-              <div className="flex-1">
-                {isRepartidorCT ? (
-                  <div>Los horarios de entrega son aproximados con repartos de CT y son solicitados con 1h de anticipación.</div>
-                ) : (
-                  <div>Los horarios de entrega son solicitados con 1h de anticipación.</div>
-                )}
-                <div className="font-semibold text-amber-300 mt-1">
-                  Hora actual {selectedZoneDisplayName}: {zoneTime.timeStrFull || "--:--"} hs
-                </div>
-              </div>
-              <span className="hidden lg:block">
-                <span className="material-symbols-outlined text-amber-400 select-none">warning</span>
-              </span>
-            </div>
-          )
-        )}
-
-        <div className={styles.inputGroupFull}>
-          <label className={styles.label}>Verificación crediticia</label>
-          <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-secondary/40 rounded-xl p-3 bg-slate-950/20 transition-all group cursor-pointer h-[46px] select-none">
-            <input
-              type="file"
-              name="verificacion_crediticia"
-              accept="image/*,application/pdf"
-              onChange={handleFileChange}
-              required
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              suppressHydrationWarning
-            />
-            <div className="flex items-center gap-2 text-center max-w-full px-2">
-              <span className="material-symbols-outlined text-slate-500 group-hover:text-secondary text-xl transition-colors shrink-0">
-                cloud_upload
-              </span>
-              <p
-                className="text-xs text-slate-300 font-medium truncate max-w-[150px] sm:max-w-[220px] md:max-w-[160px] lg:max-w-[240px]"
-                title={selectedFileName || "Subir Imagen o PDF"}
-              >
-                {selectedFileName ? selectedFileName : "Subir Imagen o PDF"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.inputGroupFull}>
-          <label className={styles.label}>Comentarios (Opcional)</label>
-          <textarea
-            name="comentarios"
-            className={styles.textarea}
-            placeholder="Notas adicionales sobre la orden o entrega..."
-            suppressHydrationWarning
-          />
-        </div>
+        {/* 3. Programación de entrega y verificación */}
+        <FormProgramacionEntrega
+          fechaEntrega={fechaEntrega}
+          setFechaEntrega={setFechaEntrega}
+          horaEntrega={horaEntrega}
+          setHoraEntrega={setHoraEntrega}
+          isIOS={isIOS}
+          handleOpenPicker={handleOpenPicker}
+          horasDisponibles={horasDisponibles}
+          driverRestDayInfo={driverRestDayInfo}
+          zoneTime={zoneTime}
+          horariosOcupados={horariosOcupados}
+          isMounted={isMounted}
+          selectedZona={selectedZona}
+          selectedRepartidorName={selectedRepartidorName}
+          isRepartidorCT={isRepartidorCT}
+          selectedZoneDisplayName={selectedZoneDisplayName}
+          selectedFileName={selectedFileName}
+          handleFileChange={handleFileChange}
+        />
       </div>
 
       <button
@@ -947,10 +483,10 @@ export default function OrdenesEntregaForm({
         disabled={isSubmitting}
       >
         {isSubmitting ? (
-          <>
+          <div className="flex items-center gap-2">
             <span className="animate-spin h-5 w-5 border-2 border-slate-950 border-t-transparent rounded-full" />
-            Procesando...
-          </>
+            <span>Procesando...</span>
+          </div>
         ) : (
           'Registrar Orden de Entrega'
         )}

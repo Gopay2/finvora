@@ -113,6 +113,19 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
+      {/* Seguimiento de Pagos */}
+      <Link href="/empresa/webapp/seguimiento-pagos" className={styles.card}>
+        <div className={styles.cardGlow} />
+        <div className={styles.iconWrapper}>
+          <span className={styles.icon}>search</span>
+        </div>
+        <div>
+          <h2 className={styles.cardTitle}>Seguimiento de Pagos</h2>
+          <p className={styles.cardDesc}>Control de saldos restantes y cuotas semanales cliente por cliente.</p>
+        </div>
+        <div className={styles.cardButton}>Acceder</div>
+      </Link>
+
       {/* Catálogo Web */}
       <Link href="/empresa/webapp/catalogo-web" className={styles.card}>
         <div className={styles.cardGlow} />

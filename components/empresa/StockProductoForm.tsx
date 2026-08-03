@@ -33,7 +33,7 @@ export default function StockProductoForm() {
               style={{ colorScheme: 'dark' }}
             >
               <option value="" className="bg-slate-950 text-white">Seleccionar...</option>
-              {MARCAS.map(m => <option key={m} value={m} className="bg-slate-950 text-white">{m}</option>)}
+              {MARCAS.map(marca => <option key={marca} value={marca} className="bg-slate-950 text-white">{marca}</option>)}
             </select>
             <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-base">expand_more</span>
           </div>
@@ -56,7 +56,7 @@ export default function StockProductoForm() {
               style={{ colorScheme: 'dark' }}
             >
               <option value="" className="bg-slate-950 text-white">Seleccionar...</option>
-              {COLORES.map(c => <option key={c} value={c} className="bg-slate-950 text-white">{c}</option>)}
+              {COLORES.map(color => <option key={color} value={color} className="bg-slate-950 text-white">{color}</option>)}
             </select>
             <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-base">expand_more</span>
           </div>
@@ -73,7 +73,7 @@ export default function StockProductoForm() {
               style={{ colorScheme: 'dark' }}
             >
               <option value="" className="bg-slate-950 text-white">Seleccionar...</option>
-              {RAMS.map(r => <option key={r} value={r} className="bg-slate-950 text-white">{r}</option>)}
+              {RAMS.map(ram => <option key={ram} value={ram} className="bg-slate-950 text-white">{ram}</option>)}
             </select>
             <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-base">expand_more</span>
           </div>
@@ -90,7 +90,7 @@ export default function StockProductoForm() {
               style={{ colorScheme: 'dark' }}
             >
               <option value="" className="bg-slate-950 text-white">Seleccionar...</option>
-              {ALMACENAMIENTOS.map(a => <option key={a} value={a} className="bg-slate-950 text-white">{a}</option>)}
+              {ALMACENAMIENTOS.map(almacenamiento => <option key={almacenamiento} value={almacenamiento} className="bg-slate-950 text-white">{almacenamiento}</option>)}
             </select>
             <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-base">expand_more</span>
           </div>

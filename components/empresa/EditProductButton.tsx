@@ -78,7 +78,7 @@ export default function EditProductButton({ product }: { product: Product }) {
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary appearance-none cursor-pointer"
                     style={{ colorScheme: 'dark' }}
                   >
-                    {MARCAS.map(m => <option key={m} value={m} className="bg-slate-950 text-white">{m}</option>)}
+                    {MARCAS.map((marca) => <option key={marca} value={marca} className="bg-slate-950 text-white">{marca}</option>)}
                   </select>
                 </div>
 
@@ -98,7 +98,7 @@ export default function EditProductButton({ product }: { product: Product }) {
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary appearance-none cursor-pointer"
                     style={{ colorScheme: 'dark' }}
                   >
-                    {COLORES.map(c => <option key={c} value={c} className="bg-slate-950 text-white">{c}</option>)}
+                    {COLORES.map((color) => <option key={color} value={color} className="bg-slate-950 text-white">{color}</option>)}
                   </select>
                 </div>
 
@@ -112,7 +112,7 @@ export default function EditProductButton({ product }: { product: Product }) {
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary appearance-none cursor-pointer"
                     style={{ colorScheme: 'dark' }}
                   >
-                    {RAMS.map(r => <option key={r} value={r} className="bg-slate-950 text-white">{r}</option>)}
+                    {RAMS.map((ram) => <option key={ram} value={ram} className="bg-slate-950 text-white">{ram}</option>)}
                   </select>
                 </div>
 
@@ -126,7 +126,7 @@ export default function EditProductButton({ product }: { product: Product }) {
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary appearance-none cursor-pointer"
                     style={{ colorScheme: 'dark' }}
                   >
-                    {ALMACENAMIENTOS.map(a => <option key={a} value={a} className="bg-slate-950 text-white">{a}</option>)}
+                    {ALMACENAMIENTOS.map((almacenamiento) => <option key={almacenamiento} value={almacenamiento} className="bg-slate-950 text-white">{almacenamiento}</option>)}
                   </select>
                 </div>
 

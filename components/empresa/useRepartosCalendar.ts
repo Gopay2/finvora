@@ -139,8 +139,8 @@ export function useRepartosCalendar(userRole?: string) {
       else tzCity = rep.zona_horaria.split('/').pop()?.replace('_', ' ') || rep.zona_horaria;
 
       // Obtener las zonas de reparto asignadas a este repartidor
-      const driverZones = (formDataOptions?.zonas || []).filter(z => z.repartidor_id === selectedRepartidorTab);
-      const zonesStr = driverZones.map(z => z.nombre_zona).join(', ') || 'Sin Zonas';
+      const driverZones = (formDataOptions?.zonas || []).filter(zona => zona.repartidor_id === selectedRepartidorTab);
+      const zonesStr = driverZones.map(zona => zona.nombre_zona).join(', ') || 'Sin Zonas';
 
       if (diff === 0) {
         setTimezoneDiffText(`Zonas: ${zonesStr} | Hora local (${tzCity}): ${repTimeFormatted}`);
