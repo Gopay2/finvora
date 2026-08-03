@@ -6,7 +6,7 @@ import type {
   EstadoCuota
 } from '@/app/empresa/webapp/seguimiento-pagos/seguimiento-actions';
 import { updateEstadoSemana } from '@/app/empresa/webapp/seguimiento-pagos/seguimiento-actions';
-import { calculateSemanasTranscurridas, isFechaEnSemanaActual } from '@/utils/date-tijuana';
+import { calculateSemanasTranscurridas, isFechaEnSemanaActual, addWeeksToDate } from '@/utils/date-tijuana';
 import type { OptionItem } from '@/components/empresa/comprobantes-types';
 import { DetalleSeguimientoModal } from './DetalleSeguimientoModal';
 import { EditSeguimientoModal } from './EditSeguimientoModal';
@@ -71,12 +71,15 @@ export default function SeguimientoPagosClientPage({
 
       const totalSemanas = item.plazos || 0;
       const semanaActualIndice = calculateSemanasTranscurridas(item.fecha_proximo_pago, totalSemanas);
+      const fechaProximoPagoDinamica = item.fecha_proximo_pago
+        ? addWeeksToDate(item.fecha_proximo_pago, Math.max(0, (semanaActualIndice || 1) - 1))
+        : null;
       const semanaKey = `semana_${semanaActualIndice || 1}`;
       const estadoActual = item.estados_semanales?.[semanaKey] || 'En revisión';
 
-      // 2. Filtro ÚLTIMA SEMANA (Pagos agendados para esta semana / próxima semana)
+      // 2. Filtro ÚLTIMA SEMANA (Pagos agendados para esta semana)
       if (filtroUltimaSemana) {
-        if (!isFechaEnSemanaActual(item.fecha_proximo_pago)) return false;
+        if (!isFechaEnSemanaActual(fechaProximoPagoDinamica)) return false;
       }
 
       // 3. Filtro de ESTADO
@@ -84,11 +87,11 @@ export default function SeguimientoPagosClientPage({
         if (estadoActual !== estadoFilter) return false;
       }
 
-      // 4. Filtro de FECHAS
+      // 4. Filtro de FECHAS (evalúa la fecha del próximo pago de la semana vigente)
       if (dateFrom || dateTo) {
-        if (!item.fecha_proximo_pago) return false;
-        if (dateFrom && item.fecha_proximo_pago < dateFrom) return false;
-        if (dateTo && item.fecha_proximo_pago > dateTo) return false;
+        if (!fechaProximoPagoDinamica) return false;
+        if (dateFrom && fechaProximoPagoDinamica < dateFrom) return false;
+        if (dateTo && fechaProximoPagoDinamica > dateTo) return false;
       }
 
       return true;

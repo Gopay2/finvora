@@ -200,15 +200,14 @@ export function DetalleSeguimientoModal({
                         return (
                           <tr 
                             key={row.semanaKey}
-                            className={`transition-colors ${row.esSemanaActual ? 'bg-indigo-500/10 hover:bg-indigo-500/15' : 'hover:bg-slate-800/40'}`}
+                            className={`transition-colors ${
+                              row.esSemanaActual 
+                                ? 'bg-indigo-950/80 text-indigo-100 font-bold border-l-4 border-l-indigo-400 ring-1 ring-inset ring-indigo-500/40 hover:bg-indigo-900/70' 
+                                : 'hover:bg-slate-800/40'
+                            }`}
                           >
-                            <td className="px-4 py-3 font-medium text-slate-200 flex items-center justify-center gap-2">
-                              <span>{row.numeroSemana}</span>
-                              {row.esSemanaActual && (
-                                <span className="px-2 py-0.5 text-[10px] uppercase font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full">
-                                  Actual
-                                </span>
-                              )}
+                            <td className="px-4 py-3 font-semibold text-slate-200 text-center">
+                              {row.numeroSemana}
                             </td>
                             <td className="px-4 py-3 text-slate-300 text-center text-xs sm:text-sm">
                               {formatFechaDDMMYYYY(row.fechaCuota)}

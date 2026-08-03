@@ -2,7 +2,7 @@
 
 import React from "react";
 import * as XLSX from "xlsx";
-import { calculateSaldoRestante, calculateSemanasTranscurridas, formatFechaDDMMYYYY } from "@/utils/date-tijuana";
+import { calculateSaldoRestante, calculateSemanasTranscurridas, formatFechaDDMMYYYY, addWeeksToDate } from "@/utils/date-tijuana";
 
 type DownloadPreset = 'stock' | 'ventas' | 'comprobantes' | 'ordenes_entrega' | 'garantias' | 'ordenes_garantia' | 'seguimiento_pagos';
 
@@ -192,6 +192,10 @@ export default function DownloadExcelButton({ data, type, repartidores, label, c
           item.plazos
         );
 
+        const fechaProximoPagoDinamica = item.fecha_proximo_pago
+          ? addWeeksToDate(item.fecha_proximo_pago, Math.max(0, (semanaActualIndice || 1) - 1))
+          : null;
+
         return {
           "Cliente": item.nombre_cliente || "",
           "Celular": item.celular || "—",
@@ -200,7 +204,7 @@ export default function DownloadExcelButton({ data, type, repartidores, label, c
           "Vendedor": item.vendedor?.username || "—",
           "Repartidor": item.repartidor?.nombre || "—",
           "Tag": item.tag || "",
-          "Próximo Pago": item.fecha_proximo_pago ? formatFechaDDMMYYYY(item.fecha_proximo_pago) : "Sin fecha",
+          "Próximo Pago": fechaProximoPagoDinamica ? formatFechaDDMMYYYY(fechaProximoPagoDinamica) : "Sin fecha",
           "Saldo Restante": saldoRestante,
           "Semana Actual": semanaActualIndice ? `Semana ${semanaActualIndice} de ${totalSemanas}` : "",
           "Estado Semana": estadoActual,
