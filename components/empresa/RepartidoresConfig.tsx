@@ -60,7 +60,7 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
     setError(null);
     // Optimistic update
     setRepartidores(prev =>
-      prev.map(r => r.id === id ? { ...r, activo: !currentStatus } : r)
+      prev.map(repartidor => repartidor.id === id ? { ...repartidor, activo: !currentStatus } : repartidor)
     );
 
     try {
@@ -68,13 +68,13 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
       if (!res.success) {
         // Revert on error
         setRepartidores(prev =>
-          prev.map(r => r.id === id ? { ...r, activo: currentStatus } : r)
+          prev.map(repartidor => repartidor.id === id ? { ...repartidor, activo: currentStatus } : repartidor)
         );
         setError(res.error || "Error al cambiar estado");
       }
     } catch (err: any) {
       setRepartidores(prev =>
-        prev.map(r => r.id === id ? { ...r, activo: currentStatus } : r)
+        prev.map(repartidor => repartidor.id === id ? { ...repartidor, activo: currentStatus } : repartidor)
       );
       setError(err.message || "Error de red");
     }
@@ -95,7 +95,7 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
     setError(null);
 
     const oldList = [...repartidores];
-    setRepartidores(prev => prev.filter(r => r.id !== idToDelete));
+    setRepartidores(prev => prev.filter(repartidor => repartidor.id !== idToDelete));
 
     try {
       const res = await eliminarRepartidor(idToDelete);

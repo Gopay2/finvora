@@ -60,6 +60,9 @@ export const styles = {
   badge: "px-2 py-1 rounded bg-slate-800 text-xs text-slate-400 font-bold border border-slate-700",
   linkBtn: "text-secondary hover:underline inline-flex items-center gap-1 cursor-pointer font-bold",
   autocompleteInput: "w-full bg-slate-950 border border-slate-800 rounded-xl pl-4 pr-10 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all",
+  textInput: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all",
+  textarea: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all resize-none",
+  fileUploadBox: "relative flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-secondary/40 rounded-xl px-4 bg-slate-950/20 transition-all group cursor-pointer h-[50px] select-none",
   suggestionsContainer: "absolute z-20 w-full mt-2 bg-slate-950/95 border border-slate-800 rounded-xl shadow-xl max-h-48 overflow-y-auto custom-scrollbar glass-effect animate-in fade-in duration-200",
   dateInput: "w-full sm:w-[130px] bg-slate-950 border border-slate-800 rounded-lg px-3 h-[44px] sm:h-[34px] text-[16px] sm:text-xs text-center focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
 };

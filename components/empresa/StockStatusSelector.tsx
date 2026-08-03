@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { actualizarEstadoStock, registrarVenta, getVendedores, registrarRecambio } from "@/app/empresa/webapp/stock/stock-actions";
+import { StockVentaModal } from "./stock/StockVentaModal";
+import { StockRecambioModal } from "./stock/StockRecambioModal";
 
 interface StockStatusSelectorProps {
   imei: string;
@@ -122,7 +123,6 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
       setEstado(nuevoEstado);
     } else {
       setError("Error al actualizar estado");
-      // Desaparecer error después de 3 segundos
       setTimeout(() => setError(null), 3000);
     }
     setLoading(false);
@@ -166,7 +166,6 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
     setEstado(estadoActual);
   };
 
-  // Si está desactivado, mostramos un badge estático en lugar de un select
   if (disabled) {
     return (
       <div className={`
@@ -226,140 +225,33 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
         </div>
       )}
 
-      {/* Modal de Selección de Vendedor - Usando Portal para evitar recortes de la tabla */}
-      {showSellerModal && mounted && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full space-y-4 animate-in zoom-in duration-200">
-            <div className="text-center space-y-2">
-              <span className="material-symbols-outlined text-secondary text-4xl">person_search</span>
-              <h3 className="text-lg font-bold text-white">¿Quién realizó la venta?</h3>
-              <p className="text-slate-400 text-sm">Selecciona al vendedor para registrar la venta correctamente.</p>
-            </div>
+      {/* Modal de Selección de Vendedor */}
+      <StockVentaModal
+        showSellerModal={showSellerModal}
+        mounted={mounted}
+        vendedorSeleccionado={vendedorSeleccionado}
+        setVendedorSeleccionado={setVendedorSeleccionado}
+        vendedoresList={vendedoresList}
+        error={error}
+        setError={setError}
+        handleCancelVenta={handleCancelVenta}
+        handleConfirmVenta={handleConfirmVenta}
+      />
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase ml-1">Vendedor</label>
-              <select 
-                value={vendedorSeleccionado}
-                onChange={(e) => {
-                  setVendedorSeleccionado(e.target.value);
-                  if (error) setError(null);
-                }}
-                className={`w-full bg-slate-950 border rounded-xl px-4 py-3 text-slate-100 focus:outline-none transition-all appearance-none cursor-pointer ${error ? 'border-red-500/50 focus:border-red-500' : 'border-slate-800 focus:border-secondary'}`}
-                style={{ colorScheme: 'dark' }}
-              >
-                <option value="">Elegir vendedor...</option>
-                {vendedoresList.map(v => {
-                  const name = v.username || 'Sin nombre';
-                  const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
-                  return (
-                    <option key={v.id} value={v.id}>
-                      {v.role ? `[${v.role}]` : "[Closer]"} {capitalizedName}
-                    </option>
-                  );
-                })}
-              </select>
-              
-              {error && (
-                <div className="flex items-center gap-1.5 text-red-400 text-xs mt-1 animate-in fade-in slide-in-from-top-1">
-                  <span className="material-symbols-outlined text-sm">error</span>
-                  {error}
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button 
-                onClick={handleCancelVenta}
-                className="flex-1 px-4 py-2.5 bg-slate-800 text-slate-300 rounded-xl font-bold hover:bg-slate-700 hover:text-white transition-all text-sm cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={handleConfirmVenta}
-                className="flex-1 px-4 py-2.5 bg-secondary text-slate-950 rounded-xl font-bold hover:bg-white transition-all text-sm shadow-lg shadow-secondary/20 cursor-pointer"
-              >
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Modal de Selección de Recambio - Usando Portal para evitar recortes de la tabla */}
-      {showRecambioModal && mounted && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full space-y-4 animate-in zoom-in duration-200">
-            <div className="text-center space-y-2">
-              <span className="material-symbols-outlined text-secondary text-4xl">published_with_changes</span>
-              <h3 className="text-lg font-bold text-white">Registrar Recambio</h3>
-              <p className="text-slate-400 text-sm">Completa los datos para registrar la garantía del equipo.</p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Solicitado por</label>
-                <select 
-                  value={solicitadoPor}
-                  onChange={(e) => {
-                    setSolicitadoPor(e.target.value);
-                    if (error) setError(null);
-                  }}
-                  className={`w-full bg-slate-950 border rounded-xl px-4 py-3 text-slate-100 focus:outline-none transition-all appearance-none cursor-pointer ${error && !solicitadoPor ? 'border-red-500/50 focus:border-red-500' : 'border-slate-800 focus:border-secondary'}`}
-                  style={{ colorScheme: 'dark' }}
-                >
-                  <option value="">Elegir solicitante...</option>
-                  {vendedoresList.map(v => {
-                    const name = v.username || 'Sin nombre';
-                    const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
-                    return (
-                      <option key={v.id} value={v.id}>
-                        {v.role ? `[${v.role}]` : "[Closer]"} {capitalizedName}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Motivo del Recambio</label>
-                <textarea 
-                  value={motivoRecambio}
-                  onChange={(e) => {
-                    setMotivoRecambio(e.target.value);
-                    if (error) setError(null);
-                  }}
-                  placeholder="Describa el motivo detalladamente..."
-                  className={`w-full bg-slate-950 border rounded-xl px-4 py-3 text-slate-100 focus:outline-none transition-all min-h-[100px] resize-none ${error && !motivoRecambio.trim() ? 'border-red-500/50 focus:border-red-500' : 'border-slate-800 focus:border-secondary'}`}
-                />
-              </div>
-              
-              {error && (
-                <div className="flex items-center gap-1.5 text-red-400 text-xs mt-1 animate-in fade-in slide-in-from-top-1">
-                  <span className="material-symbols-outlined text-sm">error</span>
-                  {error}
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button 
-                onClick={handleCancelRecambio}
-                className="flex-1 px-4 py-2.5 bg-slate-800 text-slate-300 rounded-xl font-bold hover:bg-slate-700 hover:text-white transition-all text-sm cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={handleConfirmRecambio}
-                className="flex-1 px-4 py-2.5 bg-secondary text-slate-950 rounded-xl font-bold hover:bg-white transition-all text-sm shadow-lg shadow-secondary/20 cursor-pointer"
-              >
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      {/* Modal de Selección de Recambio */}
+      <StockRecambioModal
+        showRecambioModal={showRecambioModal}
+        mounted={mounted}
+        solicitadoPor={solicitadoPor}
+        setSolicitadoPor={setSolicitadoPor}
+        motivoRecambio={motivoRecambio}
+        setMotivoRecambio={setMotivoRecambio}
+        vendedoresList={vendedoresList}
+        error={error}
+        setError={setError}
+        handleCancelRecambio={handleCancelRecambio}
+        handleConfirmRecambio={handleConfirmRecambio}
+      />
     </div>
   );
 }

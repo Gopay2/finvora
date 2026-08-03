@@ -4,14 +4,10 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { submitComprobante, getComprobantes } from "@/app/empresa/webapp/comprobantes/comprobantes-actions";
 import type { ComprobanteRecord } from "@/app/empresa/webapp/comprobantes/comprobantes-actions";
-import {
-  styles, handleNumericInput, handleNumericBlur
-} from "./comprobantes-types";
-import type {
-  OptionItem, Producto, StockItem, ModeloAgrupado
-} from "./comprobantes-types";
-import { VendedorAutocomplete } from "./VendedorAutocomplete";
-import { DropdownSelect } from "./DropdownSelect";
+import { styles } from "./comprobantes-types";
+import type { OptionItem, Producto, StockItem, ModeloAgrupado } from "./comprobantes-types";
+import { FormSeleccionEquipoComprobante } from "./comprobantes/FormSeleccionEquipoComprobante";
+import { FormCamposFinancierosComprobante } from "./comprobantes/FormCamposFinancierosComprobante";
 
 interface ComprobantesFormProps {
   vendedores: OptionItem[];
@@ -37,7 +33,7 @@ export default function ComprobantesForm({
   const [selectedFileName, setSelectedFileName] = useState("");
   const [operationStatus, setOperationStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Estados para el flujo de selección de equipo (replica cambaceo)
+  // Estados para selección de equipo y ubicaciones
   const [selectedRepartidorId, setSelectedRepartidorId] = useState<string>("");
   const [selectedModelKey, setSelectedModelKey] = useState<string>("");
   const [selectedColor, setSelectedColor] = useState<string>("");
@@ -45,114 +41,106 @@ export default function ComprobantesForm({
   const [fechaProximoPago, setFechaProximoPago] = useState<string>("");
   const [selectedPlazo, setSelectedPlazo] = useState<string>("");
 
-  // Estados para autocompletado de vendedores
+  // Estados para vendedor
   const [vendedorSearch, setVendedorSearch] = useState("");
   const [selectedVendedor, setSelectedVendedor] = useState<OptionItem | null>(null);
 
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Propagar el status local al padre.
-  // NOTA: Para evitar bucles de renderizado infinitos, la prop 'onStatusChange'
-  // provista por el componente padre DEBE ser una referencia estable (por ejemplo, envuelta en useCallback).
   useEffect(() => {
     onStatusChange(operationStatus);
   }, [operationStatus, onStatusChange]);
 
+  // ─── LÓGICA DE FILTRADO Y STOCK DISPONIBLE ───
 
-
-  // Obtener el repartidorId original para filtrar stock según la ubicación seleccionada
+  /** Obtiene la ID original del repartidor para filtrar el inventario correspondiente a la ubicación seleccionada */
   const selectedRepartidorOriginalId = useMemo(() => {
     if (!selectedRepartidorId) return "";
-    const found = repartidores.find(repartidorOption => repartidorOption.id === selectedRepartidorId);
+    const found = repartidores.find(r => r.id === selectedRepartidorId);
     return found?.repartidorId || "";
   }, [selectedRepartidorId, repartidores]);
 
-  // Filtrar stock por el repartidorId original (misma lógica de cambaceo: stockItem.zona === repartidorId)
+  /** Filtra el stock que pertenece a la ubicación/zona seleccionada */
   const stockFiltrado = useMemo(() => {
     if (!selectedRepartidorOriginalId) return [];
-    return stockItems.filter(stockItem => stockItem.zona === selectedRepartidorOriginalId);
+    return stockItems.filter(item => item.zona === selectedRepartidorOriginalId);
   }, [selectedRepartidorOriginalId, stockItems]);
 
-  // Productos con stock disponible en esta ubicación
   const productosConStock = useMemo(() => {
     if (!selectedRepartidorOriginalId) return [];
-    const idsConStock = new Set(stockFiltrado.map(stockItem => stockItem.producto_id));
+    const idsConStock = new Set(stockFiltrado.map(item => item.producto_id));
     return productos
-      .filter(producto => idsConStock.has(producto.id))
-      .map(producto => {
-        const unidadesValidas = stockFiltrado.filter(stockItem => stockItem.producto_id === producto.id);
-        const cantidadDisponible = unidadesValidas.filter(stockItem => stockItem.estado === 'Disponible').length;
-        const cantidadAConsultar = unidadesValidas.filter(stockItem => stockItem.estado === 'A consultar').length;
-        const cantidadEnEnvio = unidadesValidas.filter(stockItem => stockItem.estado === 'En envío').length;
+      .filter(p => idsConStock.has(p.id))
+      .map(p => {
+        const unidadesValidas = stockFiltrado.filter(item => item.producto_id === p.id);
+        const cantidadDisponible = unidadesValidas.filter(item => item.estado === 'Disponible').length;
+        const cantidadAConsultar = unidadesValidas.filter(item => item.estado === 'A consultar').length;
+        const cantidadEnEnvio = unidadesValidas.filter(item => item.estado === 'En envío').length;
         return { 
-          ...producto, 
+          ...p, 
           cantidadDisponible, 
           cantidadAConsultar, 
           cantidadEnEnvio,
           cantidadStock: cantidadDisponible + cantidadAConsultar + cantidadEnEnvio 
         };
       })
-      .filter(producto => producto.cantidadStock > 0);
+      .filter(p => p.cantidadStock > 0);
   }, [selectedRepartidorOriginalId, productos, stockFiltrado]);
 
-  // Modelos únicos agrupados
   const modelosUnicos = useMemo(() => {
     const map = new Map<string, ModeloAgrupado>();
-    productosConStock.forEach(producto => {
-      const display = `${producto.marca} ${producto.modelo} - ${producto.almacenamiento} - ${producto.ram}`;
+    productosConStock.forEach(p => {
+      const display = `${p.marca} ${p.modelo} - ${p.almacenamiento} - ${p.ram}`;
       const existing = map.get(display);
       if (!existing) {
         map.set(display, { 
           display, 
-          marca: producto.marca, 
-          modelo: producto.modelo, 
-          totalDisponible: producto.cantidadDisponible, 
-          totalAConsultar: producto.cantidadAConsultar, 
-          totalEnEnvio: producto.cantidadEnEnvio,
-          totalStock: producto.cantidadStock 
+          marca: p.marca, 
+          modelo: p.modelo, 
+          totalDisponible: p.cantidadDisponible, 
+          totalAConsultar: p.cantidadAConsultar, 
+          totalEnEnvio: p.cantidadEnEnvio,
+          totalStock: p.cantidadStock 
         });
       } else {
-        existing.totalDisponible += producto.cantidadDisponible;
-        existing.totalAConsultar += producto.cantidadAConsultar;
-        existing.totalEnEnvio += producto.cantidadEnEnvio;
-        existing.totalStock += producto.cantidadStock;
+        existing.totalDisponible += p.cantidadDisponible;
+        existing.totalAConsultar += p.cantidadAConsultar;
+        existing.totalEnEnvio += p.cantidadEnEnvio;
+        existing.totalStock += p.cantidadStock;
       }
     });
     return Array.from(map.entries());
   }, [productosConStock]);
 
-  // Colores disponibles para el modelo seleccionado
   const variantesColor = useMemo(() => {
     if (!selectedModelKey) return [];
     return productosConStock
-      .filter(producto => `${producto.marca} ${producto.modelo} - ${producto.almacenamiento} - ${producto.ram}` === selectedModelKey)
-      .map(producto => ({ 
-        color: producto.color, 
-        cantidadDisponible: producto.cantidadDisponible, 
-        cantidadAConsultar: producto.cantidadAConsultar, 
-        cantidadEnEnvio: producto.cantidadEnEnvio, 
-        hasStock: producto.cantidadStock > 0 
+      .filter(p => `${p.marca} ${p.modelo} - ${p.almacenamiento} - ${p.ram}` === selectedModelKey)
+      .map(p => ({ 
+        color: p.color, 
+        cantidadDisponible: p.cantidadDisponible, 
+        cantidadAConsultar: p.cantidadAConsultar, 
+        cantidadEnEnvio: p.cantidadEnEnvio, 
+        hasStock: p.cantidadStock > 0 
       }));
   }, [selectedModelKey, productosConStock]);
 
-  // IMEIs disponibles para modelo y color seleccionados
   const imeisDisponibles = useMemo(() => {
     if (!selectedModelKey || !selectedColor) return [];
     const matchingProducts = productosConStock.filter(
-      producto => `${producto.marca} ${producto.modelo} - ${producto.almacenamiento} - ${producto.ram}` === selectedModelKey && producto.color === selectedColor
+      p => `${p.marca} ${p.modelo} - ${p.almacenamiento} - ${p.ram}` === selectedModelKey && p.color === selectedColor
     );
-    const matchingProductIds = new Set(matchingProducts.map(producto => producto.id));
+    const matchingProductIds = new Set(matchingProducts.map(p => p.id));
     return stockFiltrado.filter(
-      stockItem => matchingProductIds.has(stockItem.producto_id) && 
-        (stockItem.estado === 'Disponible' || stockItem.estado === 'A consultar' || stockItem.estado === 'En envío') && 
-        stockItem.imei
+      item => matchingProductIds.has(item.producto_id) && 
+        (item.estado === 'Disponible' || item.estado === 'A consultar' || item.estado === 'En envío') && 
+        item.imei
     );
   }, [selectedModelKey, selectedColor, productosConStock, stockFiltrado]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // 1. Validar tamaño máximo (5MB)
       const maxSizeBytes = 5 * 1024 * 1024;
       if (file.size > maxSizeBytes) {
         setOperationStatus({ type: 'error', message: "El comprobante excede el tamaño máximo permitido de 5MB." });
@@ -161,7 +149,6 @@ export default function ComprobantesForm({
         return;
       }
 
-      // 2. Validar tipos permitidos
       const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
       if (!allowedMimeTypes.includes(file.type)) {
         setOperationStatus({ type: 'error', message: "Formato no permitido. Solo se aceptan imágenes (JPG, PNG, WEBP) o PDF." });
@@ -240,7 +227,6 @@ export default function ComprobantesForm({
       setFechaProximoPago("");
       setSelectedPlazo("");
 
-      // Obtener la lista actualizada de forma instantánea sin refrescar página completa
       if (showTable) {
         const listResponse = await getComprobantes();
         if (listResponse.success && listResponse.data) {
@@ -276,359 +262,34 @@ export default function ComprobantesForm({
       )}
 
       <div className={styles.formGrid}>
-        {/* NOMBRE DEL CLIENTE */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Nombre del Cliente</label>
-          <input
-            type="text"
-            name="nombre_cliente"
-            placeholder="Escribe el nombre del cliente..."
-            className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all"
-            required
-            autoComplete="off"
-            suppressHydrationWarning
-          />
-        </div>
+        <FormSeleccionEquipoComprobante
+          vendedores={vendedores}
+          repartidores={repartidores}
+          vendedorSearch={vendedorSearch}
+          setVendedorSearch={setVendedorSearch}
+          selectedVendedor={selectedVendedor}
+          setSelectedVendedor={setSelectedVendedor}
+          selectedRepartidorId={selectedRepartidorId}
+          setSelectedRepartidorId={setSelectedRepartidorId}
+          selectedModelKey={selectedModelKey}
+          setSelectedModelKey={setSelectedModelKey}
+          selectedColor={selectedColor}
+          setSelectedColor={setSelectedColor}
+          selectedImei={selectedImei}
+          setSelectedImei={setSelectedImei}
+          modelosUnicos={modelosUnicos}
+          variantesColor={variantesColor}
+          imeisDisponibles={imeisDisponibles}
+        />
 
-        {/* SELECTOR DE VENDEDOR AUTOCOMPLETE */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Vendedor</label>
-          <VendedorAutocomplete
-            vendedores={vendedores}
-            vendedorSearch={vendedorSearch}
-            setVendedorSearch={setVendedorSearch}
-            selectedVendedor={selectedVendedor}
-            setSelectedVendedor={setSelectedVendedor}
-          />
-        </div>
-
-        {/* SELECTOR DE REPARTIDOR */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Repartidor/Ubicación</label>
-          <DropdownSelect
-            placeholder="Seleccione el repartidor/ubicación..."
-            valueDisplay={repartidores.find(r => r.id === selectedRepartidorId)?.display || ""}
-            items={repartidores}
-            onSelect={(repartidor) => {
-              setSelectedRepartidorId(repartidor.id);
-              setSelectedModelKey("");
-              setSelectedColor("");
-              setSelectedImei("");
-            }}
-            getItemKey={(repartidor) => repartidor.id}
-            getItemDisplay={(repartidor) => repartidor.display}
-          />
-          <input
-            type="hidden"
-            name="repartidor_id"
-            value={selectedRepartidorId}
-          />
-        </div>
-
-        {/* SELECTOR DE MODELO DE CELULAR */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Modelo de Celular</label>
-          <DropdownSelect
-            placeholder="Seleccione un modelo..."
-            disabled={!selectedRepartidorId}
-            disabledPlaceholder="Primero elija ubicación"
-            valueDisplay={modelosUnicos.find(([key]) => key === selectedModelKey)?.[1]?.display || ""}
-            items={modelosUnicos}
-            onSelect={([key]) => {
-              setSelectedModelKey(key);
-              setSelectedColor("");
-              setSelectedImei("");
-            }}
-            getItemKey={([key]) => key}
-            getItemDisplay={([, info]) => info.display}
-            renderItem={([key, info], onClick) => {
-              return (
-                <div
-                  key={key}
-                  onClick={onClick}
-                  className="px-4 py-3 hover:bg-secondary/10 hover:text-secondary cursor-pointer transition-colors text-sm text-slate-200 border-b border-slate-900/50 last:border-b-0 flex items-center justify-between"
-                >
-                  <span className="font-medium truncate">{info.display}</span>
-                  <span className="text-xs text-slate-400 shrink-0 ml-2">
-                    {`(${info.totalStock} disp.)`}
-                  </span>
-                </div>
-              );
-            }}
-          />
-          <input type="hidden" name="celular" value={selectedModelKey} />
-        </div>
-
-        {/* SELECTOR DE COLOR */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Color</label>
-          <DropdownSelect
-            placeholder="Seleccione un color..."
-            disabled={!selectedModelKey}
-            disabledPlaceholder="Primero elija un modelo"
-            valueDisplay={selectedColor}
-            items={variantesColor}
-            onSelect={(variante) => {
-              setSelectedColor(variante.color);
-              setSelectedImei("");
-            }}
-            getItemKey={(variante) => variante.color}
-            getItemDisplay={(variante) => variante.color}
-            renderItem={(variante, onClick) => {
-              return (
-                <div
-                  key={variante.color}
-                  onClick={onClick}
-                  className="px-4 py-3 hover:bg-secondary/10 hover:text-secondary cursor-pointer transition-colors text-sm text-slate-200 border-b border-slate-900/50 last:border-b-0 flex items-center"
-                >
-                  <span className="font-medium">{variante.color}</span>
-                </div>
-              );
-            }}
-          />
-          <input type="hidden" name="color_celular" value={selectedColor} />
-        </div>
-
-        {/* SELECTOR DE IMEI */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>IMEI</label>
-          <DropdownSelect
-            placeholder="Seleccione un IMEI..."
-            disabled={!selectedColor}
-            disabledPlaceholder="Primero elija un color"
-            valueDisplay={selectedImei}
-            items={imeisDisponibles}
-            onSelect={(stockItem) => {
-              setSelectedImei(stockItem.imei || "");
-            }}
-            getItemKey={(stockItem) => stockItem.imei || ""}
-            getItemDisplay={(stockItem) => stockItem.imei || ""}
-          />
-          <input type="hidden" name="imei" value={selectedImei} />
-        </div>
-
-        {/* FECHA DEL PROXIMO PAGO */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Fecha del próximo pago</label>
-          <div className="relative flex items-center">
-            <span
-              className="absolute text-slate-400 pointer-events-none material-symbols-outlined text-base z-10 leading-none"
-              style={{ left: "16px", top: "50%", transform: "translateY(-50%)" }}
-            >
-              calendar_today
-            </span>
-            {!fechaProximoPago && (
-              <span
-                className="absolute text-slate-500 text-sm pointer-events-none z-10 select-none leading-none"
-                style={{ left: "44px", top: "50%", transform: "translateY(-50%)" }}
-              >
-                dd/mm/aaaa
-              </span>
-            )}
-            <input
-              type="date"
-              name="fecha_proximo_pago"
-              value={fechaProximoPago}
-              onChange={(e) => setFechaProximoPago(e.target.value)}
-              onKeyDown={(e) => e.preventDefault()}
-              onClick={(e) => {
-                try {
-                  e.currentTarget.showPicker();
-                } catch (error) {}
-              }}
-              className={`w-full bg-slate-950/50 border border-slate-800 rounded-xl pr-4 py-3 text-sm focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
-                fechaProximoPago ? "text-slate-100" : "text-transparent"
-              }`}
-              style={{ colorScheme: 'dark', paddingLeft: '44px' }}
-              required
-              suppressHydrationWarning
-            />
-          </div>
-        </div>
-
-        {/* PRECIO DE COMPRA */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Precio de Compra</label>
-          <div className={styles.relativeInputContainer}>
-            <span className={styles.prefix}>$</span>
-            <input
-              type="text"
-              name="precio_compra"
-              className={styles.input}
-              required
-              placeholder="0.00"
-              inputMode="decimal"
-              pattern="^[0-9]+([.,][0-9]+)?$"
-              title="Ingrese un número válido (ej. 100 o 100.50)"
-              onInput={handleNumericInput}
-              onBlur={handleNumericBlur}
-              suppressHydrationWarning
-            />
-          </div>
-        </div>
-
-        {/* PAGO INICIAL */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Pago Inicial</label>
-          <div className={styles.relativeInputContainer}>
-            <span className={styles.prefix}>$</span>
-            <input
-              type="text"
-              name="pago_inicial"
-              className={styles.input}
-              required
-              placeholder="0.00"
-              inputMode="decimal"
-              pattern="^[0-9]+([.,][0-9]+)?$"
-              title="Ingrese un número válido (ej. 100 o 100.50)"
-              onInput={handleNumericInput}
-              onBlur={handleNumericBlur}
-              suppressHydrationWarning
-            />
-          </div>
-        </div>
-
-        {/* PAGO RECIBIDO */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Pago Recibido</label>
-          <div className={styles.relativeInputContainer}>
-            <span className={styles.prefix}>$</span>
-            <input
-              type="text"
-              name="pago_recibido"
-              className={styles.input}
-              required
-              placeholder="0.00"
-              inputMode="decimal"
-              pattern="^[0-9]+([.,][0-9]+)?$"
-              title="Ingrese un número válido (ej. 100 o 100.50)"
-              onInput={handleNumericInput}
-              onBlur={handleNumericBlur}
-              suppressHydrationWarning
-            />
-          </div>
-        </div>
-
-        {/* PAGO SEMANAL */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Pago Semanal</label>
-          <div className={styles.relativeInputContainer}>
-            <span className={styles.prefix}>$</span>
-            <input
-              type="text"
-              name="pago_semanal"
-              className={styles.input}
-              required
-              placeholder="0.00"
-              inputMode="decimal"
-              pattern="^[0-9]+([.,][0-9]+)?$"
-              title="Ingrese un número válido (ej. 100 o 100.50)"
-              onInput={handleNumericInput}
-              onBlur={handleNumericBlur}
-              suppressHydrationWarning
-            />
-          </div>
-        </div>
-
-        {/* PLAZOS */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Plazos</label>
-          <DropdownSelect
-            placeholder="Seleccione plazo..."
-            valueDisplay={selectedPlazo}
-            items={[
-              { id: "13", display: "13" },
-              { id: "26", display: "26" },
-              { id: "39", display: "39" },
-              { id: "52", display: "52" }
-            ]}
-            onSelect={(plazo) => {
-              setSelectedPlazo(plazo.id);
-            }}
-            getItemKey={(plazo) => plazo.id}
-            getItemDisplay={(plazo) => plazo.display}
-          />
-          <input
-            type="hidden"
-            name="plazos"
-            value={selectedPlazo}
-          />
-        </div>
-
-        {/* PRECIO TOTAL */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Precio Total</label>
-          <div className={styles.relativeInputContainer}>
-            <span className={styles.prefix}>$</span>
-            <input
-              type="text"
-              name="precio_total"
-              className={styles.input}
-              required
-              placeholder="0.00"
-              inputMode="decimal"
-              pattern="^[0-9]+([.,][0-9]+)?$"
-              title="Ingrese un número válido (ej. 100 o 100.50)"
-              onInput={handleNumericInput}
-              onBlur={handleNumericBlur}
-              suppressHydrationWarning
-            />
-          </div>
-        </div>
-
-        {/* TAG */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Tag</label>
-          <input
-            type="text"
-            name="tag"
-            placeholder="Escribe el tag..."
-            className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all"
-            required
-            autoComplete="off"
-            suppressHydrationWarning
-          />
-        </div>
-
-        {/* DOCUMENTO / FOTO */}
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>Comprobante (Imagen o PDF)</label>
-          <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-secondary/40 rounded-xl px-4 bg-slate-950/20 transition-all group cursor-pointer h-[50px] select-none">
-            <input
-              type="file"
-              name="comprobante"
-              accept="image/*,.pdf"
-              onChange={handleFileChange}
-              required
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              suppressHydrationWarning
-            />
-            <div className="flex items-center gap-2 text-center max-w-full px-2">
-              <span className="material-symbols-outlined text-slate-500 group-hover:text-secondary text-xl transition-colors shrink-0">
-                cloud_upload
-              </span>
-              <p
-                className="text-xs text-slate-300 font-medium truncate max-w-[150px] sm:max-w-[200px]"
-                title={selectedFileName || "Subir comprobante"}
-              >
-                {selectedFileName ? selectedFileName : "Subir comprobante"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* COMENTARIOS */}
-        <div className="space-y-2 md:col-span-3">
-          <label className={styles.label}>Comentarios (Opcional)</label>
-          <textarea
-            name="comentarios"
-            placeholder="Escribe comentarios o notas adicionales..."
-            className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all resize-none"
-            rows={2}
-            autoComplete="off"
-            suppressHydrationWarning
-          />
-        </div>
+        <FormCamposFinancierosComprobante
+          fechaProximoPago={fechaProximoPago}
+          setFechaProximoPago={setFechaProximoPago}
+          selectedPlazo={selectedPlazo}
+          setSelectedPlazo={setSelectedPlazo}
+          selectedFileName={selectedFileName}
+          handleFileChange={handleFileChange}
+        />
       </div>
 
       <button

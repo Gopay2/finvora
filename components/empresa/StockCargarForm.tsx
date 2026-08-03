@@ -17,6 +17,7 @@ const styles = {
   inputGroup: "space-y-2",
   label: "text-sm font-medium text-slate-300 ml-1",
   input: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all",
+  selectInput: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
   statusSuccess: "p-4 rounded-xl text-sm font-medium flex items-center gap-3 animate-peek bg-green-500/10 text-green-400 border border-green-500/20",
   statusError: "p-4 rounded-xl text-sm font-medium flex items-center gap-3 animate-peek bg-red-500/10 text-red-400 border border-red-500/20",
 };
@@ -81,9 +82,9 @@ export default function StockCargarForm({ productos, repartidores, zonasReparto 
   // Obtener marcas únicas ordenadas alfabéticamente a partir de los productos filtrados por la zona
   const marcas = useMemo(() => {
     const set = new Set<string>();
-    productosPorZona.forEach((p) => {
-      if (p.marca && p.marca.trim()) {
-        set.add(p.marca.trim().toUpperCase());
+    productosPorZona.forEach((producto) => {
+      if (producto.marca && producto.marca.trim()) {
+        set.add(producto.marca.trim().toUpperCase());
       }
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
@@ -169,7 +170,7 @@ export default function StockCargarForm({ productos, repartidores, zonasReparto 
             <select 
               value={selectedZona}
               onChange={handleZonaChange}
-              className={`${styles.input} appearance-none cursor-pointer bg-slate-950 text-slate-100`}
+              className={styles.selectInput}
               style={{ colorScheme: 'dark' }}
             >
               <option value="" className="bg-slate-950 text-slate-500 italic">
@@ -196,7 +197,7 @@ export default function StockCargarForm({ productos, repartidores, zonasReparto 
               value={selectedRepartidorId}
               onChange={(event) => setSelectedRepartidorId(event.target.value)}
               disabled={zonasUnicas.length > 0 && !selectedZona}
-              className={`${styles.input} appearance-none cursor-pointer bg-slate-950 text-slate-100 disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={styles.selectInput}
               style={{ colorScheme: 'dark' }}
             >
               {zonasUnicas.length > 0 && !selectedZona ? (
@@ -228,7 +229,7 @@ export default function StockCargarForm({ productos, repartidores, zonasReparto 
               value={selectedMarca}
               onChange={handleMarcaChange}
               disabled={zonasUnicas.length > 0 && !selectedZona}
-              className={`${styles.input} appearance-none cursor-pointer bg-slate-950 text-slate-100 disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={styles.selectInput}
               style={{ colorScheme: 'dark' }}
             >
               {zonasUnicas.length > 0 && !selectedZona ? (
@@ -261,7 +262,7 @@ export default function StockCargarForm({ productos, repartidores, zonasReparto 
               value={selectedProductoId}
               onChange={handleProductoChange}
               disabled={!selectedMarca}
-              className={`${styles.input} appearance-none cursor-pointer bg-slate-950 text-slate-100 disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={styles.selectInput}
               style={{ colorScheme: 'dark' }}
             >
               {!selectedMarca ? (

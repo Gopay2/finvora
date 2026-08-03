@@ -1,115 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useRepartosCalendar } from './useRepartosCalendar';
-import { getDriverRestDayInfo } from '@/utils/driver-schedule';
-
-const DAYS_OF_WEEK = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-
-const styles = {
-  // Calendar base
-  wrapper: "flex flex-col w-full relative",
-  loadingOverlay: "absolute inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[90] flex items-center justify-center",
-  loadingSpinner: "w-12 h-12 border-4 border-secondary/30 border-t-secondary rounded-full animate-spin",
-  
-  // Header controls
-  header: "flex items-center justify-between py-3 px-4 border-b border-slate-800 bg-slate-900/60 shrink-0",
-  headerTitle: "text-lg md:text-xl font-bold text-white capitalize tracking-wide",
-  headerYear: "text-secondary font-light ml-1",
-  controls: "flex items-center gap-3",
-  todayBtn: "px-3 h-8 flex items-center justify-center rounded-lg bg-secondary text-slate-950 hover:bg-secondary/90 transition-all border border-transparent text-[10px] font-black uppercase tracking-wider shadow-[0_0_15px_rgba(16,185,129,0.2)] cursor-pointer",
-  navGroup: "flex items-center gap-1.5",
-  navBtn: "w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-all border border-slate-700 cursor-pointer",
-  
-  // Grid
-  daysOfWeekHeader: "grid grid-cols-7 border-b border-slate-800 bg-slate-900/40",
-  dayOfWeekLabel: "py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-500",
-  gridBody: "grid grid-cols-7 select-none",
-  blankCell: "border-r border-b border-slate-800/20 bg-slate-950/10 h-20 md:h-28",
-  dayCell: "border-r border-b border-slate-800/50 p-2 flex flex-col transition-all group relative cursor-pointer h-20 md:h-28 overflow-hidden",
-  dayCellToday: "bg-secondary/5 z-10",
-  dayCellDefault: "bg-transparent hover:bg-slate-800/20",
-  todayGlow: "absolute inset-0 border-2 border-secondary shadow-[0_0_20px_rgba(16,185,129,0.4),inset_0_0_20px_rgba(16,185,129,0.15)] pointer-events-none",
-  cellHeader: "flex items-start justify-between relative z-10 shrink-0 pr-4 md:pr-0",
-  cellNumber: "w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold transition-all",
-  cellNumberToday: "text-secondary font-black text-sm",
-  cellNumberDefault: "text-slate-400 group-hover:text-white",
-  badgeCount: "hidden md:block absolute top-1 right-1 text-[8px] md:text-[9px] font-black text-slate-950 bg-secondary px-1 md:px-1.5 py-0.5 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.3)] animate-in fade-in zoom-in duration-300",
-  cellContent: "flex-1 mt-1 overflow-y-auto space-y-0.5 relative z-10 custom-scrollbar pr-0.5 min-h-0 w-full",
-  repartoCompact: "text-[9px] font-semibold bg-slate-950/60 text-slate-300 border border-slate-800/60 rounded-md px-1.5 py-0.5 flex items-center justify-between gap-1 shadow-sm hover:border-slate-750 hover:text-white transition-all truncate",
-  moreLabel: "text-[9px] font-bold text-center text-secondary bg-secondary/10 border border-secondary/20 rounded-md py-0.5 mt-0.5",
-  
-  // Modal layout
-  modalBackdrop: "fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4",
-  modalContainer: "w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-8 shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col max-h-[80dvh] md:max-h-[90vh] my-auto",
-  modalHeader: "flex items-center justify-between border-b border-slate-800 pb-3 md:pb-4 shrink-0",
-  modalTitle: "text-xl md:text-2xl font-bold text-white",
-  modalSubtitle: "text-slate-500 text-xs mt-1",
-  modalCloseBtn: "w-10 h-10 flex items-center justify-center rounded-xl bg-slate-950/50 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800 hover:border-slate-700 transition-all cursor-pointer",
-  
-  // Tabs
-  tabsContainer: "flex flex-col gap-2 border-b border-slate-800/80 pb-3 pt-2 md:pb-4 md:pt-3 shrink-0",
-  tabsList: "flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1",
-  tabBtn: "px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 border cursor-pointer",
-  tabBtnActive: "bg-secondary/10 border-secondary text-secondary shadow-[0_0_15px_rgba(16,185,129,0.08)] font-extrabold",
-  tabBtnInactive: "bg-slate-950/40 border-slate-800 text-slate-400 hover:text-white hover:border-slate-750",
-  tabBadge: "px-2 py-0.5 rounded-full text-[9px] font-black",
-  tabBadgeActive: "bg-secondary text-slate-950",
-  tabBadgeInactive: "bg-slate-800/80 text-slate-300",
-  timezoneBadge: "text-xs text-blue-400 font-bold flex items-center gap-2 ml-1 mt-1.5 bg-blue-500/10 border border-blue-500/20 px-3.5 py-2 rounded-xl w-fit shadow-[0_0_15px_rgba(59,130,246,0.05)]",
-  noDriversWarning: "p-4 bg-slate-950/30 border border-slate-800 text-slate-500 text-xs rounded-2xl text-center my-3 shrink-0",
-  
-  // List details
-  repartosList: "flex-1 overflow-y-auto py-2 md:py-4 space-y-2 pr-1 custom-scrollbar min-h-0 my-2",
-  restDayBanner: "p-3 mb-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold rounded-2xl flex items-center justify-center gap-2 text-center animate-in fade-in duration-300",
-  timeRow: "flex gap-2 md:gap-4 items-stretch group/row min-h-12",
-  timeColumn: "w-14 md:w-20 flex flex-col items-center justify-center shrink-0 border-r border-slate-800 pr-2 md:pr-3 relative",
-  timeText: "text-xs font-black text-slate-300 font-mono tracking-tight",
-  periodText: "text-[9px] text-slate-600 uppercase tracking-widest font-semibold",
-  lineTop: "absolute right-[-1px] top-1/2 bottom-0 w-[2px] bg-slate-800 group-last/row:hidden",
-  lineBottom: "absolute right-[-1px] top-0 bottom-1/2 w-[2px] bg-slate-800 group-first/row:hidden",
-  timeNode: "absolute right-[-4px] top-1/2 -translate-y-1/2 w-2 rounded-full border",
-  timeNodeActive: "bg-secondary border-slate-900 shadow-[0_0_8px_rgba(16,185,129,0.6)] w-2.5 h-2.5 right-[-5px]",
-  timeNodeEmpty: "bg-slate-900 border-slate-800 h-2 w-2",
-  contentCol: "flex-1 pb-2",
-  
-  // Reparto Card
-  card: "relative bg-slate-950/40 border border-slate-800 rounded-2xl p-3 md:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 hover:border-slate-700 transition-all shadow-inner group overflow-hidden pr-10 md:pr-4",
-  cardActiveStrip: "absolute left-0 top-0 bottom-0 w-1 bg-secondary shadow-[0_0_10px_rgba(16,185,129,0.5)]",
-  cardContent: "space-y-1.5 md:space-y-2 flex-1 min-w-0 pl-1 md:pl-2",
-  cardBadgeRow: "flex flex-wrap items-center gap-1.5",
-  cardZoneBadge: "px-2 py-0.5 text-[9px] md:text-[10px] md:px-2.5 font-bold uppercase rounded-md bg-emerald-500/10 text-secondary border border-emerald-500/20",
-  cardTitle: "text-white font-bold text-sm md:text-base truncate",
-  cardSpecs: "text-[10px] md:text-xs font-normal text-slate-500 ml-1.5",
-  cardDetails: "flex flex-wrap gap-x-3 gap-y-0.5 md:gap-x-4 md:gap-y-1 text-[11px] md:text-xs text-slate-400",
-  cardDetailItem: "flex items-center gap-1 md:gap-1.5",
-  cardDetailVal: "text-slate-200",
-  cardDeleteBtn: "absolute top-3 right-3 md:relative md:top-auto md:right-auto p-1.5 md:p-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:border-red-500/30 transition-all flex items-center justify-center cursor-pointer md:self-center disabled:opacity-50",
-  
-  // Empty slot
-  emptySlotBtn: "w-full text-left py-2.5 px-4 rounded-xl border border-dashed transition-all flex items-center justify-between group/btn",
-  emptySlotActive: "border-slate-800 hover:border-secondary/30 bg-transparent hover:bg-secondary/5 text-slate-600 hover:text-secondary cursor-pointer",
-  emptySlotDisabled: "border-slate-800/40 bg-slate-950/5 text-slate-700 cursor-not-allowed opacity-40",
-  emptySlotText: "text-xs italic select-none",
-  emptySlotIcon: "material-symbols-outlined text-sm opacity-0 group-hover/btn:opacity-100 transition-all text-secondary",
-  emptyListState: "flex flex-col items-center justify-center py-12 text-slate-500 italic text-sm",
-  emptyListIcon: "material-symbols-outlined text-4xl mb-2 opacity-50",
-  
-  // Footer
-  footer: "flex items-center justify-end gap-3 border-t border-slate-800 pt-3 md:pt-4 shrink-0",
-  footerCloseBtn: "px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-semibold text-sm transition-all cursor-pointer border border-slate-700",
-  footerCreateBtn: "px-5 py-2.5 bg-secondary text-slate-950 font-bold rounded-xl hover:bg-secondary/90 transition-all text-sm cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.2)] disabled:opacity-50 disabled:cursor-not-allowed",
-  
-  // Form elements
-  formContainer: "flex-1 flex flex-col justify-between overflow-y-auto mt-4 min-h-0",
-  formScroll: "space-y-4 pr-1 overflow-y-auto pb-4 custom-scrollbar",
-  formError: "p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-xl flex items-center gap-2 animate-pulse",
-  formGrid: "grid grid-cols-1 md:grid-cols-2 gap-4",
-  formField: "space-y-1.5",
-  formLabel: "text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1",
-  formInput: "w-full bg-slate-950 border border-slate-800 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary transition-all appearance-none disabled:opacity-40 disabled:cursor-not-allowed",
-};
+import { RepartosCalendarHeader } from './repartos/RepartosCalendarHeader';
+import { RepartosCalendarGrid } from './repartos/RepartosCalendarGrid';
+import { RepartosModalList } from './repartos/RepartosModalList';
+import { RepartosModalForm } from './repartos/RepartosModalForm';
 
 interface RepartosCalendarProps {
   userRole?: string;
@@ -132,11 +29,9 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
     selectedRepartidorTab,
     timezoneDiffText,
     formRepartidor,
-    formZona,
     formVendedor,
     formStockImei,
     formHorario,
-    formNotas,
     formError,
     
     // Auxiliares calculados
@@ -145,7 +40,6 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
     blanks,
     days,
     monthNames,
-    zonasFiltradas,
     repartosDelDiaSeleccionado,
     formDataOptions,
     repartidoresFiltradosLogistica,
@@ -158,11 +52,9 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
     setIsFormOpen,
     setSelectedRepartidorTab,
     setFormRepartidor,
-    setFormZona,
     setFormVendedor,
     setFormStockImei,
     setFormHorario,
-    setFormNotas,
     setFormError,
     prevMonth,
     nextMonth,
@@ -182,160 +74,53 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
     };
   }, [isModalOpen]);
 
-  const canCreateOrDelete = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor' || userRole === 'Repartidor';
+  const canCreateOrDelete = ['Admin', 'Developer', 'Supervisor', 'Repartidor'].includes(userRole || '');
 
   return (
-    <div className={styles.wrapper}>
+    <div className="flex flex-col w-full relative">
       {/* Indicador de carga general */}
       {loading && (
-        <div className={styles.loadingOverlay}>
-          <div className={styles.loadingSpinner} />
+        <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px] z-[90] flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-secondary/30 border-t-secondary rounded-full animate-spin" />
         </div>
       )}
 
-      {/* Header (Controles) */}
-      <div className={styles.header}>
-        <h3 className={styles.headerTitle}>
-          {monthNames[month]} <span className={styles.headerYear}>{year}</span>
-        </h3>
-        <div className={styles.controls}>
-          <button 
-            onClick={() => setCurrentDate(new Date())}
-            className={styles.todayBtn}
-          >
-            Hoy
-          </button>
-          <div className={styles.navGroup}>
-            <button 
-              onClick={prevMonth}
-              className={styles.navBtn}
-            >
-              <span className="material-symbols-outlined text-lg">chevron_left</span>
-            </button>
-            <button 
-              onClick={nextMonth}
-              className={styles.navBtn}
-            >
-              <span className="material-symbols-outlined text-lg">chevron_right</span>
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Header del Calendario */}
+      <RepartosCalendarHeader
+        monthName={monthNames[month]}
+        year={year}
+        onToday={() => setCurrentDate(new Date())}
+        onPrevMonth={prevMonth}
+        onNextMonth={nextMonth}
+      />
 
       {/* Grilla del Calendario */}
-      <div className="w-full flex flex-col">
-        {/* Cabecera de días de la semana */}
-        <div className={styles.daysOfWeekHeader}>
-          {DAYS_OF_WEEK.map((day) => (
-            <div key={day} className={styles.dayOfWeekLabel}>
-              {day}
-            </div>
-          ))}
-        </div>
-
-        {/* Cuerpo del calendario */}
-        <div className={styles.gridBody}>
-          {blanks.map((b) => (
-            <div key={`blank-${b}`} className={styles.blankCell}>
-            </div>
-          ))}
-          {days.map((d) => {
-            const todayFlag = isToday(d);
-            const formattedDayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-            const repartosDelDia = repartos.filter(reparto => reparto.fecha_reparto === formattedDayStr);
-
-            return (
-              <div 
-                key={`day-${d}`} 
-                onClick={() => {
-                  setSelectedDay(d);
-                  setIsModalOpen(true);
-                  setIsFormOpen(false); // Abrir por defecto en listado
-                }}
-                className={`
-                  ${styles.dayCell}
-                  ${todayFlag ? styles.dayCellToday : styles.dayCellDefault}
-                `}
-              >
-                {/* Borde flúor y resplandor para el cuadrado completo */}
-                {todayFlag && (
-                  <div className={styles.todayGlow} />
-                )}
-
-                <div className={styles.cellHeader}>
-                  <span className={`
-                    ${styles.cellNumber}
-                    ${todayFlag ? styles.cellNumberToday : styles.cellNumberDefault}
-                  `}>
-                    {d}
-                  </span>
-                  
-                  {/* Badge de cantidad de envíos si los hay */}
-                  {repartosDelDia.length > 0 && (
-                    <span className={styles.badgeCount}>
-                      {repartosDelDia.length}
-                    </span>
-                  )}
-                </div>
-
-                {/* Área de contenido para renderizar repartos compactos */}
-                <div className={styles.cellContent}>
-                  {/* Vista Mobile: Puntos/Indicadores circulares pequeños */}
-                  <div className="flex md:hidden flex-wrap gap-1 justify-center items-center mt-1">
-                    {repartosDelDia.slice(0, 3).map((rep) => (
-                      <div 
-                        key={rep.id} 
-                        className="w-1.5 h-1.5 rounded-full bg-secondary shadow-[0_0_5px_rgba(16,185,129,0.6)] animate-in fade-in duration-300"
-                        title={`${rep.productos?.marca} ${rep.productos?.modelo}`}
-                      />
-                    ))}
-                    {repartosDelDia.length > 3 && (
-                      <span className="text-[8px] text-secondary font-black animate-pulse">+</span>
-                    )}
-                  </div>
-
-                  {/* Vista Desktop: Cards de repartos compactos completos */}
-                  <div className="hidden md:flex flex-col space-y-0.5">
-                    {repartosDelDia.slice(0, 2).map((rep) => {
-                      // Extraer primer nombre del repartidor para que quede compacto
-                      const primerNombreRep = rep.repartidores?.nombre?.replace("Repartidor ", "").split(' ')[0] || "S/R";
-                      return (
-                        <div 
-                          key={rep.id} 
-                          className={styles.repartoCompact}
-                          title={`${rep.productos?.marca} ${rep.productos?.modelo} - ${rep.repartidores?.nombre} (${rep.zonas_reparto?.nombre_zona})`}
-                        >
-                          <span className="truncate max-w-[95%]">
-                            📦 {rep.productos?.marca} {rep.productos?.modelo} ({primerNombreRep})
-                          </span>
-                        </div>
-                      );
-                    })}
-                    {repartosDelDia.length > 2 && (
-                      <div className={styles.moreLabel}>
-                        + {repartosDelDia.length - 2} más
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <RepartosCalendarGrid
+        year={year}
+        month={month}
+        blanks={blanks}
+        days={days}
+        repartos={repartos}
+        isToday={isToday}
+        onSelectDay={(day) => {
+          setSelectedDay(day);
+          setIsModalOpen(true);
+          setIsFormOpen(false);
+        }}
+      />
 
       {/* MODAL DETALLES / AGENDAR REPARTO */}
       {isMounted && isModalOpen && selectedDay !== null && createPortal(
-        <div className={styles.modalBackdrop}>
-          <div className={styles.modalContainer}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4">
+          <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-8 shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col max-h-[80dvh] md:max-h-[90vh] my-auto">
             
             {/* Header del Modal */}
-            <div className={styles.modalHeader}>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 md:pb-4 shrink-0">
               <div>
-                <h2 className={styles.modalTitle}>
+                <h2 className="text-xl md:text-2xl font-bold text-white">
                   {isFormOpen ? "Agendar Nuevo Reparto" : `Repartos — ${selectedDay} de ${monthNames[month]} de ${year}`}
                 </h2>
-                <p className={styles.modalSubtitle}>
+                <p className="text-slate-500 text-xs mt-1">
                   {isFormOpen 
                     ? "Completa los datos del envío" 
                     : `${repartosDelDiaSeleccionado.length} entregas agendadas`}
@@ -347,455 +132,58 @@ export default function RepartosCalendar({ userRole }: RepartosCalendarProps) {
                   setFormError(null);
                   setSelectedRepartidorTab(null);
                 }}
-                className={styles.modalCloseBtn}
+                className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-950/50 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800 hover:border-slate-700 transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            {/* CUERPO DEL MODAL (LISTADO) */}
+            {/* Listado del Modal */}
             {!isFormOpen && (
-              <>
-                {/* Selector de Pestañas de Repartidores */}
-                {repartidoresFiltradosLogistica.length > 0 ? (
-                  <div className={styles.tabsContainer}>
-                    <div className={styles.tabsList}>
-                      {repartidoresFiltradosLogistica.map((rep) => {
-                        const isActive = selectedRepartidorTab === rep.id;
-                        const countRepartos = repartosDelDiaSeleccionado.filter(reparto => reparto.repartidores?.id === rep.id).length;
-                        
-                        let tzShort = 'GMT-6';
-                        try {
-                          const formatter = new Intl.DateTimeFormat('en-US', {
-                            timeZone: rep.zona_horaria,
-                            timeZoneName: 'shortOffset'
-                          });
-                          tzShort = formatter.formatToParts(new Date()).find(p => p.type === 'timeZoneName')?.value || 'GMT-6';
-                        } catch (e) {}
-
-                        return (
-                          <button
-                            key={rep.id}
-                            type="button"
-                            onClick={() => setSelectedRepartidorTab(rep.id)}
-                            className={`${styles.tabBtn} ${isActive ? styles.tabBtnActive : styles.tabBtnInactive}`}
-                          >
-                            <span className="material-symbols-outlined text-sm">person</span>
-                            <span>{rep.nombre}</span>
-                            <span className="text-[10px] opacity-60 font-semibold">({tzShort})</span>
-                            {countRepartos > 0 && (
-                              <span className={`${styles.tabBadge} ${isActive ? styles.tabBadgeActive : styles.tabBadgeInactive}`}>
-                                {countRepartos}
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {timezoneDiffText && (
-                      <div className={styles.timezoneBadge}>
-                        <span className="material-symbols-outlined text-sm text-blue-400 animate-pulse">schedule</span>
-                        <span>{timezoneDiffText}</span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className={styles.noDriversWarning}>
-                    ⚠️ No hay repartidores activos registrados para ver agendas. Ve a Configuración de Repartidores primero.
-                  </div>
-                )}
-
-                <div className={styles.repartosList}>
-                  {selectedRepartidorTab ? (() => {
-                    const driverReps = repartosDelDiaSeleccionado.filter(rep => rep.repartidores?.id === selectedRepartidorTab);
-                    const currentTabDriverObj = repartidoresFiltradosLogistica.find(r => r.id === selectedRepartidorTab);
-                    const isTabDriverCT = (currentTabDriverObj?.nombre || "").toLowerCase() === "repartidor ct";
-
-                    const formattedDayStr = selectedDay !== null 
-                      ? `${year}-${String(month + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
-                      : '';
-                    const driverRestInfo = getDriverRestDayInfo(currentTabDriverObj?.nombre, formattedDayStr);
-
-                    const minStandardHour = isTabDriverCT ? 10 : 9;
-                    const maxStandardHour = isTabDriverCT ? 17 : 19;
-
-                    const standardSlots: string[] = [];
-                    for (let h = minStandardHour; h <= maxStandardHour; h++) {
-                      const hStr = String(h).padStart(2, '0');
-                      standardSlots.push(`${hStr}:00`);
-                      if (h < maxStandardHour) {
-                        standardSlots.push(`${hStr}:30`);
-                      }
-                    }
-
-                    const extraSlots = new Set<string>();
-                    driverReps.forEach(rep => {
-                      if (!rep.horario) return;
-                      const timePart = rep.horario.slice(0, 5);
-                      if (timePart && !standardSlots.includes(timePart)) {
-                        extraSlots.add(timePart);
-                      }
-                    });
-
-                    const allSlotStrings = Array.from(new Set([...standardSlots, ...Array.from(extraSlots)])).sort((a, b) => a.localeCompare(b));
-
-                    return (
-                      <>
-                        {driverRestInfo.isRestDay && (
-                          <div className={styles.restDayBanner}>
-                            <span className="material-symbols-outlined text-base select-none">event_busy</span>
-                            <span>{currentTabDriverObj?.nombre || 'El repartidor'} no realiza entregas los días {driverRestInfo.restDayNames.join(", ")} (Día de descanso).</span>
-                          </div>
-                        )}
-                        {allSlotStrings.map((slotStr) => {
-                          const [hour, minute] = slotStr.split(':').map(Number);
-                          
-                          // Calcular si esta hora en el día seleccionado ya pasó o tiene menos de 1 hora de anticipación en la zona horaria del repartidor
-                          const rep = repartidoresFiltradosLogistica.find(r => r.id === selectedRepartidorTab);
-                          const tz = rep?.zona_horaria || 'America/Mexico_City';
-                          const driverNowString = new Date().toLocaleString('en-US', { timeZone: tz });
-                          const driverNow = new Date(driverNowString);
-                          const minAllowed = new Date(driverNow.getTime() + 60 * 60 * 1000);
-                          const slotDate = new Date(year, month, selectedDay || 1, hour, minute);
-                          const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor' || userRole === 'Repartidor';
-                          const isPastOrUnavailable = (!isPrivileged && slotDate < minAllowed) || driverRestInfo.isRestDay;
-                          
-                          // Buscar repartos para este slot específico asignados a este repartidor
-                          const repsInSlot = driverReps.filter(rep => {
-                            if (!rep.horario) return false;
-                            return rep.horario.slice(0, 5) === slotStr;
-                          });
-
-                          return (
-                            <div key={slotStr} className={styles.timeRow}>
-                              {/* Indicador de Hora (Local del Repartidor) */}
-                              <div className={styles.timeColumn}>
-                                <span className={styles.timeText}>
-                                  {slotStr}
-                                </span>
-                                <span className={styles.periodText}>
-                                  {hour >= 12 ? 'pm' : 'am'}
-                                </span>
-                                {/* Línea vertical conectora */}
-                                <div className={styles.lineTop} />
-                                <div className={styles.lineBottom} />
-                                {/* Nodo central */}
-                                <div className={`
-                                  ${styles.timeNode}
-                                  ${repsInSlot.length > 0 ? styles.timeNodeActive : styles.timeNodeEmpty}
-                                `} />
-                              </div>
-
-                              {/* Contenido (Tarjeta o Vacío) */}
-                              <div className={styles.contentCol}>
-                                {repsInSlot.length > 0 ? (
-                                  <div className="space-y-2">
-                                    {repsInSlot.map((rep) => (
-                                      <div 
-                                        key={rep.id} 
-                                        className={styles.card}
-                                      >
-                                        {/* Línea decorativa izquierda flúor */}
-                                        <div className={styles.cardActiveStrip} />
-
-                                        <div className={styles.cardContent}>
-                                          <div className={styles.cardBadgeRow}>
-                                            <span className={styles.cardZoneBadge}>
-                                              📍 {rep.zonas_reparto?.nombre_zona || 'Sin Zona'}
-                                            </span>
-                                          </div>
-                                          
-                                          <h4 className={styles.cardTitle}>
-                                            {rep.productos?.marca} {rep.productos?.modelo}
-                                          </h4>
-                                          
-                                          <div className={styles.cardDetails}>
-                                            {rep.notas && (
-                                              <span className={styles.cardDetailItem}>
-                                                <span className="material-symbols-outlined text-sm text-secondary">account_circle</span>
-                                                Cliente: <strong className={styles.cardDetailVal}>{rep.notas}</strong>
-                                              </span>
-                                            )}
-                                            <span className={styles.cardDetailItem}>
-                                              <span className="material-symbols-outlined text-sm text-slate-500">local_shipping</span>
-                                              Repartidor: <strong className={styles.cardDetailVal}>{rep.repartidores?.nombre || 'No asignado'}</strong>
-                                            </span>
-                                            <span className={styles.cardDetailItem}>
-                                              <span className="material-symbols-outlined text-sm text-slate-500">person</span>
-                                              Vendedor: <strong className={styles.cardDetailVal}>
-                                                {(() => {
-                                                  const rawName = rep.vendedor?.username || rep.vendedor?.email || 'N/A';
-                                                  return rawName !== 'N/A' ? rawName.charAt(0).toUpperCase() + rawName.slice(1) : 'N/A';
-                                                })()}
-                                              </strong>
-                                            </span>
-                                            {rep.imei && (
-                                              <span className={`${styles.cardDetailItem} font-mono text-[11px]`}>
-                                                <span className="material-symbols-outlined text-sm text-slate-500">tag</span>
-                                                IMEI: <strong className={styles.cardDetailVal}>{rep.imei}</strong>
-                                              </span>
-                                            )}
-                                          </div>
-                                        </div>
-                                        
-                                        {canCreateOrDelete && (
-                                          <button
-                                            onClick={() => handleEliminarReparto(rep.id)}
-                                            disabled={actionLoading}
-                                            className={styles.cardDeleteBtn}
-                                            title="Eliminar Reparto"
-                                          >
-                                            <span className="material-symbols-outlined text-lg">delete</span>
-                                          </button>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  /* Slot Vacío */
-                                  <button
-                                    onClick={() => {
-                                      if (!canCreateOrDelete || isPastOrUnavailable) return;
-                                      setFormHorario(slotStr);
-                                      setFormRepartidor(selectedRepartidorTab || '');
-                                      setIsFormOpen(true);
-                                      setFormError(null);
-                                    }}
-                                    disabled={!canCreateOrDelete || isPastOrUnavailable}
-                                    className={`
-                                      ${styles.emptySlotBtn}
-                                      ${(!canCreateOrDelete || isPastOrUnavailable) ? styles.emptySlotDisabled : styles.emptySlotActive}
-                                    `}
-                                  >
-                                    <span className={styles.emptySlotText}>
-                                      {!canCreateOrDelete
-                                        ? 'Sin repartos programados'
-                                        : driverRestInfo.isRestDay
-                                          ? `Día de descanso (${driverRestInfo.restDayNames.join(", ")})`
-                                          : isPastOrUnavailable
-                                            ? 'Horario no disponible (Pasado / Límite)'
-                                            : 'Sin repartos programados'}
-                                    </span>
-                                    {canCreateOrDelete && !isPastOrUnavailable && (
-                                      <span className={styles.emptySlotIcon}>
-                                        add_circle
-                                      </span>
-                                    )}
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </>
-                    );
-                  })()
-                  : (
-                    <div className={styles.emptyListState}>
-                      <span className={styles.emptyListIcon}>touch_app</span>
-                      Selecciona un repartidor en la barra superior para ver su agenda
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer del Modal (Listado) */}
-                <div className={styles.footer}>
-                  <button 
-                    onClick={() => {
-                      setIsModalOpen(false);
-                      setSelectedRepartidorTab(null);
-                    }}
-                    className={styles.footerCloseBtn}
-                  >
-                    Cerrar
-                  </button>
-                   {canCreateOrDelete && (
-                     <button 
-                       onClick={() => {
-                         setFormRepartidor(selectedRepartidorTab || '');
-                         setIsFormOpen(true);
-                         setFormError(null);
-                       }}
-                       disabled={!selectedRepartidorTab}
-                       className={styles.footerCreateBtn}
-                     >
-                       + Agendar Reparto
-                     </button>
-                   )}
-                </div>
-              </>
+              <RepartosModalList
+                year={year}
+                month={month}
+                selectedDay={selectedDay}
+                repartidoresFiltradosLogistica={repartidoresFiltradosLogistica}
+                selectedRepartidorTab={selectedRepartidorTab}
+                setSelectedRepartidorTab={setSelectedRepartidorTab}
+                repartosDelDiaSeleccionado={repartosDelDiaSeleccionado}
+                timezoneDiffText={timezoneDiffText}
+                canCreateOrDelete={canCreateOrDelete}
+                actionLoading={actionLoading}
+                userRole={userRole}
+                handleEliminarReparto={handleEliminarReparto}
+                setFormHorario={setFormHorario}
+                setFormRepartidor={setFormRepartidor}
+                setIsFormOpen={setIsFormOpen}
+                setFormError={setFormError}
+                setIsModalOpen={setIsModalOpen}
+              />
             )}
 
-            {/* CUERPO DEL MODAL (FORMULARIO CREACIÓN) */}
+            {/* Formulario del Modal */}
             {isFormOpen && (
-              <form onSubmit={handleCrearReparto} className={styles.formContainer}>
-                <div className={styles.formScroll}>
-                  
-                  {formError && (
-                    <div className={styles.formError}>
-                      <span className="material-symbols-outlined text-base">error</span>
-                      {formError}
-                    </div>
-                  )}
-
-                  <div className={styles.formGrid}>
-                    {/* Repartidor */}
-                    <div className={styles.formField}>
-                      <label className={styles.formLabel}>Repartidor</label>
-                      <select
-                         value={formRepartidor}
-                         onChange={(e) => {
-                           setFormRepartidor(e.target.value);
-                           setFormStockImei(''); // Resetear stock cuando cambia repartidor
-                         }}
-                         required
-                         className={styles.formInput}
-                         style={{ colorScheme: 'dark' }}
-                       >
-                        <option value="">Seleccionar Repartidor</option>
-                        {repartidoresFiltradosLogistica.map(repartidor => (
-                          <option key={repartidor.id} value={repartidor.id}>
-                            {repartidor.nombre}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Vendedor */}
-                    <div className={styles.formField}>
-                      <label className={styles.formLabel}>Vendedor</label>
-                      <select
-                         value={formVendedor}
-                         onChange={(e) => setFormVendedor(e.target.value)}
-                         required
-                         className={styles.formInput}
-                         style={{ colorScheme: 'dark' }}
-                       >
-                        <option value="">Seleccionar Vendedor</option>
-                        {formDataOptions.vendedores.map(vendedor => {
-                          const rawName = vendedor.username ? vendedor.username : (vendedor.email || '');
-                          const displayName = rawName ? rawName.charAt(0).toUpperCase() + rawName.slice(1) : '';
-                          const roleLabel = vendedor.role ? `[${vendedor.role}] ` : '';
-                          return (
-                            <option key={vendedor.id} value={vendedor.id}>
-                              {roleLabel}{displayName}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-
-                    {/* Stock disponible (IMEI) */}
-                    <div className={styles.formField}>
-                      <label className={styles.formLabel}>Equipo (IMEI)</label>
-                      <select
-                         value={formStockImei}
-                         onChange={(e) => setFormStockImei(e.target.value)}
-                         required
-                         disabled={!formRepartidor}
-                         className={styles.formInput}
-                         style={{ colorScheme: 'dark' }}
-                       >
-                        <option value="">
-                          {!formRepartidor ? 'Elige un repartidor primero' : 'Seleccionar de Stock'}
-                        </option>
-                        {formDataOptions.stock
-                          .filter(stock => stock.zona === formRepartidor)
-                          .map(stock => (
-                            <option key={stock.imei} value={stock.imei}>
-                              {stock.productos?.marca} {stock.productos?.modelo} ({stock.productos?.color}, {stock.productos?.almacenamiento}) - IMEI: {stock.imei}
-                            </option>
-                          ))
-                        }
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Horario de entrega */}
-                  <div className={styles.formField}>
-                    <label className={styles.formLabel}>Horario de entrega</label>
-                    <select
-                      value={formHorario}
-                      onChange={(e) => setFormHorario(e.target.value)}
-                      required
-                      className={styles.formInput}
-                      style={{ colorScheme: 'dark' }}
-                    >
-                      <option value="">Seleccionar Hora</option>
-                      {(() => {
-                        const selectedFormRep = repartidoresFiltradosLogistica.find(r => r.id === formRepartidor);
-                        const isFormRepCT = (selectedFormRep?.nombre || "").toLowerCase() === "repartidor ct";
-                        const formattedDayStr = selectedDay !== null 
-                          ? `${year}-${String(month + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
-                          : '';
-                        const formDriverRest = getDriverRestDayInfo(selectedFormRep?.nombre, formattedDayStr);
-
-                        const startHour = isFormRepCT ? 10 : 9;
-                        const endHour = isFormRepCT ? 17 : 19;
-                        
-                        const formSlots: string[] = [];
-                        for (let h = startHour; h <= endHour; h++) {
-                          const hStr = String(h).padStart(2, '0');
-                          formSlots.push(`${hStr}:00`);
-                          if (h < endHour) {
-                            formSlots.push(`${hStr}:30`);
-                          }
-                        }
-
-                        return formSlots.map((slotStr) => {
-                          const [hour, minute] = slotStr.split(':').map(Number);
-                          const tz = selectedFormRep?.zona_horaria || 'America/Mexico_City';
-                          const driverNowString = new Date().toLocaleString('en-US', { timeZone: tz });
-                          const driverNow = new Date(driverNowString);
-                          const minAllowed = new Date(driverNow.getTime() + 60 * 60 * 1000);
-                          const slotDate = new Date(year, month, selectedDay || 1, hour, minute);
-                          const isPrivileged = userRole === 'Admin' || userRole === 'Developer' || userRole === 'Supervisor' || userRole === 'Repartidor';
-                          const isPastOrUnavailable = (!isPrivileged && slotDate < minAllowed) || formDriverRest.isRestDay;
-                          return (
-                            <option 
-                              key={slotStr} 
-                              value={slotStr} 
-                              disabled={isPastOrUnavailable}
-                              className={isPastOrUnavailable ? "text-slate-600 bg-slate-950" : "text-white bg-slate-950"}
-                            >
-                              {slotStr} hs {formDriverRest.isRestDay ? "(Día de descanso)" : isPastOrUnavailable ? "(No disponible)" : ""}
-                            </option>
-                          );
-                        });
-                      })()}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Footer del Formulario */}
-                <div className={styles.footer}>
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      setIsFormOpen(false);
-                      setFormError(null);
-                    }}
-                    className={styles.footerCloseBtn}
-                    disabled={actionLoading}
-                  >
-                    Volver al Listado
-                  </button>
-                  <button 
-                    type="submit"
-                    className={styles.footerCreateBtn}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
-                        Guardando...
-                      </>
-                    ) : (
-                      "Confirmar Reparto"
-                    )}
-                  </button>
-                </div>
-              </form>
+              <RepartosModalForm
+                year={year}
+                month={month}
+                selectedDay={selectedDay}
+                repartidoresFiltradosLogistica={repartidoresFiltradosLogistica}
+                formDataOptions={formDataOptions}
+                formRepartidor={formRepartidor}
+                setFormRepartidor={setFormRepartidor}
+                formVendedor={formVendedor}
+                setFormVendedor={setFormVendedor}
+                formStockImei={formStockImei}
+                setFormStockImei={setFormStockImei}
+                formHorario={formHorario}
+                setFormHorario={setFormHorario}
+                formError={formError}
+                setFormError={setFormError}
+                actionLoading={actionLoading}
+                userRole={userRole}
+                setIsFormOpen={setIsFormOpen}
+                handleCrearReparto={handleCrearReparto}
+              />
             )}
 
           </div>

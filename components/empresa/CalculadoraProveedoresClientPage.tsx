@@ -3,25 +3,15 @@
 import React, { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { styles, formatCurrency } from "./comprobantes-types";
 import {
   agregarProductoProveedor,
   actualizarCostoProveedor,
   eliminarProductoProveedor,
 } from "@/app/empresa/webapp/sueldos/proveedores/proveedores-actions";
-import type { CatalogProduct, SupplierCostRecord } from "@/app/empresa/webapp/sueldos/proveedores/page";
-
-const pageStyles = {
-  container: "max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500",
-  backLink: "flex items-center gap-1.5 text-slate-400 hover:text-slate-200 transition-colors text-sm font-semibold cursor-pointer w-fit",
-  headerTitle: "text-xl md:text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent",
-  switchContainer: "grid grid-cols-3 w-full sm:w-[390px] bg-slate-950/80 backdrop-blur p-1.5 border border-slate-800 rounded-2xl gap-1 shrink-0",
-  card: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl space-y-4 text-sm",
-  selectInput: "w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-secondary transition-all appearance-none cursor-pointer text-xs sm:text-sm h-[42px] disabled:opacity-50 disabled:cursor-not-allowed",
-  costInput: "bg-slate-950 border border-slate-800 rounded-xl pl-6 pr-4 py-2.5 text-[16px] sm:text-sm text-slate-200 focus:outline-none focus:border-secondary transition-all h-[42px] w-full text-center",
-  tableContainer: "bg-slate-900/30 backdrop-blur-xl border border-slate-800/85 rounded-3xl overflow-hidden shadow-2xl",
-  th: "px-6 py-4 text-slate-400 font-semibold uppercase text-xs tracking-wider",
-};
+import type { CatalogProduct, SupplierCostRecord, ProveedorNombre } from "@/types/proveedores";
+import { AsignarProductoForm } from "./proveedores/AsignarProductoForm";
+import { ProveedoresTable } from "./proveedores/ProveedoresTable";
+import { DeleteProveedorCostModal } from "./proveedores/DeleteProveedorCostModal";
 
 interface CalculadoraProveedoresClientPageProps {
   catalogProducts: CatalogProduct[];
@@ -33,7 +23,7 @@ export default function CalculadoraProveedoresClientPage({
   initialAssignedCosts,
 }: CalculadoraProveedoresClientPageProps) {
   const router = useRouter();
-  const [proveedorActive, setProveedorActive] = useState<"Tijuana" | "Monterrey" | "Guadalajara">("Tijuana");
+  const [proveedorActive, setProveedorActive] = useState<ProveedorNombre>("Tijuana");
 
   // Estados para agregar producto
   const [selectedMarca, setSelectedMarca] = useState("");
@@ -52,24 +42,20 @@ export default function CalculadoraProveedoresClientPage({
   const [deleteModal, setDeleteModal] = useState<{ id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Sigla según el proveedor activo: Guadalajara -> GDL, Monterrey -> MTY, Tijuana -> TIJ
   const targetSigla = useMemo(() => {
     if (proveedorActive === "Guadalajara") return "GDL";
     if (proveedorActive === "Monterrey") return "MTY";
     return "TIJ";
   }, [proveedorActive]);
 
-  // Filtrar costos asignados al proveedor activo
   const activeAssignedCosts = useMemo(() => {
     return initialAssignedCosts.filter((costoRecord) => costoRecord.proveedor === proveedorActive);
   }, [initialAssignedCosts, proveedorActive]);
 
-  // IDs de productos ya asignados a este proveedor
   const assignedProductIds = useMemo(() => {
     return activeAssignedCosts.map((costoRecord) => costoRecord.producto_id);
   }, [activeAssignedCosts]);
 
-  // Productos disponibles en el catálogo para ser asignados que correspondan a la sigla del proveedor activo
   const selectableProducts = useMemo(() => {
     return catalogProducts.filter((productoItem) => {
       const isNotAssigned = !assignedProductIds.includes(productoItem.id);
@@ -79,7 +65,6 @@ export default function CalculadoraProveedoresClientPage({
     });
   }, [catalogProducts, assignedProductIds, targetSigla]);
 
-  // Obtener marcas únicas ordenadas de los productos seleccionables
   const marcas = useMemo(() => {
     const set = new Set<string>();
     selectableProducts.forEach((productoItem) => {
@@ -90,7 +75,6 @@ export default function CalculadoraProveedoresClientPage({
     return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   }, [selectableProducts]);
 
-  // Filtrar productos seleccionables por marca
   const filteredProducts = useMemo(() => {
     if (!selectedMarca) return [];
     return selectableProducts
@@ -135,7 +119,6 @@ export default function CalculadoraProveedoresClientPage({
 
     const numericVal = Number(currentVal) || 0;
 
-    // Si no cambió el valor, simplemente limpiar el estado local de edición
     if (numericVal === originalCosto) {
       setEditCosts((prev) => {
         const copy = { ...prev };
@@ -157,7 +140,6 @@ export default function CalculadoraProveedoresClientPage({
         setSavedMap((prev) => ({ ...prev, [id]: false }));
       }, 2000);
 
-      // Limpiar edición para permitir que use el prop actualizado
       setEditCosts((prev) => {
         const copy = { ...prev };
         delete copy[id];
@@ -207,7 +189,7 @@ export default function CalculadoraProveedoresClientPage({
             </p>
           </div>
 
-          {/* Selector de Proveedor (Switch Segmentado) */}
+          {/* Switch de Proveedor */}
           <div className="grid grid-cols-3 w-full sm:w-[390px] bg-slate-950/80 backdrop-blur p-1.5 border border-slate-800 rounded-2xl gap-1 shrink-0">
             {(["Tijuana", "Monterrey", "Guadalajara"] as const).map((prov) => {
               const isActive = proveedorActive === prov;
@@ -237,331 +219,41 @@ export default function CalculadoraProveedoresClientPage({
       </header>
 
       {/* Bloque: Agregar Producto a Proveedor */}
-      <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-6 rounded-3xl space-y-4 text-sm">
-        <h3 className="text-slate-200 font-semibold text-sm flex items-center gap-2">
-          <span className="material-symbols-outlined text-secondary text-base">add_circle</span>
-          Asignar nuevo producto
-        </h3>
-
-        <div className="flex flex-col md:flex-row gap-4 items-end">
-          {/* Selector de Marca */}
-          <div className="space-y-2 w-full md:w-56 shrink-0">
-            <label className="text-xs font-semibold text-slate-400 ml-1">Marca:</label>
-            <div className="relative flex items-center w-full">
-              <select
-                value={selectedMarca}
-                onChange={(e) => {
-                  setSelectedMarca(e.target.value);
-                  setSelectedProdId("");
-                }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-secondary transition-all appearance-none cursor-pointer text-xs sm:text-sm h-[42px]"
-                style={{ colorScheme: 'dark' }}
-                suppressHydrationWarning
-              >
-                {marcas.length === 0 ? (
-                  <option value="" className="italic text-slate-500">No hay productos disponibles con sigla ({targetSigla})...</option>
-                ) : (
-                  <>
-                    <option value="">Elegir marca...</option>
-                    {marcas.map((marca) => (
-                      <option key={marca} value={marca}>
-                        {marca}
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
-              <span className="material-symbols-outlined absolute right-4 pointer-events-none text-slate-500 text-base">
-                keyboard_arrow_down
-              </span>
-            </div>
-          </div>
-
-          {/* Selector de Producto */}
-          <div className="space-y-2 flex-1 w-full">
-            <label className="text-xs font-semibold text-slate-400 ml-1">Modelo:</label>
-            <div className="relative flex items-center w-full">
-              <select
-                value={selectedProdId}
-                onChange={(e) => setSelectedProdId(e.target.value)}
-                disabled={!selectedMarca}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-slate-100 focus:outline-none focus:border-secondary transition-all appearance-none cursor-pointer text-xs sm:text-sm h-[42px] disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ colorScheme: 'dark' }}
-                suppressHydrationWarning
-              >
-                {!selectedMarca ? (
-                  <option value="">Selecciona una marca primero...</option>
-                ) : (
-                  <>
-                    <option value="">Elegir modelo del catálogo...</option>
-                    {filteredProducts.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.modelo} ({p.color} - {p.almacenamiento})
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
-              <span className="material-symbols-outlined absolute right-4 pointer-events-none text-slate-500 text-base">
-                keyboard_arrow_down
-              </span>
-            </div>
-          </div>
-
-          {/* Costo Inicial */}
-          <div className="space-y-2 w-full md:w-44 shrink-0">
-            <label className="text-xs font-semibold text-slate-400 ml-1">Costo:</label>
-            <div className="relative flex items-center w-full">
-              <span className="absolute left-3 text-slate-400 font-bold text-xs pointer-events-none">$</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={costoInput}
-                onFocus={(e) => {
-                  if (costoInput === "0") {
-                    setCostoInput("");
-                  }
-                  e.target.select();
-                }}
-                onBlur={() => {
-                  if (!costoInput || costoInput.trim() === "") {
-                    setCostoInput("0");
-                  }
-                }}
-                onChange={(e) => {
-                  let val = e.target.value;
-                  if (/^0\d+$/.test(val)) {
-                    val = val.replace(/^0+/, "");
-                  }
-                  if (val === "" || /^\d*$/.test(val)) {
-                    setCostoInput(val);
-                  }
-                }}
-                className="bg-slate-950 border border-slate-800 rounded-xl pl-6 pr-4 py-2.5 text-[16px] sm:text-sm text-slate-200 focus:outline-none focus:border-secondary transition-all h-[42px] w-full text-center"
-                suppressHydrationWarning
-              />
-            </div>
-          </div>
-
-          {/* Botón de Agregar */}
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={handleAgregar}
-            className="h-[42px] px-6 bg-secondary text-slate-950 font-bold rounded-xl hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/10 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto text-xs"
-          >
-            {isPending ? (
-              <span className="animate-spin h-4 w-4 border-2 border-slate-950 border-t-transparent rounded-full" />
-            ) : (
-              <span className="material-symbols-outlined text-base font-bold">add</span>
-            )}
-            Asignar
-          </button>
-        </div>
-
-        {/* Notificaciones */}
-        {errorMsg && (
-          <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">error</span>
-            {errorMsg}
-          </div>
-        )}
-        {successMsg && (
-          <div className="p-3 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl text-xs flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">check_circle</span>
-            {successMsg}
-          </div>
-        )}
-      </div>
+      <AsignarProductoForm
+        selectedMarca={selectedMarca}
+        setSelectedMarca={setSelectedMarca}
+        selectedProdId={selectedProdId}
+        setSelectedProdId={setSelectedProdId}
+        costoInput={costoInput}
+        setCostoInput={setCostoInput}
+        marcas={marcas}
+        filteredProducts={filteredProducts}
+        targetSigla={targetSigla}
+        isPending={isPending}
+        handleAgregar={handleAgregar}
+        errorMsg={errorMsg}
+        successMsg={successMsg}
+      />
 
       {/* Tabla de Productos Asignados */}
-      <div className="bg-slate-900/30 backdrop-blur-xl border border-slate-800/85 rounded-3xl overflow-hidden shadow-2xl">
-        <div className="bg-slate-950 p-4 border-b border-slate-800 flex justify-between items-center">
-          <h4 className="text-sm font-bold text-slate-200">
-            Productos en Proveedor {proveedorActive} ({activeAssignedCosts.length})
-          </h4>
-        </div>
+      <ProveedoresTable
+        proveedorActive={proveedorActive}
+        activeAssignedCosts={activeAssignedCosts}
+        editCosts={editCosts}
+        setEditCosts={setEditCosts}
+        savingMap={savingMap}
+        savedMap={savedMap}
+        handleSaveCosto={handleSaveCosto}
+        handleEliminar={handleEliminar}
+      />
 
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full min-w-[650px] border-collapse text-left text-sm">
-            <thead className="bg-slate-950 border-b border-slate-800 text-slate-400 font-semibold uppercase text-xs tracking-wider">
-              <tr>
-                <th className="px-6 py-4 min-w-[100px]">Marca</th>
-                <th className="px-6 py-4 min-w-[120px]">Modelo</th>
-                <th className="px-6 py-4 min-w-[160px]">Especificación</th>
-                <th className="px-6 py-4 text-center min-w-[160px]" style={{ width: "20%" }}>Costo Equipo</th>
-                <th className="px-6 py-4 text-center min-w-[90px]" style={{ width: "15%" }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/40">
-              {activeAssignedCosts.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500 italic">
-                    No se han asignado productos a Proveedor {proveedorActive} aún.
-                  </td>
-                </tr>
-              ) : (
-                activeAssignedCosts.map((costoRecord) => {
-                  const productInfo = costoRecord.producto;
-                  const name = productInfo ? `${productInfo.marca} ${productInfo.modelo}` : "Producto Desconocido";
-
-                  return (
-                    <tr key={costoRecord.id} className="hover:bg-slate-900/10 transition-colors">
-                      <td className="px-6 py-4 text-slate-200 font-medium">
-                        {productInfo ? productInfo.marca : "—"}
-                      </td>
-                      <td className="px-6 py-4 text-slate-200 font-medium">
-                        {productInfo ? productInfo.modelo : "—"}
-                      </td>
-                      <td className="px-6 py-4 text-slate-400">
-                        {productInfo ? (
-                          <span>
-                            {productInfo.color} • {productInfo.almacenamiento}
-                            {productInfo.ram && ` • ${productInfo.ram} RAM`}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="relative flex items-center justify-center w-full">
-                          <div className="relative flex items-center">
-                            <span className="absolute left-3 text-slate-400 font-bold text-xs pointer-events-none">$</span>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              value={editCosts[costoRecord.id] !== undefined ? editCosts[costoRecord.id] : costoRecord.costo.toString()}
-                              onFocus={(e) => {
-                                const currentVal = editCosts[costoRecord.id] !== undefined ? editCosts[costoRecord.id] : costoRecord.costo.toString();
-                                if (currentVal === "0") {
-                                  setEditCosts((prev) => ({ ...prev, [costoRecord.id]: "" }));
-                                }
-                                e.target.select();
-                              }}
-                              onChange={(e) => {
-                                let val = e.target.value;
-                                if (/^0\d+$/.test(val)) {
-                                  val = val.replace(/^0+/, "");
-                                }
-                                if (val === "" || /^\d*$/.test(val)) {
-                                  setEditCosts((prev) => ({ ...prev, [costoRecord.id]: val }));
-                                }
-                              }}
-                              onBlur={() => {
-                                const currentVal = editCosts[costoRecord.id];
-                                if (currentVal !== undefined && (currentVal === "" || currentVal.trim() === "")) {
-                                  setEditCosts((prev) => ({ ...prev, [costoRecord.id]: "0" }));
-                                }
-                                handleSaveCosto(costoRecord.id, costoRecord.costo);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  handleSaveCosto(costoRecord.id, costoRecord.costo);
-                                  e.currentTarget.blur();
-                                }
-                              }}
-                              className={`bg-slate-950 border rounded-xl pl-6 pr-4 py-1.5 text-[16px] sm:text-xs text-center text-slate-200 w-32 focus:outline-none transition-all ${savedMap[costoRecord.id]
-                                  ? "border-green-500/60 shadow-[0_0_8px_rgba(34,197,94,0.15)] bg-green-500/5"
-                                  : savingMap[costoRecord.id]
-                                    ? "border-secondary/40"
-                                    : "border-slate-800 focus:border-secondary"
-                                }`}
-                              suppressHydrationWarning
-                            />
-                            {/* Estado de guardado y botón móvil (anclado de forma absoluta y centrada verticalmente al input para mantener el input perfectamente centrado con el encabezado) */}
-                            <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center whitespace-nowrap shrink-0">
-                              {savingMap[costoRecord.id] ? (
-                                <span className="animate-spin h-3.5 w-3.5 border-2 border-secondary border-t-transparent rounded-full pointer-events-none" />
-                              ) : savedMap[costoRecord.id] ? (
-                                <span className="material-symbols-outlined text-green-400 text-sm font-bold animate-bounce pointer-events-none">
-                                  check
-                                </span>
-                              ) : (
-                                // Mostrar botón de guardar solo en móviles si hay cambios pendientes
-                                editCosts[costoRecord.id] !== undefined && editCosts[costoRecord.id] !== costoRecord.costo.toString() && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSaveCosto(costoRecord.id, costoRecord.costo)}
-                                    className="sm:hidden flex items-center justify-center w-5 h-5 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-md cursor-pointer active:scale-95 transition-all"
-                                    title="Guardar costo"
-                                  >
-                                    <span className="material-symbols-outlined text-[14px] font-black">done</span>
-                                  </button>
-                                )
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleEliminar(costoRecord.id, name)}
-                          className="p-2 text-slate-500 hover:text-red-400 transition-colors hover:bg-red-500/10 rounded-xl cursor-pointer"
-                          title="Eliminar asignación"
-                        >
-                          <span className="material-symbols-outlined text-base">delete</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
       {/* Modal de Confirmación de Eliminación */}
-      {deleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
-            onClick={() => !isDeleting && setDeleteModal(null)}
-          />
-          {/* Card */}
-          <div className="relative bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl shadow-slate-950/60 p-6 w-full max-w-sm space-y-5 animate-in fade-in zoom-in-95 duration-200">
-            {/* Icono */}
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 mx-auto">
-              <span className="material-symbols-outlined text-red-400 text-2xl">delete</span>
-            </div>
-            {/* Textos */}
-            <div className="text-center space-y-1.5">
-              <h3 className="text-slate-100 font-bold text-base">Eliminar asignación</h3>
-              <p className="text-slate-400 text-sm">
-                ¿Estás seguro de que querés quitar{" "}
-                <span className="text-slate-200 font-semibold">{deleteModal.name}</span>{" "}
-                de este proveedor?
-              </p>
-              <p className="text-slate-500 text-xs">Esta acción no se puede deshacer.</p>
-            </div>
-            {/* Acciones */}
-            <div className="flex gap-3">
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={() => setDeleteModal(null)}
-                className="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 rounded-xl text-sm font-semibold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={confirmDelete}
-                className="flex-1 px-4 py-2.5 bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 rounded-xl text-sm font-semibold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isDeleting ? (
-                  <span className="animate-spin h-4 w-4 border-2 border-red-400 border-t-transparent rounded-full" />
-                ) : (
-                  <span className="material-symbols-outlined text-base">delete</span>
-                )}
-                {isDeleting ? "Eliminando..." : "Eliminar"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteProveedorCostModal
+        deleteModal={deleteModal}
+        isDeleting={isDeleting}
+        onClose={() => setDeleteModal(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

@@ -43,7 +43,7 @@ export default function StockUbicacionSelector({
     setLoading(false);
   };
 
-  const nombreActual = repartidores.find(r => r.id === ubicacion)?.nombre || "Sin Asignar";
+  const nombreActual = repartidores.find(repartidor => repartidor.id === ubicacion)?.nombre || "Sin Asignar";
 
   if (disabled) {
     return (
@@ -81,9 +81,9 @@ export default function StockUbicacionSelector({
           }}
         >
           <option value="" className="bg-slate-950 text-slate-500 italic">Sin Asignar</option>
-          {repartidores.map(r => (
-            <option key={r.id} value={r.id} className="bg-slate-950 text-white">
-              {r.nombre}
+          {repartidores.map(repartidor => (
+            <option key={repartidor.id} value={repartidor.id} className="bg-slate-950 text-white">
+              {repartidor.nombre}
             </option>
           ))}
         </select>

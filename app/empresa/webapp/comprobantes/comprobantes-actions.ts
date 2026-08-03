@@ -320,8 +320,8 @@ export async function submitComprobante(formData: FormData) {
 
   const comprobanteUrl = uploadResult.publicUrl;
 
-  // 2. Registrar en la base de datos
-  const { error } = await supabase
+  // 2. Registrar en la base de datos comprobantes
+  const { data: newComprobante, error } = await supabase
     .from('comprobantes')
     .insert([{
       nombre_cliente: nombreCliente.trim(),
@@ -341,7 +341,9 @@ export async function submitComprobante(formData: FormData) {
       fecha_proximo_pago: fechaProximoPago,
       comprobante_url: comprobanteUrl,
       creado_por: currentUserId
-    }]);
+    }])
+    .select('id')
+    .single();
 
   if (error) {
     console.error("Error al registrar comprobante en DB:", error);
@@ -357,6 +359,37 @@ export async function submitComprobante(formData: FormData) {
       console.error("Error al limpiar archivo de storage tras fallo en DB:", cleanupError);
     }
     return { success: false, error: "Ocurrió un error al guardar el registro en la base de datos." };
+  }
+
+  // 2.1 Crear automáticamente el registro en seguimiento_pagos
+  try {
+    const plazosMatch = plazos.match(/\d+/);
+    const plazosInt = plazosMatch ? parseInt(plazosMatch[0], 10) : null;
+
+    const { error: seguimientoErr } = await supabase.from('seguimiento_pagos').insert([{
+      comprobante_origen_id: newComprobante?.id || null,
+      tag: tag,
+      nombre_cliente: nombreCliente.trim(),
+      celular: celular || null,
+      color_celular: colorCelular || null,
+      imei: imei || null,
+      precio_total: precioTotal,
+      pago_inicial: pagoInicial,
+      pago_semanal: pagoSemanal,
+      plazos: plazosInt,
+      fecha_proximo_pago: fechaProximoPago,
+      vendedor_id: vendedorId,
+      repartidor_id: repartidorId,
+      creado_por: currentUserId
+    }]);
+
+    if (seguimientoErr) {
+      console.error("Error al insertar registro automático en seguimiento_pagos:", seguimientoErr);
+    } else {
+      revalidatePath('/empresa/webapp/seguimiento-pagos');
+    }
+  } catch (seguimientoErr) {
+    console.error("Excepción al insertar registro en seguimiento_pagos:", seguimientoErr);
   }
 
   // 3. Si se seleccionó un IMEI, registrar la venta y dar de baja en la tabla de stock
