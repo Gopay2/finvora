@@ -58,12 +58,13 @@ export default function StockUbicacionSelector({
   }
 
   return (
-    <div className="relative inline-flex flex-col items-center">
+    <div className="relative inline-flex flex-col items-center" suppressHydrationWarning>
       <div className="relative flex items-center justify-center">
         <select
           value={ubicacion}
           onChange={handleChange}
           disabled={loading}
+          suppressHydrationWarning
           className={`
             appearance-none cursor-pointer rounded-lg text-[10px] font-bold uppercase border transition-all
             ${ubicacion 

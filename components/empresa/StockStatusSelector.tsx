@@ -8,6 +8,7 @@ import { StockRecambioModal } from "./stock/StockRecambioModal";
 interface StockStatusSelectorProps {
   imei: string;
   estadoActual: string;
+  fechaEnEnvio?: string | null;
   disabled?: boolean;
   vendedores?: Vendedor[];
 }
@@ -18,10 +19,18 @@ interface Vendedor {
   role: string;
 }
 
-export default function StockStatusSelector({ imei, estadoActual, disabled = false, vendedores = [] }: StockStatusSelectorProps) {
+export default function StockStatusSelector({
+  imei,
+  estadoActual,
+  fechaEnEnvio = null,
+  disabled = false,
+  vendedores = []
+}: StockStatusSelectorProps) {
   const [estado, setEstado] = useState(estadoActual);
+  const [fechaEnEnvioState, setFechaEnEnvioState] = useState<string | null>(fechaEnEnvio);
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [envioCountdown, setEnvioCountdown] = useState<number | null>(null);
   const [showSellerModal, setShowSellerModal] = useState(false);
   const [showRecambioModal, setShowRecambioModal] = useState(false);
   const [vendedoresList, setVendedoresList] = useState<Vendedor[]>(vendedores);
@@ -36,6 +45,14 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Sincronizar estado local con prop si cambia externamente
+  useEffect(() => {
+    setEstado(estadoActual);
+    if (fechaEnEnvio) {
+      setFechaEnEnvioState(fechaEnEnvio);
+    }
+  }, [estadoActual, fechaEnEnvio]);
 
   const colors: Record<string, string> = {
     Disponible: "bg-green-500/10 text-green-400 border-green-500/20",
@@ -56,6 +73,53 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
     }
     loadVendedores();
   }, [vendedores]);
+
+  // Manejo del temporizador regresivo (cambiar 1 * 60 * 1000 por 12 * 60 * 60 * 1000 para producción)
+  useEffect(() => {
+    if (!mounted) return;
+
+    if (estado === "En envío") {
+      const fechaBaseIso = fechaEnEnvioState || new Date().toISOString();
+      const fechaBaseMs = new Date(fechaBaseIso).getTime();
+
+      const calcularSegundosRestantes = () => {
+        // Duración actual de estado de "En envío": 12 HORAS (12 * 60 * 60 * 1000)
+        // Adicional modificar intervalo en Supabase Function en el caso de modificar el tiempo
+        const targetTimeMs = fechaBaseMs + 12 * 60 * 60 * 1000;
+        const diffSecs = Math.floor((targetTimeMs - Date.now()) / 1000);
+        return diffSecs > 0 ? diffSecs : 0;
+      };
+
+      const segundosIniciales = calcularSegundosRestantes();
+      setEnvioCountdown(segundosIniciales);
+
+      if (segundosIniciales <= 0) {
+        setEstado("Disponible");
+        return;
+      }
+
+      const interval = setInterval(() => {
+        const segundos = calcularSegundosRestantes();
+        setEnvioCountdown(segundos);
+        if (segundos <= 0) {
+          clearInterval(interval);
+          setEstado("Disponible");
+        }
+      }, 1000);
+
+      return () => clearInterval(interval);
+    } else {
+      setEnvioCountdown(null);
+    }
+  }, [estado, fechaEnEnvioState, mounted]);
+
+  // Formato HH:MM:SS (ej: 08:45:12)
+  const formatHHMMSS = (totalSeconds: number): string => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     if (timeLeft !== null && timeLeft > 0) {
@@ -121,6 +185,9 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
     const result = await actualizarEstadoStock(imei, nuevoEstado);
     if (result.success) {
       setEstado(nuevoEstado);
+      if (nuevoEstado === "En envío") {
+        setFechaEnEnvioState(new Date().toISOString());
+      }
     } else {
       setError("Error al actualizar estado");
       setTimeout(() => setError(null), 3000);
@@ -168,22 +235,31 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
 
   if (disabled) {
     return (
-      <div className={`
-        inline-flex items-center justify-center px-4 h-6 min-w-[110px] rounded-lg text-[10px] font-bold uppercase border
-        ${colors[estado] || colors.Disponible}
-      `}>
-        {estado}
+      <div className="relative inline-flex flex-col items-center" suppressHydrationWarning>
+        <div className={`
+          inline-flex items-center justify-center px-4 h-6 min-w-[110px] rounded-lg text-[10px] font-bold uppercase border
+          ${colors[estado] || colors.Disponible}
+        `}>
+          {estado}
+        </div>
+        {mounted && estado === "En envío" && envioCountdown !== null && (
+          <div className="mt-1 flex items-center justify-center gap-1 text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+            <span className="material-symbols-outlined text-[11px]">schedule</span>
+            <span className="font-bold tracking-wider">{formatHHMMSS(envioCountdown)}</span>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="relative inline-flex flex-col items-center">
+    <div className="relative inline-flex flex-col items-center" suppressHydrationWarning>
       <div className="relative flex items-center justify-center">
         <select
           value={estado}
           onChange={handleChange}
           disabled={loading}
+          suppressHydrationWarning
           className={`
             appearance-none cursor-pointer rounded-lg text-[10px] font-bold uppercase border transition-all
             ${colors[estado] || colors.Disponible}
@@ -208,6 +284,14 @@ export default function StockStatusSelector({ imei, estadoActual, disabled = fal
           <span className="absolute -right-6 animate-spin h-3 w-3 border-2 border-slate-500 border-t-transparent rounded-full" />
         )}
       </div>
+
+      {/* Temporizador regresivo si está En envío (renderizado solo tras el montaje cliente) */}
+      {mounted && estado === "En envío" && envioCountdown !== null && (
+        <div className="mt-1 flex items-center justify-center gap-1 text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 shadow-sm animate-pulse">
+          <span className="material-symbols-outlined text-[11px]">schedule</span>
+          <span className="font-bold tracking-wider">{formatHHMMSS(envioCountdown)}</span>
+        </div>
+      )}
 
       {timeLeft !== null && (
         <div className="mt-1">
