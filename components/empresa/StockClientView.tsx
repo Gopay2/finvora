@@ -28,6 +28,7 @@ interface StockItem {
   zona: string | null;
   estado: string;
   fecha_ingreso: string;
+  fecha_en_envio?: string | null;
   productos?: ProductoInfo;
 }
 
@@ -109,6 +110,7 @@ export default function StockClientView({
             <select
               value={selectedMarca}
               onChange={(event) => setSelectedMarca(event.target.value)}
+              suppressHydrationWarning
               className={styles.select}
               style={{ colorScheme: "dark" }}
             >
@@ -130,6 +132,7 @@ export default function StockClientView({
             <select
               value={selectedUbicacion}
               onChange={(event) => setSelectedUbicacion(event.target.value)}
+              suppressHydrationWarning
               className={styles.select}
               style={{ colorScheme: "dark" }}
             >
@@ -151,6 +154,7 @@ export default function StockClientView({
             <select
               value={selectedEstado}
               onChange={(event) => setSelectedEstado(event.target.value)}
+              suppressHydrationWarning
               className={styles.select}
               style={{ colorScheme: "dark" }}
             >
@@ -233,6 +237,7 @@ export default function StockClientView({
                         <StockStatusSelector
                           imei={unidad.imei}
                           estadoActual={unidad.estado}
+                          fechaEnEnvio={unidad.fecha_en_envio}
                           disabled={!canEdit}
                           vendedores={vendedores}
                         />

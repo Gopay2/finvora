@@ -49,6 +49,7 @@ export default async function StockPage() {
       zona,
       estado,
       fecha_ingreso,
+      fecha_en_envio,
       productos!inner (
         marca,
         modelo,
@@ -58,6 +59,7 @@ export default async function StockPage() {
       )
     `)
     .order('fecha_ingreso', { ascending: false });
+
 
 
   const { data: unidades, error } = await query;
