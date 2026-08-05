@@ -2,23 +2,33 @@
 
 import React from 'react';
 
+interface ModeloStockInfo {
+  display: string;
+  totalDisponible: number;
+  totalAConsultar: number;
+}
+
+interface ImeiOption {
+  imei?: string;
+}
+
 interface FormSeleccionEquipoProps {
   selectedZona: string;
-  handleZonaChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  handleZonaChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
   zonasUnicas: string[];
   selectedRepartidorId: string;
-  handleRepartidorChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  handleRepartidorChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
   repartidoresValidos: { id: string; nombre: string }[];
   selectedRepartidorName: string;
   selectedModelKey: string;
-  handleModelChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  modelosUnicos: [string, any][];
+  handleModelChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+  modelosUnicos: [string, ModeloStockInfo][];
   selectedColor: string;
   setSelectedColor: (color: string) => void;
   variantesColor: { color: string; cantidadDisponible: number; cantidadAConsultar: number; hasStock: boolean }[];
   selectedImei: string;
   setSelectedImei: (imei: string) => void;
-  imeisDisponibles: any[];
+  imeisDisponibles: ImeiOption[];
   clienteHistorial: string;
   setClienteHistorial: (historial: string) => void;
   selectedProductCost: number;
@@ -27,6 +37,9 @@ interface FormSeleccionEquipoProps {
   enganchePorcentajes: number[];
 }
 
+/**
+ * Componente para la selección de zona de reparto, repartidor asignado, modelo de equipo, color, IMEI y calculador de enganche.
+ */
 export function FormSeleccionEquipo({
   selectedZona,
   handleZonaChange,
@@ -58,10 +71,15 @@ export function FormSeleccionEquipo({
     engancheInput: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed pl-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
     relativeInputContainer: "relative flex items-center",
     enganchePrefix: "absolute left-4 text-slate-400 pointer-events-none",
+    formGrid: "grid grid-cols-1 md:grid-cols-2 gap-6",
+    sectionTitle: "text-lg font-bold text-secondary border-b border-slate-800 pb-2 mb-4",
   };
 
   return (
-    <>
+    <div>
+      <h3 className={styles.sectionTitle}>Selección de Zona y Equipo</h3>
+      <div className={styles.formGrid}>
+
       {/* SELECTOR DE ZONA */}
       <div className={styles.inputGroup}>
         <label className={styles.label}>Zona de reparto</label>
@@ -132,6 +150,7 @@ export function FormSeleccionEquipo({
             <option value="Brisas" className="bg-slate-950 text-white">Brisas</option>
             <option value="Carpas carrusel" className="bg-slate-950 text-white">Carpas carrusel</option>
             <option value="Plaza carrusel" className="bg-slate-950 text-white">Plaza carrusel</option>
+            <option value="Macroplaza" className="bg-slate-950 text-white">Macroplaza</option>
           </select>
         </div>
       )}
@@ -303,6 +322,7 @@ export function FormSeleccionEquipo({
           </div>
         </div>
       )}
-    </>
-  );
+    </div>
+  </div>
+);
 }

@@ -31,6 +31,7 @@ export default function StockStatusSelector({
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [envioCountdown, setEnvioCountdown] = useState<number | null>(null);
+  const [isProgramado, setIsProgramado] = useState(false);
   const [showSellerModal, setShowSellerModal] = useState(false);
   const [showRecambioModal, setShowRecambioModal] = useState(false);
   const [vendedoresList, setVendedoresList] = useState<Vendedor[]>(vendedores);
@@ -83,17 +84,23 @@ export default function StockStatusSelector({
       const fechaBaseMs = new Date(fechaBaseIso).getTime();
 
       const calcularSegundosRestantes = () => {
-        // Duración actual de estado de "En envío": 12 HORAS (12 * 60 * 60 * 1000)
-        // Adicional modificar intervalo en Supabase Function en el caso de modificar el tiempo
+        const ahoraMs = Date.now();
+        // Si la fecha base está en el futuro (entrega programada), el temporizador de 12hs no inicia aún
+        if (ahoraMs < fechaBaseMs) {
+          setIsProgramado(true);
+          return 12 * 60 * 60; // 43200 s = 12:00:00 estático
+        }
+
+        setIsProgramado(false);
         const targetTimeMs = fechaBaseMs + 12 * 60 * 60 * 1000;
-        const diffSecs = Math.floor((targetTimeMs - Date.now()) / 1000);
+        const diffSecs = Math.floor((targetTimeMs - ahoraMs) / 1000);
         return diffSecs > 0 ? diffSecs : 0;
       };
 
       const segundosIniciales = calcularSegundosRestantes();
       setEnvioCountdown(segundosIniciales);
 
-      if (segundosIniciales <= 0) {
+      if (segundosIniciales <= 0 && Date.now() >= fechaBaseMs) {
         setEstado("Disponible");
         return;
       }
@@ -101,7 +108,7 @@ export default function StockStatusSelector({
       const interval = setInterval(() => {
         const segundos = calcularSegundosRestantes();
         setEnvioCountdown(segundos);
-        if (segundos <= 0) {
+        if (segundos <= 0 && Date.now() >= fechaBaseMs) {
           clearInterval(interval);
           setEstado("Disponible");
         }
@@ -110,6 +117,7 @@ export default function StockStatusSelector({
       return () => clearInterval(interval);
     } else {
       setEnvioCountdown(null);
+      setIsProgramado(false);
     }
   }, [estado, fechaEnEnvioState, mounted]);
 
@@ -244,7 +252,7 @@ export default function StockStatusSelector({
         </div>
         {mounted && estado === "En envío" && envioCountdown !== null && (
           <div className="mt-1 flex items-center justify-center gap-1 text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-            <span className="material-symbols-outlined text-[11px]">schedule</span>
+            <span className="material-symbols-outlined text-[11px]">{isProgramado ? "event" : "schedule"}</span>
             <span className="font-bold tracking-wider">{formatHHMMSS(envioCountdown)}</span>
           </div>
         )}
@@ -287,8 +295,8 @@ export default function StockStatusSelector({
 
       {/* Temporizador regresivo si está En envío (renderizado solo tras el montaje cliente) */}
       {mounted && estado === "En envío" && envioCountdown !== null && (
-        <div className="mt-1 flex items-center justify-center gap-1 text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 shadow-sm animate-pulse">
-          <span className="material-symbols-outlined text-[11px]">schedule</span>
+        <div className={`mt-1 flex items-center justify-center gap-1 text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 shadow-sm ${isProgramado ? "" : "animate-pulse"}`}>
+          <span className="material-symbols-outlined text-[11px]">{isProgramado ? "event" : "schedule"}</span>
           <span className="font-bold tracking-wider">{formatHHMMSS(envioCountdown)}</span>
         </div>
       )}

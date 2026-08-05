@@ -27,7 +27,7 @@ interface OrdenesEntregaFormProps {
 }
 
 const styles = {
-  formCard: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl space-y-6",
+  formCard: "bg-slate-900/40 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl space-y-8",
   button: "w-full bg-secondary text-slate-950 font-bold py-4 rounded-xl hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/20 cursor-pointer flex items-center justify-center gap-2",
   buttonDisabled: "w-full bg-secondary text-slate-950 font-bold py-4 rounded-xl hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/20 cursor-not-allowed flex items-center justify-center gap-2 opacity-70",
   statusSuccess: "p-4 rounded-xl text-sm font-medium flex items-center gap-3 animate-peek bg-green-500/10 text-green-400 border border-green-500/20",
@@ -425,57 +425,55 @@ export default function OrdenesEntregaForm({
         </div>
       )}
 
-      <div className={styles.formGrid}>
-        {/* 1. Datos del cliente */}
-        <FormDatosCliente />
+      {/* 1. Datos del cliente */}
+      <FormDatosCliente />
 
-        {/* 2. Selección de equipo y stock */}
-        <FormSeleccionEquipo
-          selectedZona={selectedZona}
-          handleZonaChange={handleZonaChange}
-          zonasUnicas={zonasUnicas}
-          selectedRepartidorId={selectedRepartidorId}
-          handleRepartidorChange={handleRepartidorChange}
-          repartidoresValidos={repartidoresValidos}
-          selectedRepartidorName={selectedRepartidorName}
-          selectedModelKey={selectedModelKey}
-          handleModelChange={handleModelChange}
-          modelosUnicos={modelosUnicos}
-          selectedColor={selectedColor}
-          setSelectedColor={setSelectedColor}
-          variantesColor={variantesColor}
-          selectedImei={selectedImei}
-          setSelectedImei={setSelectedImei}
-          imeisDisponibles={imeisDisponibles}
-          clienteHistorial={clienteHistorial}
-          setClienteHistorial={setClienteHistorial}
-          selectedProductCost={selectedProductCost}
-          engancheValue={engancheValue}
-          setEngancheValue={setEngancheValue}
-          enganchePorcentajes={enganchePorcentajes}
-        />
+      {/* 2. Selección de equipo y stock */}
+      <FormSeleccionEquipo
+        selectedZona={selectedZona}
+        handleZonaChange={handleZonaChange}
+        zonasUnicas={zonasUnicas}
+        selectedRepartidorId={selectedRepartidorId}
+        handleRepartidorChange={handleRepartidorChange}
+        repartidoresValidos={repartidoresValidos}
+        selectedRepartidorName={selectedRepartidorName}
+        selectedModelKey={selectedModelKey}
+        handleModelChange={handleModelChange}
+        modelosUnicos={modelosUnicos}
+        selectedColor={selectedColor}
+        setSelectedColor={setSelectedColor}
+        variantesColor={variantesColor}
+        selectedImei={selectedImei}
+        setSelectedImei={setSelectedImei}
+        imeisDisponibles={imeisDisponibles}
+        clienteHistorial={clienteHistorial}
+        setClienteHistorial={setClienteHistorial}
+        selectedProductCost={selectedProductCost}
+        engancheValue={engancheValue}
+        setEngancheValue={setEngancheValue}
+        enganchePorcentajes={enganchePorcentajes}
+      />
 
-        {/* 3. Programación de entrega y verificación */}
-        <FormProgramacionEntrega
-          fechaEntrega={fechaEntrega}
-          setFechaEntrega={setFechaEntrega}
-          horaEntrega={horaEntrega}
-          setHoraEntrega={setHoraEntrega}
-          isIOS={isIOS}
-          handleOpenPicker={handleOpenPicker}
-          horasDisponibles={horasDisponibles}
-          driverRestDayInfo={driverRestDayInfo}
-          zoneTime={zoneTime}
-          horariosOcupados={horariosOcupados}
-          isMounted={isMounted}
-          selectedZona={selectedZona}
-          selectedRepartidorName={selectedRepartidorName}
-          isRepartidorCT={isRepartidorCT}
-          selectedZoneDisplayName={selectedZoneDisplayName}
-          selectedFileName={selectedFileName}
-          handleFileChange={handleFileChange}
-        />
-      </div>
+      {/* 3. Programación de entrega y verificación */}
+      <FormProgramacionEntrega
+        fechaEntrega={fechaEntrega}
+        setFechaEntrega={setFechaEntrega}
+        horaEntrega={horaEntrega}
+        setHoraEntrega={setHoraEntrega}
+        isIOS={isIOS}
+        handleOpenPicker={handleOpenPicker}
+        horasDisponibles={horasDisponibles}
+        driverRestDayInfo={driverRestDayInfo}
+        zoneTime={zoneTime}
+        horariosOcupados={horariosOcupados}
+        isMounted={isMounted}
+        selectedZona={selectedZona}
+        selectedRepartidorName={selectedRepartidorName}
+        isRepartidorCT={isRepartidorCT}
+        selectedZoneDisplayName={selectedZoneDisplayName}
+        selectedFileName={selectedFileName}
+        handleFileChange={handleFileChange}
+      />
 
       <button
         type="submit"

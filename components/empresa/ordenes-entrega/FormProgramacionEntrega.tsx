@@ -8,7 +8,7 @@ interface FormProgramacionEntregaProps {
   horaEntrega: string;
   setHoraEntrega: (hora: string) => void;
   isIOS: boolean;
-  handleOpenPicker: (e: React.MouseEvent<HTMLInputElement>) => void;
+  handleOpenPicker: (event: React.MouseEvent<HTMLInputElement>) => void;
   horasDisponibles: string[];
   driverRestDayInfo: { isRestDay: boolean; restDayNames: string[] };
   zoneTime: { dateStr: string; hour: number; minute: number; timeStrFull: string };
@@ -19,9 +19,12 @@ interface FormProgramacionEntregaProps {
   isRepartidorCT: boolean;
   selectedZoneDisplayName: string;
   selectedFileName: string;
-  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
+/**
+ * Componente para la programación de la fecha y hora de entrega, validación de descansos y carga de archivo de verificación.
+ */
 export function FormProgramacionEntrega({
   fechaEntrega,
   setFechaEntrega,
@@ -50,11 +53,16 @@ export function FormProgramacionEntrega({
     textarea: "w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all disabled:opacity-40 disabled:cursor-not-allowed min-h-[100px] resize-none",
     relativeInputContainer: "relative flex items-center",
     pickerIcon: "absolute left-4 text-slate-400 pointer-events-none material-symbols-outlined text-base",
-    warningBanner: "md:col-span-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 p-4 rounded-xl text-sm font-medium flex flex-col lg:flex-row items-center justify-between gap-3 text-center"
+    warningBanner: "md:col-span-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 p-4 rounded-xl text-sm font-medium flex flex-col lg:flex-row items-center justify-between gap-3 text-center",
+    formGrid: "grid grid-cols-1 md:grid-cols-2 gap-6",
+    sectionTitle: "text-lg font-bold text-secondary border-b border-slate-800 pb-2 mb-4",
   };
 
   return (
-    <>
+    <div>
+      <h3 className={styles.sectionTitle}>Entrega y Verificación</h3>
+      <div className={styles.formGrid}>
+
       <div className={styles.inputGroup}>
         <label className={styles.label}>Fecha de entrega</label>
         <div className={styles.relativeInputContainer}>
@@ -205,6 +213,7 @@ export function FormProgramacionEntrega({
           suppressHydrationWarning
         />
       </div>
-    </>
-  );
+    </div>
+  </div>
+);
 }

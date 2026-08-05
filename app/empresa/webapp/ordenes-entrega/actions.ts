@@ -41,7 +41,12 @@ export async function submitOrdenEntrega(formData: FormData) {
     identificacion: formData.get("identificacion_fisica") as string,
     curp: formData.get("curp") as string,
     telefono: formData.get("telefono") as string,
+    preferencia_comunicacion: formData.get("preferencia_comunicacion") as string,
     direccion: formData.get("direccion") as string,
+    nombre_referencia_1: formData.get("nombre_referencia_1") as string,
+    telefono_referencia_1: formData.get("telefono_referencia_1") as string,
+    nombre_referencia_2: formData.get("nombre_referencia_2") as string,
+    telefono_referencia_2: formData.get("telefono_referencia_2") as string,
     enganche: formData.get("enganche") as string,
     celular: formData.get("celular") as string,
     color: formData.get("color_celular") as string,
@@ -57,7 +62,7 @@ export async function submitOrdenEntrega(formData: FormData) {
     comentarios: formData.get("comentarios") as string,
   };
 
-  const verificacionFile = formData.get("verificacion_crediticia") as any;
+  const verificacionFile = formData.get("verificacion_crediticia") as File | null;
 
   // 3.35. CONTROL DE DÍA DE DESCANSO DEL REPARTIDOR
   if (data.fecha && data.repartidor) {
@@ -97,7 +102,12 @@ export async function submitOrdenEntrega(formData: FormData) {
       identificacion_fisica: data.identificacion || null,
       curp: data.curp || null,
       telefono: data.telefono,
+      preferencia_comunicacion: data.preferencia_comunicacion || null,
       direccion: data.direccion,
+      nombre_referencia_1: data.nombre_referencia_1 || null,
+      telefono_referencia_1: data.telefono_referencia_1 || null,
+      nombre_referencia_2: data.nombre_referencia_2 || null,
+      telefono_referencia_2: data.telefono_referencia_2 || null,
       enganche: data.enganche ? parseFloat(data.enganche) : null,
       celular: data.celular,
       color_celular: data.color,
@@ -184,9 +194,62 @@ export async function submitOrdenEntrega(formData: FormData) {
   // Remueve el IMEI del inventario disponible para evitar selecciones duplicadas en órdenes posteriores.
   if (data.imei) {
     try {
+      let fechaEnEnvioIso: string | null = null;
+
+      if (data.fecha && data.hora) {
+        // Determinar la zona horaria específica del repartidor
+        let driverTimeZone = "America/Mexico_City";
+        if (data.repartidor_id) {
+          const { data: driverRow } = await supabase
+            .from("repartidores")
+            .select("zona_horaria")
+            .eq("id", data.repartidor_id)
+            .maybeSingle();
+          if (driverRow?.zona_horaria) {
+            driverTimeZone = driverRow.zona_horaria;
+          }
+        } else if (data.zona?.toLowerCase().includes("tijuana") || data.zona?.toLowerCase().includes("mexicali")) {
+          driverTimeZone = "America/Tijuana";
+        }
+
+        // Calcular la fecha/hora en UTC correspondiente al horario local pactado
+        const cleanHora = data.hora.length === 5 ? data.hora : data.hora.padStart(5, '0');
+        const [y, m, d] = data.fecha.split('-').map(Number);
+        const [h, min] = cleanHora.split(':').map(Number);
+
+        if (!isNaN(y) && !isNaN(m) && !isNaN(d) && !isNaN(h) && !isNaN(min)) {
+          const utcMs = Date.UTC(y, m - 1, d, h, min, 0);
+          const fmt = new Intl.DateTimeFormat('en-US', {
+            timeZone: driverTimeZone,
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hourCycle: 'h23'
+          });
+          const parts = fmt.formatToParts(new Date(utcMs));
+          const getP = (type: string) => parseInt(parts.find(p => p.type === type)?.value || '0', 10);
+
+          const testYear = getP('year');
+          const testMonth = getP('month');
+          const testDay = getP('day');
+          const testHour = getP('hour');
+          const testMin = getP('minute');
+
+          const testUtcMs = Date.UTC(testYear, testMonth - 1, testDay, testHour, testMin, 0);
+          const diffMs = utcMs - testUtcMs;
+          fechaEnEnvioIso = new Date(utcMs + diffMs).toISOString();
+        }
+      }
+
+      const updatePayload: { estado: string; fecha_en_envio?: string } = {
+        estado: "En envío"
+      };
+      if (fechaEnEnvioIso) {
+        updatePayload.fecha_en_envio = fechaEnEnvioIso;
+      }
+
       const { error: stockUpdateErr } = await supabase
         .from("stock")
-        .update({ estado: "En envío" })
+        .update(updatePayload)
         .eq("imei", data.imei);
 
       if (stockUpdateErr) {
@@ -237,6 +300,7 @@ export async function submitOrdenEntrega(formData: FormData) {
     { name: "🪪 CURP", value: `\`${data.curp}\``, inline: false },
     { name: "📄 Identificación física vigente", value: data.identificacion, inline: false },
     { name: "📞 Teléfono", value: `[${data.telefono}](${whatsappUrl})`, inline: false },
+    { name: "💬 Preferencia de comunicación", value: data.preferencia_comunicacion || "No especificada", inline: false },
     { name: "📍 Dirección", value: data.direccion, inline: false },
     { name: "📍 Zona de Reparto", value: data.zona || "No especificada", inline: false },
     { name: "🛵 Repartidor Asignado", value: data.repartidor || "No asignado", inline: false },
