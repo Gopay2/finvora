@@ -29,7 +29,12 @@ export interface OrdenEntrega {
   identificacion_fisica?: string;
   curp?: string;
   telefono: string;
+  preferencia_comunicacion?: string;
   direccion: string;
+  nombre_referencia_1?: string;
+  telefono_referencia_1?: string;
+  nombre_referencia_2?: string;
+  telefono_referencia_2?: string;
   enganche?: number;
   celular: string;
   color_celular: string;
