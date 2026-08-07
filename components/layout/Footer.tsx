@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 
 /**
  * Styles configuration following Next.js Code Quality best practices.
@@ -15,13 +16,14 @@ const styles = {
   contactItem: "text-slate-500 text-sm flex items-center gap-2",
   socialWrapper: "flex gap-4",
   socialIcon: "w-10 h-10 rounded-full bg-slate-950/50 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-secondary hover:bg-secondary/10 transition-all shadow-lg",
-  bottomBar: "max-w-7xl mx-auto px-8 py-8 border-t border-slate-900 text-center",
+  bottomBar: "max-w-7xl mx-auto px-8 py-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-center",
   legalText: "text-slate-600 text-xs",
+  legalLink: "text-slate-500 hover:text-secondary text-xs transition-colors underline-offset-4 hover:underline",
 };
 
 /**
  * Footer Component
- * Contains the company copyright info, contact details, and social media links.
+ * Contains the company copyright info, contact details, social media links, and privacy policy link.
  */
 export default function Footer() {
   return (
@@ -30,11 +32,13 @@ export default function Footer() {
         {/* Column 1 & 2: Brand */}
         <div className={styles.brandColumn}>
           <div className={styles.logoWrapper}>
-            <img
-              alt="Finvora Logo"
-              className={styles.logoImage}
-              src="/brands/finvoralogo.webp"
-            />
+            <Link href="/">
+              <img
+                alt="Finvora Logo"
+                className={styles.logoImage}
+                src="/brands/finvoralogo.webp"
+              />
+            </Link>
           </div>
           <p className={styles.brandDescription}>
             © 2026 Finvora. Tu celular nuevo en 5 minutos, sin salir de casa. Transformando el acceso a la tecnología en México.
@@ -59,13 +63,13 @@ export default function Footer() {
         <div className="md:-mt-8 md:pl-28 lg:mt-0 lg:pl-0">
           <h4 className={styles.columnTitle}>Síguenos</h4>
           <div className={styles.socialWrapper}>
-            <a className={styles.socialIcon} href="#">
+            <a className={styles.socialIcon} href="#" aria-label="Facebook">
               <i className="fa-brands fa-facebook-f"></i>
             </a>
-            <a className={styles.socialIcon} href="#">
+            <a className={styles.socialIcon} href="#" aria-label="Instagram">
               <i className="fa-brands fa-instagram"></i>
             </a>
-            <a className={styles.socialIcon} href="#">
+            <a className={styles.socialIcon} href="#" aria-label="TikTok">
               <i className="fa-brands fa-tiktok"></i>
             </a>
           </div>
@@ -73,6 +77,10 @@ export default function Footer() {
       </div>
       <div className={styles.bottomBar}>
         <p className={styles.legalText}>Finvora es una marca registrada. Todos los derechos reservados 2026.</p>
+        <span className="hidden sm:inline text-slate-800" aria-hidden="true">|</span>
+        <Link href="/politica-de-privacidad" className={styles.legalLink}>
+          Política de Privacidad
+        </Link>
       </div>
     </footer>
   );

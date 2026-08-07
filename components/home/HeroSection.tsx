@@ -15,7 +15,7 @@ const styles = {
   heroTitle: "font-headline font-extrabold text-on-surface leading-tight tracking-tighter mb-6 text-center lg:text-left sm:text-4xl md:text-5xl lg:text-7xl text-[2.5rem]",
   heroDescription: "text-lg md:text-xl text-on-surface-variant mb-10 max-w-lg leading-relaxed text-center lg:text-left mx-auto lg:mx-0",
   heroButtonsContainer: "flex flex-col sm:flex-row gap-4 text-center lg:text-left justify-center lg:justify-start",
-  heroApplyButton: "text-on-tertiary-fixed px-10 py-4 rounded-md font-bold text-lg hover:brightness-110 transition-all shadow-xl shadow-tertiary/20",
+  heroApplyButton: "text-on-tertiary-fixed px-6 sm:px-10 py-3.5 sm:py-4 rounded-md font-bold text-base sm:text-lg hover:brightness-110 transition-all shadow-xl shadow-tertiary/20 whitespace-nowrap inline-flex items-center justify-center text-center",
   
   heroImageContainer: "relative lg:h-[600px] flex items-center justify-center",
   heroImageGlow: "absolute w-[120%] h-[120%] bg-secondary/10 rounded-full blur-[100px] -z-10 animate-pulse",

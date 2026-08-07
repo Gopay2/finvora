@@ -1,5 +1,7 @@
 import { MetadataRoute } from 'next';
-import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/server";
+
+export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://finvora.mx';
@@ -36,25 +38,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    {
+      url: `${baseUrl}/politica-de-privacidad`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.4,
+    },
   ];
 
   // 2. Rutas dinámicas consultadas en Supabase (Equipos del catálogo configurados como visibles)
   try {
-    const supabase = await createClient();
-    const { data: celulares } = await supabase
-      .from('catalogo_celulares')
-      .select('id, created_at')
-      .eq('visible', true);
+    const supabase = await createAdminClient();
+    if (supabase) {
+      const { data: celulares } = await supabase
+        .from('catalogo_celulares')
+        .select('id, created_at')
+        .eq('visible', true);
 
-    if (celulares && celulares.length > 0) {
-      const dynamicRoutes: MetadataRoute.Sitemap = celulares.map((c: { id: string; created_at: string | null }) => ({
-        url: `${baseUrl}/catalogo/${c.id}`,
-        lastModified: c.created_at ? new Date(c.created_at) : new Date(),
-        changeFrequency: 'weekly',
-        priority: 0.8,
-      }));
+      if (celulares && celulares.length > 0) {
+        const dynamicRoutes: MetadataRoute.Sitemap = celulares.map((c: { id: string; created_at: string | null }) => ({
+          url: `${baseUrl}/catalogo/${c.id}`,
+          lastModified: c.created_at ? new Date(c.created_at) : new Date(),
+          changeFrequency: 'weekly',
+          priority: 0.8,
+        }));
 
-      return [...staticRoutes, ...dynamicRoutes];
+        return [...staticRoutes, ...dynamicRoutes];
+      }
     }
   } catch (error) {
     console.error("Error al generar las rutas dinámicas del sitemap:", error);
