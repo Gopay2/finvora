@@ -64,20 +64,20 @@ export default function BrandsSection() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
               <a 
-                className="bg-secondary text-on-secondary-fixed px-8 py-3 rounded-md font-bold hover:scale-105 transition-all inline-flex items-center justify-center gap-2"
+                className="bg-secondary text-on-secondary-fixed px-5 sm:px-8 py-3.5 rounded-md font-bold text-sm sm:text-base hover:scale-105 transition-all inline-flex items-center justify-center gap-2 whitespace-nowrap"
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <span className="material-symbols-outlined text-xl" aria-hidden="true">bolt</span>
-                Iniciar mi solicitud ahora
+                <span className="material-symbols-outlined text-xl shrink-0" aria-hidden="true">bolt</span>
+                <span>Iniciar mi solicitud ahora</span>
               </a>
               <Link 
-                className="border border-secondary/30 text-secondary hover:bg-secondary/5 px-8 py-3 rounded-md font-bold hover:scale-105 transition-all inline-flex items-center justify-center gap-2"
+                className="border border-secondary/30 text-secondary hover:bg-secondary/5 px-5 sm:px-8 py-3.5 rounded-md font-bold text-sm sm:text-base hover:scale-105 transition-all inline-flex items-center justify-center gap-2 whitespace-nowrap"
                 href="/catalogo"
               >
-                <span className="material-symbols-outlined text-xl" aria-hidden="true">phone_iphone</span>
-                Ver catálogo de equipos
+                <span className="material-symbols-outlined text-xl shrink-0" aria-hidden="true">phone_iphone</span>
+                <span>Ver catálogo de equipos</span>
               </Link>
             </div>
           </div>
