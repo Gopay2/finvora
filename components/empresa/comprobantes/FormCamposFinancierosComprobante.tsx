@@ -207,7 +207,7 @@ export function FormCamposFinancierosComprobante({
       </div>
 
       {/* DOCUMENTO / FOTO */}
-      <div className={styles.inputGroup}>
+      <div className="space-y-2 md:col-span-3">
         <label className={styles.label}>Comprobante (Imagen o PDF)</label>
         <div className={styles.fileUploadBox}>
           <input
@@ -224,7 +224,7 @@ export function FormCamposFinancierosComprobante({
               cloud_upload
             </span>
             <p
-              className="text-xs text-slate-300 font-medium truncate max-w-[150px] sm:max-w-[200px]"
+              className="text-xs text-slate-300 font-medium truncate max-w-[200px] sm:max-w-[300px] md:max-w-md"
               title={selectedFileName || "Subir comprobante"}
             >
               {selectedFileName ? selectedFileName : "Subir comprobante"}

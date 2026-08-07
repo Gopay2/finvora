@@ -90,6 +90,7 @@ export default function DownloadExcelButton({ data, type, repartidores, label, c
       worksheetData = data.map(item => ({
         "Fecha (Tijuana)": formatTijuanaDate(item.created_at),
         "Nombre Cliente": item.nombre_cliente || "",
+        "Número de Teléfono": item.numero_telefono || "",
         "Comentarios": item.comentarios || "",
         "Vendedor": item.vendedor?.username || "Desconocido",
         "Repartidor": item.repartidor?.nombre || "Desconocido",
@@ -203,6 +204,7 @@ export default function DownloadExcelButton({ data, type, repartidores, label, c
 
         return {
           "Cliente": item.nombre_cliente || "",
+          "Número de Teléfono": item.numero_telefono || "",
           "Celular": item.celular || "—",
           "Color": item.color_celular || "—",
           "IMEI": item.imei || "—",

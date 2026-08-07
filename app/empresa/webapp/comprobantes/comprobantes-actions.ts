@@ -11,6 +11,7 @@ import { registrarVenta } from "@/app/empresa/webapp/stock/stock-actions";
 export interface ComprobanteRecord {
   id: string;
   nombre_cliente: string;
+  numero_telefono?: string | null;
   comentarios: string | null;
   precio_compra: number;
   pago_inicial: number;
@@ -56,6 +57,7 @@ interface RepartidorSubQuery {
 interface ComprobanteRawResponse {
   id: string;
   nombre_cliente: string;
+  numero_telefono?: string | null;
   comentarios: string | null;
   precio_compra: string | number;
   pago_inicial: string | number;
@@ -252,6 +254,7 @@ export async function submitComprobante(formData: FormData) {
   }
 
   const nombreCliente = formData.get("nombre_cliente") as string;
+  const numeroTelefono = formData.get("numero_telefono") as string;
   const comentarios = formData.get("comentarios") as string;
   const vendedorId = formData.get("vendedor_id") as string;
   const repartidorId = formData.get("repartidor_id") as string;
@@ -270,6 +273,7 @@ export async function submitComprobante(formData: FormData) {
 
   if (
     !nombreCliente || !nombreCliente.trim() ||
+    !numeroTelefono || !numeroTelefono.trim() ||
     !vendedorId ||
     !repartidorId ||
     !precioCompraRaw ||
@@ -325,6 +329,7 @@ export async function submitComprobante(formData: FormData) {
     .from('comprobantes')
     .insert([{
       nombre_cliente: nombreCliente.trim(),
+      numero_telefono: numeroTelefono.trim(),
       comentarios: comentarios ? comentarios.trim() : null,
       vendedor_id: vendedorId,
       repartidor_id: repartidorId,
@@ -370,6 +375,7 @@ export async function submitComprobante(formData: FormData) {
       comprobante_origen_id: newComprobante?.id || null,
       tag: tag,
       nombre_cliente: nombreCliente.trim(),
+      numero_telefono: numeroTelefono.trim(),
       celular: celular || null,
       color_celular: colorCelular || null,
       imei: imei || null,
@@ -449,6 +455,7 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
     .select(`
       id,
       nombre_cliente,
+      numero_telefono,
       comentarios,
       precio_compra,
       pago_inicial,
@@ -480,6 +487,7 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
   const formattedData: ComprobanteRecord[] = (rawComprobantes || []).map((comprobanteRaw: ComprobanteRawResponse) => ({
     id: comprobanteRaw.id,
     nombre_cliente: comprobanteRaw.nombre_cliente,
+    numero_telefono: comprobanteRaw.numero_telefono || null,
     comentarios: comprobanteRaw.comentarios || null,
     precio_compra: Number(comprobanteRaw.precio_compra),
     pago_inicial: Number(comprobanteRaw.pago_inicial),

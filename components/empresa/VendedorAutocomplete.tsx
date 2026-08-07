@@ -66,9 +66,12 @@ export function VendedorAutocomplete({
         className={styles.autocompleteInput}
         required
         spellCheck={false}
-        autoComplete="off"
+        name="search_vendedor_query_no_autofill"
+        autoComplete="one-time-code"
         autoCorrect="off"
         autoCapitalize="off"
+        data-1p-ignore
+        data-lpignore="true"
         suppressHydrationWarning
       />
       <input

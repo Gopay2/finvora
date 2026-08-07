@@ -21,7 +21,7 @@ export function DateRangeFilter({
   onClear,
   showClearButton = false
 }: DateRangeFilterProps) {
-  const dateInputStyle = "h-10 px-4 w-44 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer text-transparent text-center text-base md:text-sm font-semibold";
+  const dateInputStyle = "h-10 px-4 w-full sm:w-44 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer text-transparent text-center text-base md:text-sm font-semibold";
 
   return (
     <div className="flex flex-wrap items-center gap-3">
