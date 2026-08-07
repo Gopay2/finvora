@@ -79,7 +79,7 @@ export function SeguimientoTable({
               <th className="px-4 py-4 text-center">Saldo Restante</th>
               <th className="w-[12%]"></th>
               <th className="px-4 py-4 text-center">Estado Semana</th>
-              <th className="px-10 py-4 text-right w-full">Acciones</th>
+              <th className="px-6 py-4 text-center whitespace-nowrap">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/50">
@@ -108,6 +108,8 @@ export function SeguimientoTable({
                 const estadoActualSemana: EstadoCuota = (item.estados_semanales?.[semanaKey] as EstadoCuota) || 'En revisión';
                 const estadoConfig = ESTADOS_DISPONIBLES.find(e => e.value === estadoActualSemana) || ESTADOS_DISPONIBLES[0];
                 const isUpdating = isUpdatingState === item.id;
+                const cleanPhone = item.numero_telefono ? item.numero_telefono.replace(/\D/g, '') : '';
+                const whatsappUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : null;
 
                 return (
                   <tr key={item.id} className="hover:bg-slate-900/20 transition-colors group border-b border-slate-800/50">
@@ -221,12 +223,32 @@ export function SeguimientoTable({
                     </td>
 
                     {/* Acciones */}
-                    <td className="px-8 py-4 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end space-x-2">
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-3">
+                        {whatsappUrl ? (
+                          <a
+                            href={whatsappUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={`Enviar WhatsApp (${item.numero_telefono})`}
+                            className="p-2 text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 rounded-xl transition-all text-xs font-semibold flex items-center justify-center cursor-pointer shrink-0"
+                          >
+                            <i className="fa-brands fa-whatsapp text-base"></i>
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled
+                            title="Sin número de teléfono registrado"
+                            className="p-2 text-slate-600 bg-slate-950 border border-slate-800 rounded-xl opacity-30 cursor-not-allowed text-xs font-semibold flex items-center justify-center shrink-0"
+                          >
+                            <i className="fa-brands fa-whatsapp text-base"></i>
+                          </button>
+                        )}
                         <button
                           onClick={() => setSelectedForDetail(item)}
                           title="Ver desglose semanal"
-                          className="p-2 text-slate-400 hover:text-secondary hover:bg-slate-800/60 rounded-xl transition-all text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                          className="p-2 text-slate-400 hover:text-secondary hover:bg-slate-800/60 rounded-xl transition-all text-xs font-semibold flex items-center justify-center cursor-pointer shrink-0"
                         >
                           <span className="material-symbols-outlined text-base">visibility</span>
                         </button>
@@ -234,7 +256,7 @@ export function SeguimientoTable({
                           <button
                             onClick={() => setSelectedForEdit(item)}
                             title="Editar datos"
-                            className="p-2 text-slate-400 hover:text-amber-400 hover:bg-slate-800/60 rounded-xl transition-all text-xs font-semibold cursor-pointer"
+                            className="p-2 text-slate-400 hover:text-amber-400 hover:bg-slate-800/60 rounded-xl transition-all text-xs font-semibold flex items-center justify-center cursor-pointer shrink-0"
                           >
                             <span className="material-symbols-outlined text-base">edit</span>
                           </button>

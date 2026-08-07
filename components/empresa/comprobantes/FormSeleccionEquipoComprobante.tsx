@@ -67,6 +67,20 @@ export function FormSeleccionEquipoComprobante({
         />
       </div>
 
+      {/* NÚMERO DE TELÉFONO */}
+      <div className={styles.inputGroup}>
+        <label className={styles.label}>Número de Teléfono</label>
+        <input
+          type="tel"
+          name="numero_telefono"
+          placeholder="Ej: 5212345678900"
+          className={styles.textInput}
+          required
+          autoComplete="off"
+          suppressHydrationWarning
+        />
+      </div>
+
       {/* SELECTOR DE VENDEDOR AUTOCOMPLETE */}
       <div className={styles.inputGroup}>
         <label className={styles.label}>Vendedor</label>

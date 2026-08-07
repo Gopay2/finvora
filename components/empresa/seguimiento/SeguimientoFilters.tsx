@@ -110,9 +110,9 @@ export function SeguimientoFilters({
               <span className="text-slate-300 font-semibold text-xs md:text-sm">Fechas:</span>
             </div>
 
-            <div className="flex items-center gap-2 pl-2 sm:pl-0">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <label className="text-slate-400 font-semibold shrink-0 text-xs md:text-sm">Desde:</label>
-              <div className="relative flex items-center shrink-0">
+              <div className="relative flex items-center flex-1 sm:flex-initial w-full sm:w-auto">
                 <input
                   type="date"
                   value={dateFrom}
@@ -123,7 +123,7 @@ export function SeguimientoFilters({
                       e.currentTarget.showPicker();
                     } catch {}
                   }}
-                  className="h-10 px-4 w-44 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer text-transparent text-center text-base md:text-sm font-semibold"
+                  className="h-10 px-4 w-full sm:w-44 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer text-transparent text-center text-base md:text-sm font-semibold"
                   style={{ colorScheme: 'dark' }}
                   suppressHydrationWarning
                 />
@@ -133,9 +133,9 @@ export function SeguimientoFilters({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pl-2 sm:pl-0">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <label className="text-slate-400 font-semibold shrink-0 text-xs md:text-sm">Hasta:</label>
-              <div className="relative flex items-center shrink-0">
+              <div className="relative flex items-center flex-1 sm:flex-initial w-full sm:w-auto">
                 <input
                   type="date"
                   value={dateTo}
@@ -146,7 +146,7 @@ export function SeguimientoFilters({
                       e.currentTarget.showPicker();
                     } catch {}
                   }}
-                  className="h-10 px-4 w-44 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer text-transparent text-center text-base md:text-sm font-semibold"
+                  className="h-10 px-4 w-full sm:w-44 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-secondary transition-all cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer text-transparent text-center text-base md:text-sm font-semibold"
                   style={{ colorScheme: 'dark' }}
                   suppressHydrationWarning
                 />

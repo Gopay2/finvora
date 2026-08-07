@@ -68,10 +68,10 @@ export function RegistrosFilters({
           <input
             type="text"
             placeholder={
-              activeTab === "ventas" 
-                ? "Buscar por IMEI, modelo..." 
-                : activeTab === "ordenes" 
-                  ? "Buscar folio, cliente, IMEI..." 
+              activeTab === "ventas"
+                ? "Buscar por IMEI, modelo..."
+                : activeTab === "ordenes"
+                  ? "Buscar folio, cliente, IMEI..."
                   : activeTab === "garantias"
                     ? "Buscar IMEI, modelo, solicitante, motivo..."
                     : "Buscar folio, cliente, IMEI, fallas..."
@@ -185,12 +185,12 @@ export function RegistrosFilters({
           <DownloadExcelButton
             data={activeData}
             type={
-              activeTab === "ventas" 
-                ? "ventas" 
-                : activeTab === "garantias" 
-                  ? "garantias" 
-                  : activeTab === "ordenes" 
-                    ? "ordenes_entrega" 
+              activeTab === "ventas"
+                ? "ventas"
+                : activeTab === "garantias"
+                  ? "garantias"
+                  : activeTab === "ordenes"
+                    ? "ordenes_entrega"
                     : "ordenes_garantia"
             }
           />

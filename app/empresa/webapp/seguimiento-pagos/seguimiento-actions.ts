@@ -11,6 +11,7 @@ export interface SeguimientoPagoRecord {
   comprobante_origen_id?: string | null;
   tag?: string | null;
   nombre_cliente: string;
+  numero_telefono?: string | null;
   celular?: string | null;
   color_celular?: string | null;
   imei?: string | null;
@@ -51,6 +52,7 @@ interface SeguimientoRawResponse {
   comprobante_origen_id?: string | null;
   tag?: string | null;
   nombre_cliente: string;
+  numero_telefono?: string | null;
   celular?: string | null;
   color_celular?: string | null;
   imei?: string | null;
@@ -91,6 +93,7 @@ export async function getSeguimientoPagos(): Promise<{
         comprobante_origen_id,
         tag,
         nombre_cliente,
+        numero_telefono,
         celular,
         color_celular,
         imei,
@@ -123,6 +126,7 @@ export async function getSeguimientoPagos(): Promise<{
         comprobante_origen_id: row.comprobante_origen_id || null,
         tag: row.tag || comprobanteObj?.tag || null,
         nombre_cliente: row.nombre_cliente,
+        numero_telefono: row.numero_telefono || null,
         celular: row.celular || null,
         color_celular: row.color_celular || null,
         imei: row.imei || null,
@@ -205,6 +209,7 @@ export async function updateSeguimientoPago(
   id: string,
   datos: {
     nombre_cliente?: string;
+    numero_telefono?: string;
     celular?: string;
     color_celular?: string;
     imei?: string;

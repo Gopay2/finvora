@@ -105,6 +105,18 @@ export function DetalleSeguimientoModal({
                 IMEI: {registro.imei || 'Sin registrar'}
               </p>
               <p className="text-slate-300">
+                Teléfono: {registro.numero_telefono ? (
+                  <a
+                    href={`https://wa.me/${registro.numero_telefono.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-400 hover:underline font-semibold"
+                  >
+                    {registro.numero_telefono}
+                  </a>
+                ) : 'Sin registrar'}
+              </p>
+              <p className="text-slate-300">
                 Tag: {registro.tag || 'Sin tag'}
               </p>
               <p className="text-slate-300">

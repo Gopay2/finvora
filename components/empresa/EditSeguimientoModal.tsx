@@ -21,6 +21,7 @@ export function EditSeguimientoModal({
   onRefresh
 }: EditSeguimientoModalProps) {
   const [nombreCliente, setNombreCliente] = useState('');
+  const [numeroTelefono, setNumeroTelefono] = useState('');
   const [celular, setCelular] = useState('');
   const [imei, setImei] = useState('');
   const [precioTotal, setPrecioTotal] = useState<number | ''>('');
@@ -34,6 +35,7 @@ export function EditSeguimientoModal({
   useEffect(() => {
     if (registro) {
       setNombreCliente(registro.nombre_cliente || '');
+      setNumeroTelefono(registro.numero_telefono || '');
       setCelular(registro.celular || '');
       setImei(registro.imei || '');
       setPrecioTotal(registro.precio_total || '');
@@ -60,6 +62,7 @@ export function EditSeguimientoModal({
 
     const result = await updateSeguimientoPago(registro.id, {
       nombre_cliente: nombreCliente.trim(),
+      numero_telefono: numeroTelefono.trim() || undefined,
       celular: celular.trim() || undefined,
       imei: imei.trim() || undefined,
       precio_total: Number(precioTotal) || 0,
@@ -105,6 +108,17 @@ export function EditSeguimientoModal({
               {errorMsg}
             </div>
           )}
+
+          <div className="space-y-1">
+            <label className="block text-xs font-semibold text-slate-300">Número de Teléfono</label>
+            <input
+              type="tel"
+              value={numeroTelefono}
+              onChange={(e) => setNumeroTelefono(e.target.value)}
+              placeholder="Ej: 5212345678900"
+              className="w-full h-10 px-3.5 rounded-xl bg-slate-950 border border-slate-800 text-base sm:text-sm text-slate-100 focus:border-indigo-500 outline-none transition-colors font-[family-name:var(--font-outfit)]"
+            />
+          </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-1">
