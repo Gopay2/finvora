@@ -88,3 +88,28 @@ export function getDriverRestDayInfo(
 
   return { isRestDay: false, dayOfWeekName, restDayNames: [] };
 }
+
+/**
+ * Configuración de rangos horarios por repartidor.
+ */
+export function getDriverScheduleConfig(driverName: string | null | undefined): {
+  startHour: number;
+  startMinute: number;
+  endHour: number;
+  endMinute: number;
+} {
+  const norm = (driverName || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (norm.includes("ct")) {
+    return { startHour: 10, startMinute: 0, endHour: 17, endMinute: 0 };
+  }
+  if (norm.includes("angel")) {
+    return { startHour: 10, startMinute: 0, endHour: 17, endMinute: 30 };
+  }
+  // Estándar para los demás repartidores (09:00 a 19:00)
+  return { startHour: 9, startMinute: 0, endHour: 19, endMinute: 0 };
+}
+

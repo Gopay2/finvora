@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useMemo, useEffect } from "react";
 import { submitOrdenEntrega } from "@/app/empresa/webapp/ordenes-entrega/actions";
-import { getDriverRestDayInfo } from "@/utils/driver-schedule";
+import { getDriverRestDayInfo, getDriverScheduleConfig } from "@/utils/driver-schedule";
 import type {
   Producto,
   RepartoZonaInfo,
@@ -85,20 +85,21 @@ function computeAvailableHours(
   fechaEntrega: string,
   isRestDay: boolean,
   zoneTime: { dateStr: string; hour: number; minute: number },
-  isRepartidorCT: boolean
+  driverName: string
 ): string[] {
   if (!fechaEntrega || isRestDay || fechaEntrega < zoneTime.dateStr) return [];
 
-  const startHour = isRepartidorCT ? 10 : 9;
-  const endHour = isRepartidorCT ? 17 : 19;
+  const { startHour, startMinute, endHour, endMinute } = getDriverScheduleConfig(driverName);
   const allSlots: string[] = [];
 
-  for (let h = startHour; h <= endHour; h++) {
-    const hStr = h.toString().padStart(2, '0');
-    allSlots.push(`${hStr}:00`);
-    if (h < endHour) {
-      allSlots.push(`${hStr}:30`);
-    }
+  const startTotalMinutes = startHour * 60 + startMinute;
+  const endTotalMinutes = endHour * 60 + endMinute;
+
+  for (let m = startTotalMinutes; m <= endTotalMinutes; m += 30) {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    const slotStr = `${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+    allSlots.push(slotStr);
   }
 
   if (fechaEntrega === zoneTime.dateStr) {
@@ -324,9 +325,9 @@ export default function OrdenesEntregaForm({
       fechaEntrega,
       driverRestDayInfo.isRestDay,
       zoneTime,
-      isRepartidorCT
+      selectedRepartidorName
     );
-  }, [fechaEntrega, zoneTime, isRepartidorCT, driverRestDayInfo.isRestDay]);
+  }, [fechaEntrega, zoneTime, selectedRepartidorName, driverRestDayInfo.isRestDay]);
 
   const horariosOcupados = useMemo(() => {
     if (!selectedRepartidorId || !fechaEntrega || !repartosExistentes || !repartosExistentes.length) {

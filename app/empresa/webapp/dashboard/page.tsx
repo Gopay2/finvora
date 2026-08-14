@@ -26,6 +26,52 @@ const styles = {
   kpiLabel: "text-[9px] sm:text-[10px] uppercase tracking-widest text-slate-400 font-bold text-center mt-0.5",
 };
 
+// ─── Helper de Descarga por Lotes (Chunks) en Supabase ──────────────────────
+async function fetchSalesChunked(
+  supabase: any,
+  startDate?: Date | null,
+  endDate?: Date | null
+): Promise<VentaDashboard[]> {
+  const PAGE_SIZE = 1000;
+  let from = 0;
+  let allSales: VentaDashboard[] = [];
+  let hasMore = true;
+
+  while (hasMore) {
+    let query = supabase
+      .from("ventas")
+      .select(`
+        fecha_venta,
+        vendedor:perfiles(username),
+        productos(marca, modelo)
+      `)
+      .order("fecha_venta", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (startDate) {
+      query = query.gte("fecha_venta", startDate.toISOString());
+    }
+    if (endDate) {
+      query = query.lte("fecha_venta", endDate.toISOString());
+    }
+
+    const { data, error } = await query;
+
+    if (error || !data || data.length === 0) {
+      hasMore = false;
+    } else {
+      allSales = allSales.concat(data as VentaDashboard[]);
+      if (data.length < PAGE_SIZE) {
+        hasMore = false;
+      } else {
+        from += PAGE_SIZE;
+      }
+    }
+  }
+
+  return allSales;
+}
+
 // ─── Componente Principal de Página ──────────────────────────────────────────
 interface PageProps {
   searchParams: Promise<{
@@ -53,18 +99,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   const supabase = await createClient();
 
-  // 2. Obtener todas las ventas del sistema
-  const { data: allSales } = await supabase
-    .from("ventas")
-    .select(`
-      fecha_venta,
-      vendedor:perfiles(username),
-      productos(marca, modelo)
-    `);
-
-  const sales = allSales || [];
-
-  // 3. Lógica Temporal de Tijuana (America/Tijuana)
+  // 2. Lógica Temporal de Tijuana (America/Tijuana)
   const now = new Date();
 
   const getTijuanaDateString = (date: Date) =>
@@ -81,29 +116,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const currentTijuanaYear = currYear;
   const currentTijuanaMonth = currMonth - 1; // 0-11
 
-  // 4. Calcular KPIs Fijos (Absolutos)
-
-  // A. Ventas Hoy
-  let ventasHoy = 0;
-  sales.forEach((sale: VentaDashboard) => {
-    const saleDate = new Date(sale.fecha_venta);
-    if (getTijuanaDateString(saleDate) === tijuanaTodayStr) {
-      ventasHoy++;
-    }
-  });
-
-  // A.5 Ventas Ayer
-  let ventasAyer = 0;
+  // 3. Rangos de Fecha para KPIs Fijos del Período Actual
   const yesterdayDateHelper = new Date(Date.UTC(currYear, currMonth - 1, currDay - 1));
   const tijuanaYesterdayStr = yesterdayDateHelper.toISOString().split('T')[0];
-  sales.forEach((sale: VentaDashboard) => {
-    const saleDate = new Date(sale.fecha_venta);
-    if (getTijuanaDateString(saleDate) === tijuanaYesterdayStr) {
-      ventasAyer++;
-    }
-  });
 
-  // B. Ventas Última Semana (Semana vigente de Lunes a Domingo)
+  // Semana vigente (Lunes a Domingo)
   const tempUtcTijuana = new Date(Date.UTC(currYear, currMonth - 1, currDay));
   const dayOfWeek = tempUtcTijuana.getUTCDay(); // 0 = Domingo, 1 = Lunes, etc.
   const diffToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
@@ -128,87 +145,26 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     23, 59, 59, 999
   );
 
-  let ventasSemana = 0;
-  sales.forEach((sale: VentaDashboard) => {
-    const saleDate = new Date(sale.fecha_venta);
-    if (saleDate >= startOfWeek && saleDate <= endOfWeek) {
-      ventasSemana++;
-    }
-  });
-
-  // C. Ventas Mes Actual
+  // Mes actual
   const startOfMonth = getTijuanaDate(currentTijuanaYear, currentTijuanaMonth, 1, 0, 0, 0, 0);
   const lastDayCurrentMonth = new Date(currentTijuanaYear, currentTijuanaMonth + 1, 0).getDate();
   const endOfMonth = getTijuanaDate(currentTijuanaYear, currentTijuanaMonth, lastDayCurrentMonth, 23, 59, 59, 999);
 
-  let ventasMesActual = 0;
-  sales.forEach((sale: VentaDashboard) => {
-    const saleDate = new Date(sale.fecha_venta);
-    if (saleDate >= startOfMonth && saleDate <= endOfMonth) {
-      ventasMesActual++;
-    }
-  });
+  // El inicio más temprano requerido para calcular los KPIs fijos (Hoy, Ayer, Semana, Mes)
+  const startOfYesterday = getTijuanaDate(currYear, currMonth - 1, currDay - 1, 0, 0, 0, 0);
+  const kpiStartDate = new Date(
+    Math.min(startOfWeek.getTime(), startOfMonth.getTime(), startOfYesterday.getTime())
+  );
 
-  // D. Mejores Vendedores (Mes actual vs Histórico)
-  const vendedoresMesStats: Record<string, number> = {};
-  const vendedoresHistoricoStats: Record<string, number> = {};
-
-  sales.forEach((sale: VentaDashboard) => {
-    const saleDate = new Date(sale.fecha_venta);
-    const vName = sale.vendedor?.username || "Desconocido";
-
-    vendedoresHistoricoStats[vName] = (vendedoresHistoricoStats[vName] || 0) + 1;
-
-    if (saleDate >= startOfMonth && saleDate <= endOfMonth) {
-      vendedoresMesStats[vName] = (vendedoresMesStats[vName] || 0) + 1;
-    }
-  });
-
-  const getWinnerName = (stats: Record<string, number>) => {
-    const sorted = Object.entries(stats).sort((a, b) => b[1] - a[1]);
-    const nameRaw = sorted[0]?.[0] || "---";
-    if (nameRaw === "---" || nameRaw === "Desconocido") return "---";
-    return nameRaw.charAt(0).toUpperCase() + nameRaw.slice(1);
-  };
-
-  const mejorVendedorMes = getWinnerName(vendedoresMesStats);
-  const mejorVendedorHistorico = getWinnerName(vendedoresHistoricoStats);
-
-  // E. Celulares más vendidos (Mes actual vs Histórico)
-  const productosMesStats: Record<string, number> = {};
-  const productosHistoricoStats: Record<string, number> = {};
-
-  sales.forEach((sale: VentaDashboard) => {
-    const saleDate = new Date(sale.fecha_venta);
-    const pName = sale.productos ? `${sale.productos.marca} ${sale.productos.modelo}` : "Desconocido";
-
-    productosHistoricoStats[pName] = (productosHistoricoStats[pName] || 0) + 1;
-
-    if (saleDate >= startOfMonth && saleDate <= endOfMonth) {
-      productosMesStats[pName] = (productosMesStats[pName] || 0) + 1;
-    }
-  });
-
-  const getWinnerProduct = (stats: Record<string, number>) => {
-    const sorted = Object.entries(stats).sort((a, b) => b[1] - a[1]);
-    return sorted[0]?.[0] || "---";
-  };
-
-  const celularMasVendidoMes = getWinnerProduct(productosMesStats);
-  const celularMasVendidoHistorico = getWinnerProduct(productosHistoricoStats);
-
-  // 5. Calcular Parámetros de Filtro
+  // 4. Determinar Fechas y Modo del Gráfico según Filtros
   const filterYearNum = yearParam === 'actual' ? currentTijuanaYear : (yearParam === 'historico' ? null : parseInt(yearParam));
   const filterMonthIdx = monthParam === 'actual' ? currentTijuanaMonth : (monthParam ? parseInt(monthParam) - 1 : null);
 
-  // Determinar cuántas semanas tiene el mes seleccionado
   let weeksInSelectedMonth = 0;
   if (filterYearNum !== null && filterMonthIdx !== null) {
     weeksInSelectedMonth = getTijuanaMonthWeeks(filterYearNum, filterMonthIdx).length;
   }
 
-  // 6. Aplicar Filtro de Fechas para los Gráficos
-  let filteredSales = sales;
   let startDate: Date | null = null;
   let endDate: Date | null = null;
   let chartViewMode: 'semanal' | 'mensual' | 'anual' | 'historico' = 'historico';
@@ -251,20 +207,133 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     }
   }
 
-  // Filtrar en memoria
-  if (startDate && endDate) {
-    filteredSales = sales.filter((sale: VentaDashboard) => {
-      const saleDate = new Date(sale.fecha_venta);
-      return saleDate >= startDate! && saleDate <= endDate!;
-    });
-  }
+  // 5. Ejecutar Consultas Optimizadas en Paralelo
+  const [
+    currentPeriodSales,
+    filteredSalesResult,
+    oldestSaleResult,
+    newestSaleResult,
+    allHistoricalSalesResult
+  ] = await Promise.all([
+    // A: Ventas para KPIs fijos (solo desde el inicio del período actual)
+    fetchSalesChunked(supabase, kpiStartDate, endOfMonth),
+    
+    // B: Ventas para los gráficos (filtradas en BD por el rango exacto)
+    fetchSalesChunked(supabase, startDate, endDate),
 
-  // Extraer los años únicos que tienen datos de ventas reales en la base de datos
-  const yearsWithSalesData = Array.from(
-    new Set(sales.map((sale: VentaDashboard) => new Date(sale.fecha_venta).getFullYear()))
-  ) as number[];
-  yearsWithSalesData.sort((a, b) => b - a);
-  const availableYears = yearsWithSalesData.length > 0 ? yearsWithSalesData : [currentTijuanaYear];
+    // C: Venta más antigua para conocer el año mínimo disponible
+    supabase.from("ventas").select("fecha_venta").order("fecha_venta", { ascending: true }).limit(1),
+
+    // D: Venta más nueva para conocer el año máximo disponible
+    supabase.from("ventas").select("fecha_venta").order("fecha_venta", { ascending: false }).limit(1),
+
+    // E: Ventas históricas para ganadores históricos (si el filtro no es ya histórico)
+    yearParam === 'historico'
+      ? Promise.resolve([])
+      : fetchSalesChunked(supabase, null, null)
+  ]);
+
+  const filteredSales = filteredSalesResult;
+  const historicalSales = yearParam === 'historico' ? filteredSalesResult : allHistoricalSalesResult;
+
+  // 6. Calcular KPIs Fijos (Absolutos)
+  let ventasHoy = 0;
+  currentPeriodSales.forEach((sale: VentaDashboard) => {
+    const saleDate = new Date(sale.fecha_venta);
+    if (getTijuanaDateString(saleDate) === tijuanaTodayStr) {
+      ventasHoy++;
+    }
+  });
+
+  let ventasAyer = 0;
+  currentPeriodSales.forEach((sale: VentaDashboard) => {
+    const saleDate = new Date(sale.fecha_venta);
+    if (getTijuanaDateString(saleDate) === tijuanaYesterdayStr) {
+      ventasAyer++;
+    }
+  });
+
+  let ventasSemana = 0;
+  currentPeriodSales.forEach((sale: VentaDashboard) => {
+    const saleDate = new Date(sale.fecha_venta);
+    if (saleDate >= startOfWeek && saleDate <= endOfWeek) {
+      ventasSemana++;
+    }
+  });
+
+  let ventasMesActual = 0;
+  currentPeriodSales.forEach((sale: VentaDashboard) => {
+    const saleDate = new Date(sale.fecha_venta);
+    if (saleDate >= startOfMonth && saleDate <= endOfMonth) {
+      ventasMesActual++;
+    }
+  });
+
+  // 7. Mejores Vendedores (Mes actual vs Histórico)
+  const vendedoresMesStats: Record<string, number> = {};
+  currentPeriodSales.forEach((sale: VentaDashboard) => {
+    const saleDate = new Date(sale.fecha_venta);
+    if (saleDate >= startOfMonth && saleDate <= endOfMonth) {
+      const vName = sale.vendedor?.username || "Desconocido";
+      vendedoresMesStats[vName] = (vendedoresMesStats[vName] || 0) + 1;
+    }
+  });
+
+  const vendedoresHistoricoStats: Record<string, number> = {};
+  historicalSales.forEach((sale: VentaDashboard) => {
+    const vName = sale.vendedor?.username || "Desconocido";
+    vendedoresHistoricoStats[vName] = (vendedoresHistoricoStats[vName] || 0) + 1;
+  });
+
+  const getWinnerName = (stats: Record<string, number>) => {
+    const sorted = Object.entries(stats).sort((a, b) => b[1] - a[1]);
+    const nameRaw = sorted[0]?.[0] || "---";
+    if (nameRaw === "---" || nameRaw === "Desconocido") return "---";
+    return nameRaw.charAt(0).toUpperCase() + nameRaw.slice(1);
+  };
+
+  const mejorVendedorMes = getWinnerName(vendedoresMesStats);
+  const mejorVendedorHistorico = getWinnerName(vendedoresHistoricoStats);
+
+  // 8. Celulares más vendidos (Mes actual vs Histórico)
+  const productosMesStats: Record<string, number> = {};
+  currentPeriodSales.forEach((sale: VentaDashboard) => {
+    const saleDate = new Date(sale.fecha_venta);
+    if (saleDate >= startOfMonth && saleDate <= endOfMonth) {
+      const pName = sale.productos ? `${sale.productos.marca} ${sale.productos.modelo}` : "Desconocido";
+      productosMesStats[pName] = (productosMesStats[pName] || 0) + 1;
+    }
+  });
+
+  const productosHistoricoStats: Record<string, number> = {};
+  historicalSales.forEach((sale: VentaDashboard) => {
+    const pName = sale.productos ? `${sale.productos.marca} ${sale.productos.modelo}` : "Desconocido";
+    productosHistoricoStats[pName] = (productosHistoricoStats[pName] || 0) + 1;
+  });
+
+  const getWinnerProduct = (stats: Record<string, number>) => {
+    const sorted = Object.entries(stats).sort((a, b) => b[1] - a[1]);
+    return sorted[0]?.[0] || "---";
+  };
+
+  const celularMasVendidoMes = getWinnerProduct(productosMesStats);
+  const celularMasVendidoHistorico = getWinnerProduct(productosHistoricoStats);
+
+  // 9. Extraer Años Disponibles
+  const minYear = oldestSaleResult?.data?.[0]?.fecha_venta
+    ? new Date(oldestSaleResult.data[0].fecha_venta).getFullYear()
+    : currentTijuanaYear;
+  const maxYear = newestSaleResult?.data?.[0]?.fecha_venta
+    ? new Date(newestSaleResult.data[0].fecha_venta).getFullYear()
+    : currentTijuanaYear;
+
+  const availableYears: number[] = [];
+  for (let y = maxYear; y >= minYear; y--) {
+    availableYears.push(y);
+  }
+  if (availableYears.length === 0) {
+    availableYears.push(currentTijuanaYear);
+  }
 
   return (
     <div className={styles.container}>
