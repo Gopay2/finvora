@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { getDriverRestDayInfo } from '@/utils/driver-schedule';
+import { getDriverRestDayInfo, getDriverScheduleConfig } from '@/utils/driver-schedule';
 
 interface RepartosModalFormProps {
   year: number;
@@ -158,22 +158,21 @@ export function RepartosModalForm({
             <option value="">Seleccionar Hora</option>
             {(() => {
               const selectedFormRep = repartidoresFiltradosLogistica.find(r => r.id === formRepartidor);
-              const isFormRepCT = (selectedFormRep?.nombre || "").toLowerCase() === "repartidor ct";
               const formattedDayStr = selectedDay !== null 
                 ? `${year}-${String(month + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
                 : '';
               const formDriverRest = getDriverRestDayInfo(selectedFormRep?.nombre, formattedDayStr);
 
-              const startHour = isFormRepCT ? 10 : 9;
-              const endHour = isFormRepCT ? 17 : 19;
+              const { startHour, startMinute, endHour, endMinute } = getDriverScheduleConfig(selectedFormRep?.nombre);
               
               const formSlots: string[] = [];
-              for (let h = startHour; h <= endHour; h++) {
-                const hStr = String(h).padStart(2, '0');
-                formSlots.push(`${hStr}:00`);
-                if (h < endHour) {
-                  formSlots.push(`${hStr}:30`);
-                }
+              const startTotalMinutes = startHour * 60 + startMinute;
+              const endTotalMinutes = endHour * 60 + endMinute;
+
+              for (let m = startTotalMinutes; m <= endTotalMinutes; m += 30) {
+                const h = Math.floor(m / 60);
+                const min = m % 60;
+                formSlots.push(`${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`);
               }
 
               return formSlots.map((slotStr) => {
