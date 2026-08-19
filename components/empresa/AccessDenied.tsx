@@ -1,8 +1,13 @@
 import React from "react";
 import Link from "next/link";
 
+/**
+ * Props del componente de acceso denegado.
+ */
 interface AccessDeniedProps {
+  /** Rol actual del usuario logueado en la aplicación */
   role: string;
+  /** Nombre de la sección restringida del sistema a la cual intentó acceder */
   sectionName: string;
 }
 
@@ -15,6 +20,10 @@ const styles = {
   roleSpan: "text-slate-200 font-bold"
 };
 
+/**
+ * Componente visual que informa que el rol del usuario no cuenta
+ * con privilegios suficientes para acceder a la sección solicitada.
+ */
 export default function AccessDenied({ role, sectionName }: AccessDeniedProps) {
   return (
     <div className={styles.cardRestrict}>

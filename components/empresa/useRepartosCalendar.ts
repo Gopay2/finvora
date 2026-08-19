@@ -82,6 +82,32 @@ export interface FormDataOptions {
   stock: StockItem[];
 }
 
+const MONTH_NAMES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+];
+
+function getDaysInMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function getFirstDayOfMonth(year: number, month: number): number {
+  return new Date(year, month, 1).getDay();
+}
+
+function isToday(day: number, month: number, year: number): boolean {
+  const today = new Date();
+  return today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
+}
+
+function getCityNameFromTimezone(timezone: string): string {
+  if (timezone === 'America/Cancun') return 'Cancún';
+  if (timezone === 'America/Mexico_City' || timezone === 'America/Monterrey') return 'Monterrey';
+  if (timezone === 'America/Hermosillo' || timezone === 'America/Mazatlan') return 'Sonora';
+  if (timezone === 'America/Tijuana') return 'Tijuana';
+  return timezone.split('/').pop()?.replace('_', ' ') || timezone;
+}
+
 export function useRepartosCalendar(userRole?: string) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -121,29 +147,24 @@ export function useRepartosCalendar(userRole?: string) {
   // Calcular diferencia horaria del repartidor seleccionado con la del navegador y listar sus zonas de reparto
   useEffect(() => {
     if (!selectedRepartidorTab) return;
-    const rep = repartidoresFiltradosLogistica.find(repartidor => repartidor.id === selectedRepartidorTab);
-    if (!rep) return;
+    const repartidorSeleccionado = repartidoresFiltradosLogistica.find(repartidor => repartidor.id === selectedRepartidorTab);
+    if (!repartidorSeleccionado) return;
     try {
       const now = new Date();
-      const repTimeFormatted = now.toLocaleTimeString('es-MX', { timeZone: rep.zona_horaria, hour: '2-digit', minute: '2-digit', hour12: false });
-      const repTimeStr = now.toLocaleTimeString('en-US', { timeZone: rep.zona_horaria, hour: 'numeric', hour12: false });
+      const repTimeFormatted = now.toLocaleTimeString('es-MX', { timeZone: repartidorSeleccionado.zona_horaria, hour: '2-digit', minute: '2-digit', hour12: false });
+      const repTimeStr = now.toLocaleTimeString('en-US', { timeZone: repartidorSeleccionado.zona_horaria, hour: 'numeric', hour12: false });
       const localTimeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', hour12: false });
       const repHour = parseInt(repTimeStr, 10);
       const localHour = parseInt(localTimeStr, 10);
-      const diff = localHour - repHour;
-      let tzCity = 'CDMX / Mty';
-      if (rep.zona_horaria === 'America/Cancun') tzCity = 'Cancún';
-      else if (rep.zona_horaria === 'America/Mexico_City' || rep.zona_horaria === 'America/Monterrey') tzCity = 'Monterrey';
-      else if (rep.zona_horaria === 'America/Hermosillo' || rep.zona_horaria === 'America/Mazatlan') tzCity = 'Sonora';
-      else if (rep.zona_horaria === 'America/Tijuana') tzCity = 'Tijuana';
-      else tzCity = rep.zona_horaria.split('/').pop()?.replace('_', ' ') || rep.zona_horaria;
+      const diferenciaHoras = localHour - repHour;
+      const ciudadZonaHoraria = getCityNameFromTimezone(repartidorSeleccionado.zona_horaria);
 
       // Obtener las zonas de reparto asignadas a este repartidor
       const driverZones = (formDataOptions?.zonas || []).filter(zona => zona.repartidor_id === selectedRepartidorTab);
       const zonesStr = driverZones.map(zona => zona.nombre_zona).join(', ') || 'Sin Zonas';
 
-      if (diff === 0) {
-        setTimezoneDiffText(`Zonas: ${zonesStr} | Hora local (${tzCity}): ${repTimeFormatted}`);
+      if (diferenciaHoras === 0) {
+        setTimezoneDiffText(`Zonas: ${zonesStr} | Hora local (${ciudadZonaHoraria}): ${repTimeFormatted}`);
       } else {
         setTimezoneDiffText(`Zona: ${zonesStr} | Hora actual: ${repTimeFormatted}`);
       }
@@ -163,14 +184,6 @@ export function useRepartosCalendar(userRole?: string) {
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-
-  const getDaysInMonth = (y: number, m: number) => {
-    return new Date(y, m + 1, 0).getDate();
-  };
-
-  const getFirstDayOfMonth = (y: number, m: number) => {
-    return new Date(y, m, 1).getDay();
-  };
 
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfMonth(year, month);
@@ -222,18 +235,10 @@ export function useRepartosCalendar(userRole?: string) {
     console.log("LOGISTICS CALENDAR STOCK:", formDataOptions.stock);
   }, [formDataOptions.stock]);
 
-  const today = new Date();
-  const isToday = (d: number) => {
-    return today.getDate() === d && today.getMonth() === month && today.getFullYear() === year;
-  };
+  const checkIsToday = (d: number) => isToday(d, month, year);
 
   const blanks = Array.from({ length: firstDay }, (_, i) => i);
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-  const monthNames = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-  ];
 
   // Filtrar zonas según el repartidor seleccionado en el formulario
   const zonasFiltradas = formDataOptions.zonas.filter(zona => zona.repartidor_id === formRepartidor);
@@ -368,7 +373,7 @@ export function useRepartosCalendar(userRole?: string) {
     firstDay,
     blanks,
     days,
-    monthNames,
+    monthNames: MONTH_NAMES,
     zonasFiltradas,
     repartosDelDiaSeleccionado,
     formattedSelectedDayStr,
@@ -388,7 +393,7 @@ export function useRepartosCalendar(userRole?: string) {
     setFormError,
     prevMonth,
     nextMonth,
-    isToday,
+    isToday: checkIsToday,
     handleCrearReparto,
     handleEliminarReparto,
   };
