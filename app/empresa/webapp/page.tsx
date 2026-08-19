@@ -74,6 +74,19 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
+      {/* Calculadora de Crédito */}
+      <Link href="/empresa/webapp/calculadora-credito" className={styles.card}>
+        <div className={styles.cardGlow} />
+        <div className={styles.iconWrapper}>
+          <span className={styles.icon}>credit_score</span>
+        </div>
+        <div>
+          <h2 className={styles.cardTitle}>Calculadora de Crédito</h2>
+          <p className={styles.cardDesc}>Cotizador rápido de enganches por zona y modelo.</p>
+        </div>
+        <div className={styles.cardButton}>Acceder</div>
+      </Link>
+
       {/* Stock de Ventas - Bloqueado para Closer en la subpágina */}
       <Link href="/empresa/webapp/stock" className={styles.card}>
         <div className={styles.cardGlow} />
@@ -191,33 +204,7 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
-      {/* Próximamente 1 */}
-      <div className={styles.cardUpcoming}>
-        <div className={styles.cardGlow} />
-        <div className={styles.iconWrapper}>
-          <span className={styles.icon}>more_horiz</span>
-        </div>
-        <div>
-          <h2 className={styles.cardTitle}>Próximamente</h2>
-          <p className={styles.cardDesc}>Nueva sección en desarrollo.</p>
-        </div>
-        <div className={styles.cardButtonUpcoming}>Próximamente</div>
-      </div>
-
-      {/* Próximamente 2 */}
-      <div className={styles.cardUpcoming}>
-        <div className={styles.cardGlow} />
-        <div className={styles.iconWrapper}>
-          <span className={styles.icon}>more_horiz</span>
-        </div>
-        <div>
-          <h2 className={styles.cardTitle}>Próximamente</h2>
-          <p className={styles.cardDesc}>Nueva sección en desarrollo.</p>
-        </div>
-        <div className={styles.cardButtonUpcoming}>Próximamente</div>
-      </div>
-
-      {/* Próximamente 3 */}
+      {/* Próximamente */}
       <div className={styles.cardUpcoming}>
         <div className={styles.cardGlow} />
         <div className={styles.iconWrapper}>

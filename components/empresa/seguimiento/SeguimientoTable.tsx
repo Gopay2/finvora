@@ -5,15 +5,26 @@ import type { SeguimientoPagoRecord, EstadoCuota } from '@/app/empresa/webapp/se
 import { ESTADOS_DISPONIBLES } from '@/constants/seguimiento-estados';
 import { calculateSaldoRestante, calculateSemanasTranscurridas, formatFechaDDMMYYYY, addWeeksToDate } from '@/utils/date-tijuana';
 
+export interface SeguimientoFilaDisplay {
+  rowKey: string;
+  record: SeguimientoPagoRecord;
+  semanaIndice: number;
+  totalSemanas: number;
+  semanaKey: string;
+  fechaPago: string | null;
+  estadoSemana: EstadoCuota;
+  saldoRestante: number;
+}
+
 interface SeguimientoTableProps {
-  paginatedData: SeguimientoPagoRecord[];
+  paginatedData: SeguimientoFilaDisplay[];
   totalPages: number;
   currentPage: number;
   setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
   isUpdatingState: string | null;
   setSelectedForDetail: (item: SeguimientoPagoRecord) => void;
   setSelectedForEdit: (item: SeguimientoPagoRecord) => void;
-  handleStateChangeSemanaActual: (item: SeguimientoPagoRecord, nuevoEstado: EstadoCuota) => void;
+  handleStateChange: (record: SeguimientoPagoRecord, semanaKey: string, nuevoEstado: EstadoCuota, rowKey?: string) => void;
   isSuperiorRole: boolean;
 }
 
@@ -25,7 +36,7 @@ export function SeguimientoTable({
   isUpdatingState,
   setSelectedForDetail,
   setSelectedForEdit,
-  handleStateChangeSemanaActual,
+  handleStateChange,
   isSuperiorRole
 }: SeguimientoTableProps) {
   const [copiedTagId, setCopiedTagId] = useState<string | null>(null);
@@ -90,29 +101,21 @@ export function SeguimientoTable({
                 </td>
               </tr>
             ) : (
-              paginatedData.map((item) => {
-                const saldoRestante = calculateSaldoRestante(
-                  item.precio_total,
-                  item.pago_inicial,
-                  item.pago_semanal,
-                  item.fecha_proximo_pago,
-                  item.plazos
-                );
-
-                const totalSemanas = item.plazos || 0;
-                const semanaActualIndice = calculateSemanasTranscurridas(item.fecha_proximo_pago, totalSemanas);
-                const fechaProximoPagoDinamica = item.fecha_proximo_pago
-                  ? addWeeksToDate(item.fecha_proximo_pago, Math.max(0, (semanaActualIndice || 1) - 1))
-                  : null;
-                const semanaKey = `semana_${semanaActualIndice || 1}`;
-                const estadoActualSemana: EstadoCuota = (item.estados_semanales?.[semanaKey] as EstadoCuota) || 'En revisión';
+              paginatedData.map((row) => {
+                const item = row.record;
+                const saldoRestante = row.saldoRestante;
+                const totalSemanas = row.totalSemanas;
+                const semanaActualIndice = row.semanaIndice;
+                const fechaProximoPagoDinamica = row.fechaPago;
+                const semanaKey = row.semanaKey;
+                const estadoActualSemana: EstadoCuota = row.estadoSemana;
                 const estadoConfig = ESTADOS_DISPONIBLES.find(e => e.value === estadoActualSemana) || ESTADOS_DISPONIBLES[0];
-                const isUpdating = isUpdatingState === item.id;
+                const isUpdating = isUpdatingState === row.rowKey || isUpdatingState === item.id;
                 const cleanPhone = item.numero_telefono ? item.numero_telefono.replace(/\D/g, '') : '';
                 const whatsappUrl = cleanPhone ? `https://wa.me/${cleanPhone}` : null;
 
                 return (
-                  <tr key={item.id} className="hover:bg-slate-900/20 transition-colors group border-b border-slate-800/50">
+                  <tr key={row.rowKey} className="hover:bg-slate-900/20 transition-colors group border-b border-slate-800/50">
                     {/* Cliente */}
                     <td className="px-8 py-4">
                       <div className="flex items-center space-x-3">
@@ -143,7 +146,7 @@ export function SeguimientoTable({
                     <td className="px-4 py-4 whitespace-nowrap text-center">
                       <div className="flex flex-col items-center justify-center">
                         <div className="relative flex items-center justify-center">
-                          {copiedTagId === item.id && (
+                          {copiedTagId === row.rowKey && (
                             <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-emerald-400 border border-slate-700 text-[11px] font-bold px-2.5 py-0.5 rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none animate-in fade-in zoom-in-95 duration-150">
                               ¡Copiado!
                             </div>
@@ -151,7 +154,7 @@ export function SeguimientoTable({
                           {item.tag ? (
                             <button
                               type="button"
-                              onClick={() => handleCopyTag(item.id, item.tag!)}
+                              onClick={() => handleCopyTag(row.rowKey, item.tag!)}
                               className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-slate-950 text-slate-300 border border-slate-800 cursor-pointer"
                             >
                               {item.tag}
@@ -206,7 +209,7 @@ export function SeguimientoTable({
                           <select
                             value={estadoActualSemana}
                             disabled={isUpdating}
-                            onChange={(e) => handleStateChangeSemanaActual(item, e.target.value as EstadoCuota)}
+                            onChange={(e) => handleStateChange(item, semanaKey, e.target.value as EstadoCuota, row.rowKey)}
                             className={`appearance-none cursor-pointer rounded-lg text-[10px] font-semibold uppercase border transition-all outline-none m-0 p-0 h-6 min-w-[110px] text-center ${estadoConfig.bg} ${estadoConfig.text} ${estadoConfig.border} hover:brightness-110 disabled:opacity-50`}
                             style={{
                               colorScheme: 'dark',

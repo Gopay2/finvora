@@ -6,13 +6,13 @@ import type {
   EstadoCuota
 } from '@/app/empresa/webapp/seguimiento-pagos/seguimiento-actions';
 import { updateEstadoSemana } from '@/app/empresa/webapp/seguimiento-pagos/seguimiento-actions';
-import { calculateSemanasTranscurridas, isFechaEnSemanaActual, addWeeksToDate } from '@/utils/date-tijuana';
+import { calculateSaldoRestante, calculateSemanasTranscurridas, isFechaEnSemanaActual, addWeeksToDate } from '@/utils/date-tijuana';
 import type { OptionItem } from '@/components/empresa/comprobantes-types';
 import { DetalleSeguimientoModal } from './DetalleSeguimientoModal';
 import { EditSeguimientoModal } from './EditSeguimientoModal';
 import { SeguimientoFilters } from './seguimiento/SeguimientoFilters';
 import { SeguimientoKpis } from './seguimiento/SeguimientoKpis';
-import { SeguimientoTable } from './seguimiento/SeguimientoTable';
+import { SeguimientoTable, type SeguimientoFilaDisplay } from './seguimiento/SeguimientoTable';
 import DownloadExcelButton from './DownloadExcelButton';
 
 interface SeguimientoPagosClientPageProps {
@@ -57,45 +57,112 @@ export default function SeguimientoPagosClientPage({
   }, [searchQuery, filtroUltimaSemana, estadoFilter, dateFrom, dateTo]);
 
   // Filtrado exhaustivo que combina todos los controles
-  const filteredData = useMemo(() => {
-    return registrosSeguimiento.filter((item) => {
-      // 1. Buscador global (Cliente, IMEI, Tag, Vendedor)
-      const query = searchQuery.toLowerCase();
-      const matchesSearch =
-        item.nombre_cliente.toLowerCase().includes(query) ||
-        (item.imei && item.imei.toLowerCase().includes(query)) ||
-        (item.tag && item.tag.toLowerCase().includes(query)) ||
-        (item.vendedor?.username && item.vendedor.username.toLowerCase().includes(query));
+  const filteredData = useMemo<SeguimientoFilaDisplay[]>(() => {
+    const isDateFilterActive = !!(dateFrom || dateTo);
+    const result: SeguimientoFilaDisplay[] = [];
 
-      if (!matchesSearch) return false;
+    registrosSeguimiento.forEach((item) => {
+      // 1. Buscador global (Cliente, IMEI, Tag, Vendedor)
+      const query = searchQuery.toLowerCase().trim();
+      if (query) {
+        const matchesSearch =
+          item.nombre_cliente.toLowerCase().includes(query) ||
+          (item.imei && item.imei.toLowerCase().includes(query)) ||
+          (item.tag && item.tag.toLowerCase().includes(query)) ||
+          (item.vendedor?.username && item.vendedor.username.toLowerCase().includes(query));
+
+        if (!matchesSearch) return;
+      }
 
       const totalSemanas = item.plazos || 0;
-      const semanaActualIndice = calculateSemanasTranscurridas(item.fecha_proximo_pago, totalSemanas);
-      const fechaProximoPagoDinamica = item.fecha_proximo_pago
-        ? addWeeksToDate(item.fecha_proximo_pago, Math.max(0, (semanaActualIndice || 1) - 1))
-        : null;
-      const semanaKey = `semana_${semanaActualIndice || 1}`;
-      const estadoActual = item.estados_semanales?.[semanaKey] || 'En revisión';
+      const deudaInicial = Math.max(0, item.precio_total - item.pago_inicial);
 
-      // 2. Filtro ÚLTIMA SEMANA (Pagos agendados para esta semana)
-      if (filtroUltimaSemana) {
-        if (!isFechaEnSemanaActual(fechaProximoPagoDinamica)) return false;
+      if (!isDateFilterActive) {
+        // MODO POR DEFECTO / VIGENTE: evalúa la semana activa/actual
+        const semanaActualIndice = calculateSemanasTranscurridas(item.fecha_proximo_pago, totalSemanas);
+        const fechaProximoPagoDinamica = item.fecha_proximo_pago
+          ? addWeeksToDate(item.fecha_proximo_pago, Math.max(0, (semanaActualIndice || 1) - 1))
+          : null;
+        const semanaKey = `semana_${semanaActualIndice || 1}`;
+        const estadoActual = (item.estados_semanales?.[semanaKey] as EstadoCuota) || 'En revisión';
+
+        // Filtro ÚLTIMA SEMANA
+        if (filtroUltimaSemana) {
+          if (!isFechaEnSemanaActual(fechaProximoPagoDinamica)) return;
+        }
+
+        // Filtro de ESTADO
+        if (estadoFilter !== 'todos') {
+          if (estadoActual !== estadoFilter) return;
+        }
+
+        const saldoRestante = calculateSaldoRestante(
+          item.precio_total,
+          item.pago_inicial,
+          item.pago_semanal,
+          item.fecha_proximo_pago,
+          item.plazos
+        );
+
+        result.push({
+          rowKey: item.id,
+          record: item,
+          semanaIndice: semanaActualIndice || 1,
+          totalSemanas,
+          semanaKey,
+          fechaPago: fechaProximoPagoDinamica,
+          estadoSemana: estadoActual,
+          saldoRestante,
+        });
+      } else {
+        // MODO RANGO DE FECHAS: evalúa todas las semanas del crédito (anteriores e históricas)
+        if (!item.fecha_proximo_pago) return;
+
+        const maxSemanas = Math.max(totalSemanas, Object.keys(item.estados_semanales || {}).length, 1);
+
+        for (let w = 1; w <= maxSemanas; w++) {
+          const fechaCuota = addWeeksToDate(item.fecha_proximo_pago, w - 1);
+
+          // Verificar si cae en el rango de fechas
+          if (dateFrom && fechaCuota < dateFrom) continue;
+          if (dateTo && fechaCuota > dateTo) continue;
+
+          // Filtro ÚLTIMA SEMANA
+          if (filtroUltimaSemana && !isFechaEnSemanaActual(fechaCuota)) continue;
+
+          const semanaKey = `semana_${w}`;
+          const estadoCuota = (item.estados_semanales?.[semanaKey] as EstadoCuota) || 'En revisión';
+
+          // Filtro de ESTADO
+          if (estadoFilter !== 'todos' && estadoCuota !== estadoFilter) continue;
+
+          const saldoRestanteProyectado = Math.max(0, deudaInicial - (w * item.pago_semanal));
+
+          result.push({
+            rowKey: `${item.id}_${semanaKey}`,
+            record: item,
+            semanaIndice: w,
+            totalSemanas,
+            semanaKey,
+            fechaPago: fechaCuota,
+            estadoSemana: estadoCuota,
+            saldoRestante: saldoRestanteProyectado,
+          });
+        }
       }
-
-      // 3. Filtro de ESTADO
-      if (estadoFilter !== 'todos') {
-        if (estadoActual !== estadoFilter) return false;
-      }
-
-      // 4. Filtro de FECHAS (evalúa la fecha del próximo pago de la semana vigente)
-      if (dateFrom || dateTo) {
-        if (!fechaProximoPagoDinamica) return false;
-        if (dateFrom && fechaProximoPagoDinamica < dateFrom) return false;
-        if (dateTo && fechaProximoPagoDinamica > dateTo) return false;
-      }
-
-      return true;
     });
+
+    // Si está activo el filtro de fechas, ordenar cronológicamente por fecha de pago
+    if (isDateFilterActive) {
+      result.sort((a, b) => {
+        const dateA = a.fechaPago || '';
+        const dateB = b.fechaPago || '';
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        return a.record.nombre_cliente.localeCompare(b.record.nombre_cliente);
+      });
+    }
+
+    return result;
   }, [registrosSeguimiento, searchQuery, filtroUltimaSemana, estadoFilter, dateFrom, dateTo]);
 
   // Paginación
@@ -113,11 +180,8 @@ export default function SeguimientoPagosClientPage({
     let enRevisionCount = 0;
     let noVerificablesCount = 0;
 
-    filteredData.forEach((item) => {
-      const totalSemanas = item.plazos || 0;
-      const semanaActualIndice = calculateSemanasTranscurridas(item.fecha_proximo_pago, totalSemanas);
-      const semanaKey = `semana_${semanaActualIndice || 1}`;
-      const estadoActual = item.estados_semanales?.[semanaKey] || 'En revisión';
+    filteredData.forEach((row) => {
+      const estadoActual = row.estadoSemana;
 
       if (estadoActual === 'Pagado') alDiaCount++;
       else if (estadoActual === 'Por vencer') porVencerCount++;
@@ -156,12 +220,8 @@ export default function SeguimientoPagosClientPage({
   const hasAnyActiveFilter = !isDefaultState;
   const isHistoricoActive = !filtroUltimaSemana;
 
-  const handleStateChangeSemanaActual = async (item: SeguimientoPagoRecord, nuevoEstado: EstadoCuota) => {
-    const totalSemanas = item.plazos || 0;
-    const semanaActualIndice = calculateSemanasTranscurridas(item.fecha_proximo_pago, totalSemanas) || 1;
-    const semanaKey = `semana_${semanaActualIndice}`;
-
-    setIsUpdatingState(item.id);
+  const handleStateChange = async (item: SeguimientoPagoRecord, semanaKey: string, nuevoEstado: EstadoCuota, rowKey?: string) => {
+    setIsUpdatingState(rowKey || item.id);
     const result = await updateEstadoSemana(item.id, semanaKey, nuevoEstado);
     setIsUpdatingState(null);
 
@@ -242,7 +302,7 @@ export default function SeguimientoPagosClientPage({
         isUpdatingState={isUpdatingState}
         setSelectedForDetail={setSelectedForDetail}
         setSelectedForEdit={setSelectedForEdit}
-        handleStateChangeSemanaActual={handleStateChangeSemanaActual}
+        handleStateChange={handleStateChange}
         isSuperiorRole={isSuperiorRole}
       />
 

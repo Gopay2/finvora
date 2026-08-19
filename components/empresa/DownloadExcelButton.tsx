@@ -186,39 +186,53 @@ export default function DownloadExcelButton({ data, type, repartidores, label, c
       fileNamePrefix = "Seguimiento_Pagos";
       sheetName = "Seguimiento de Pagos";
       worksheetData = data.map(item => {
-        const totalSemanas = item.plazos || 0;
-        const semanaActualIndice = calculateSemanasTranscurridas(item.fecha_proximo_pago, totalSemanas);
-        const semanaKey = `semana_${semanaActualIndice || 1}`;
-        const estadoActual = item.estados_semanales?.[semanaKey] || 'En revisión';
-        const saldoRestante = calculateSaldoRestante(
-          item.precio_total,
-          item.pago_inicial,
-          item.pago_semanal,
-          item.fecha_proximo_pago,
-          item.plazos
-        );
+        const isFilaDisplay = 'record' in item && 'semanaKey' in item;
+        const record = isFilaDisplay ? item.record : item;
+        const totalSemanas = record.plazos || 0;
 
-        const fechaProximoPagoDinamica = item.fecha_proximo_pago
-          ? addWeeksToDate(item.fecha_proximo_pago, Math.max(0, (semanaActualIndice || 1) - 1))
-          : null;
+        let semanaIndice: number;
+        let fechaPago: string | null;
+        let estadoSemana: string;
+        let saldoRestante: number;
+
+        if (isFilaDisplay) {
+          semanaIndice = item.semanaIndice;
+          fechaPago = item.fechaPago;
+          estadoSemana = item.estadoSemana;
+          saldoRestante = item.saldoRestante;
+        } else {
+          semanaIndice = calculateSemanasTranscurridas(record.fecha_proximo_pago, totalSemanas);
+          const semanaKey = `semana_${semanaIndice || 1}`;
+          estadoSemana = record.estados_semanales?.[semanaKey] || 'En revisión';
+          fechaPago = record.fecha_proximo_pago
+            ? addWeeksToDate(record.fecha_proximo_pago, Math.max(0, (semanaIndice || 1) - 1))
+            : null;
+          saldoRestante = calculateSaldoRestante(
+            record.precio_total,
+            record.pago_inicial,
+            record.pago_semanal,
+            record.fecha_proximo_pago,
+            record.plazos
+          );
+        }
 
         return {
-          "Cliente": item.nombre_cliente || "",
-          "Número de Teléfono": item.numero_telefono || "",
-          "Celular": item.celular || "—",
-          "Color": item.color_celular || "—",
-          "IMEI": item.imei || "—",
-          "Vendedor": item.vendedor?.username || "—",
-          "Repartidor": item.repartidor?.nombre || "—",
-          "Tag": item.tag || "",
-          "Próximo Pago": fechaProximoPagoDinamica ? formatFechaDDMMYYYY(fechaProximoPagoDinamica) : "Sin fecha",
+          "Cliente": record.nombre_cliente || "",
+          "Número de Teléfono": record.numero_telefono || "",
+          "Celular": record.celular || "—",
+          "Color": record.color_celular || "—",
+          "IMEI": record.imei || "—",
+          "Vendedor": record.vendedor?.username || "—",
+          "Repartidor": record.repartidor?.nombre || "—",
+          "Tag": record.tag || "",
+          "Próximo Pago": fechaPago ? formatFechaDDMMYYYY(fechaPago) : "Sin fecha",
           "Saldo Restante": saldoRestante,
-          "Semana Actual": semanaActualIndice ? `Semana ${semanaActualIndice} de ${totalSemanas}` : "",
-          "Estado Semana": estadoActual,
-          "Pago Semanal": item.pago_semanal || 0,
-          "Precio Total": item.precio_total || 0,
-          "Pago Inicial": item.pago_inicial || 0,
-          "Plazos": item.plazos || 0
+          "Semana": semanaIndice ? `Semana ${semanaIndice} de ${totalSemanas}` : "",
+          "Estado Semana": estadoSemana,
+          "Pago Semanal": record.pago_semanal || 0,
+          "Precio Total": record.precio_total || 0,
+          "Pago Inicial": record.pago_inicial || 0,
+          "Plazos": record.plazos || 0
         };
       });
     }
