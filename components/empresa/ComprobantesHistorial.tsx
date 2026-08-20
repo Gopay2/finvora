@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import type { ComprobanteRecord } from "@/app/empresa/webapp/comprobantes/comprobantes-actions";
 import DownloadExcelButton from "@/components/empresa/DownloadExcelButton";
 import JSZip from "jszip";
 import FiltrosHistorial from "./FiltrosHistorial";
-import { styles, formatTijuanaDate, formatCurrency } from "./comprobantes-types";
+import { styles, formatTijuanaDate } from "./comprobantes-types";
 import type { OptionItem } from "./comprobantes-types";
 
 interface ComprobantesHistorialProps {
@@ -25,10 +25,11 @@ export default function ComprobantesHistorial({
 }: ComprobantesHistorialProps) {
   // Estado para los filtros compartidos con el sub-componente modular
   const [filters, setFilters] = useState({
+    searchQuery: "",
     dateFrom: "",
     dateTo: "",
-    filterVendedor: "",
-    filterRepartidor: ""
+    filterVendedores: [] as string[],
+    filterRepartidores: [] as string[]
   });
 
   // Estado de paginación
@@ -39,29 +40,44 @@ export default function ComprobantesHistorial({
   const [downloadProgress, setDownloadProgress] = useState("");
 
   // Reset a página 1 si cambian los filtros
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [filters]);
 
-  // Filtrado en memoria por rango de fechas, vendedor y repartidor/ubicación
+  // Filtrado en memoria por buscador global, rango de fechas, vendedor y repartidor/ubicación
   const filteredList = useMemo(() => {
-    return comprobantes.filter((item) => {
-      // Filtro de fecha
+    return comprobantes.filter((comprobante) => {
+      // 1. Buscador global (Cliente, IMEI, TAG, Vendedor)
+      if (filters.searchQuery) {
+        const query = filters.searchQuery.toLowerCase().trim();
+        const matchCliente = comprobante.nombre_cliente?.toLowerCase().includes(query);
+        const matchImei = comprobante.imei?.toLowerCase().includes(query);
+        const matchTag = comprobante.tag?.toLowerCase().includes(query);
+        const matchVendedor = comprobante.vendedor?.username?.toLowerCase().includes(query);
+
+        if (!matchCliente && !matchImei && !matchTag && !matchVendedor) return false;
+      }
+
+      // 2. Filtro de fecha
       const tijuanaDateStr = new Intl.DateTimeFormat('fr-CA', {
         timeZone: 'America/Tijuana',
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
-      }).format(new Date(item.created_at)); // Retorna "YYYY-MM-DD"
+      }).format(new Date(comprobante.created_at)); // Retorna "YYYY-MM-DD"
 
       if (filters.dateFrom && tijuanaDateStr < filters.dateFrom) return false;
       if (filters.dateTo && tijuanaDateStr > filters.dateTo) return false;
 
-      // Filtro de vendedor
-      if (filters.filterVendedor && (!item.vendedor || item.vendedor.id !== filters.filterVendedor)) return false;
+      // 3. Filtro de vendedor (soporta selección múltiple)
+      if (filters.filterVendedores.length > 0) {
+        if (!comprobante.vendedor || !filters.filterVendedores.includes(comprobante.vendedor.id)) return false;
+      }
 
-      // Filtro de repartidor/ubicación
-      if (filters.filterRepartidor && (!item.repartidor || item.repartidor.id !== filters.filterRepartidor)) return false;
+      // 4. Filtro de repartidor/ubicación (soporta selección múltiple)
+      if (filters.filterRepartidores.length > 0) {
+        if (!comprobante.repartidor || !filters.filterRepartidores.includes(comprobante.repartidor.id)) return false;
+      }
 
       return true;
     });
@@ -80,23 +96,26 @@ export default function ComprobantesHistorial({
     }
   };
 
-  // Descarga en lote empaquetada en un solo archivo ZIP para soportar dispositivos móviles
-  const handleDownloadAllFiles = async () => {
+  /**
+   * Descarga masiva de comprobantes filtrados, empaquetados en un archivo ZIP.
+   * Procesa cada comprobante de forma secuencial mostrando el progreso en la interfaz.
+   */
+  const handleDownloadAllFiles = async (): Promise<void> => {
     if (filteredList.length === 0) return;
     setIsDownloading(true);
     const zip = new JSZip();
 
-    for (let i = 0; i < filteredList.length; i++) {
-      const item = filteredList[i];
-      const url = item.comprobante_url;
-      setDownloadProgress(`Descargando ${i + 1} de ${filteredList.length}...`);
+    for (let index = 0; index < filteredList.length; index++) {
+      const comprobante = filteredList[index];
+      const comprobanteUrl = comprobante.comprobante_url;
+      setDownloadProgress(`Descargando ${index + 1} de ${filteredList.length}...`);
 
       try {
-        const response = await fetch(url);
+        const response = await fetch(comprobanteUrl);
         const blob = await response.blob();
 
-        const ext = url.split('.').pop()?.split('?')[0] || 'bin';
-        const vendorName = item.vendedor?.username || 'vendedor';
+        const fileExtension = comprobanteUrl.split('.').pop()?.split('?')[0] || 'bin';
+        const vendorName = comprobante.vendedor?.username || 'vendedor';
         const formattedDate = new Intl.DateTimeFormat('es-MX', {
           timeZone: 'America/Tijuana',
           year: 'numeric',
@@ -105,12 +124,12 @@ export default function ComprobantesHistorial({
           hour: '2-digit',
           minute: '2-digit',
           hour12: false
-        }).format(new Date(item.created_at)).replace(/[/:\s,]/g, '_');
+        }).format(new Date(comprobante.created_at)).replace(/[/:\s,]/g, '_');
 
-        const fileName = `Comprobante_${vendorName}_${formattedDate}.${ext}`;
+        const fileName = `Comprobante_${vendorName}_${formattedDate}.${fileExtension}`;
         zip.file(fileName, blob);
       } catch (error) {
-        console.error("Error al agregar archivo al ZIP:", url, error);
+        console.error("Error al agregar archivo al ZIP:", comprobanteUrl, error);
       }
     }
 
@@ -137,10 +156,10 @@ export default function ComprobantesHistorial({
   return (
     <div className={styles.tableContainer}>
       {/* Header con botón para Excel y descarga masiva */}
-      <div className="bg-slate-950 p-6 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-slate-950 p-6 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6 rounded-t-3xl">
         <div>
-          <h3 className="text-lg font-bold text-slate-100">Registro Histórico</h3>
-          <p className="text-xs text-slate-400 mt-1">Lista detallada de comprobantes cargados.</p>
+          <h3 className="text-lg font-bold text-slate-100">Registro de Comprobantes</h3>
+          <p className="text-xs text-slate-400 mt-1">Lista detallada de comprobantes de los últimos 2 meses</p>
         </div>
 
         <div className="flex flex-wrap justify-center items-center gap-3 self-center">
@@ -171,16 +190,16 @@ export default function ComprobantesHistorial({
         onFilterChange={setFilters}
       />
 
-      <div className={styles.tableWrapper}>
+      <div className={`${styles.tableWrapper} ${totalPages <= 1 ? "rounded-b-3xl" : ""}`}>
         <table className={styles.table}>
           <thead className={styles.thead}>
             <tr>
               <th className={styles.th}>Fecha</th>
-              <th className={styles.th}>Cliente</th>
+              <th className={`${styles.th} min-w-[170px]`}>Cliente</th>
+              <th className={`${styles.th} min-w-[190px]`}>Equipo</th>
+              <th className="px-4 py-4 text-center text-slate-400 font-semibold uppercase text-xs tracking-wider min-w-[120px]">IMEI</th>
               <th className={styles.th}>Vendedor</th>
-              <th className={styles.th}>Repartidor/Ubicación</th>
-              <th className={styles.th}>Equipo</th>
-              <th className={styles.th}>Pago Recibido</th>
+              <th className={`${styles.th} min-w-[110px] max-w-[130px] px-2`}>Rep. / Ubi.</th>
               <th className={styles.th}>Comprobante</th>
               <th className={styles.th}>Acciones</th>
             </tr>
@@ -193,49 +212,57 @@ export default function ComprobantesHistorial({
                 </td>
               </tr>
             ) : (
-              paginatedList.map((item) => (
-                <tr key={item.id} className={styles.tr}>
+              paginatedList.map((comprobante) => (
+                <tr key={comprobante.id} className={styles.tr}>
                   <td className={styles.td}>
-                    <span className="text-slate-100">{formatTijuanaDate(item.created_at)}</span>
+                    <span className="text-slate-100">{formatTijuanaDate(comprobante.created_at)}</span>
                   </td>
-                  <td className={styles.td}>
-                    <span className="text-slate-100 font-bold">{item.nombre_cliente}</span>
+                  <td className={`${styles.td} min-w-[170px]`}>
+                    <span className="text-slate-100 font-bold">{comprobante.nombre_cliente}</span>
                   </td>
-                  <td className={styles.td}>
-                    {item.vendedor ? (
+                  <td className={`${styles.td} min-w-[190px]`}>
+                    {comprobante.celular ? (
                       <div className="flex flex-col items-center">
-                        <span className="text-slate-100 font-bold">{item.vendedor.username.charAt(0).toUpperCase() + item.vendedor.username.slice(1)}</span>
-                        <span className="text-[10px] text-slate-500">{item.vendedor.role}</span>
-                      </div>
-                    ) : (
-                      <span className="text-slate-500">Desconocido</span>
-                    )}
-                  </td>
-                  <td className={styles.td}>
-                    {item.repartidor ? (
-                      <div className="flex flex-col items-center">
-                        <span className="text-slate-100 font-bold">{item.repartidor.nombre}</span>
-                      </div>
-                    ) : (
-                      <span className="text-slate-500">Desconocido</span>
-                    )}
-                  </td>
-                  <td className={styles.td}>
-                    {item.celular ? (
-                      <div className="flex flex-col items-center">
-                        <span className="text-slate-100 text-xs font-bold">{item.celular}</span>
-                        {item.color_celular && <span className="text-[10px] text-slate-500">{item.color_celular}</span>}
+                        <span className="text-slate-100 text-xs font-bold">{comprobante.celular}</span>
+                        {comprobante.color_celular && <span className="text-[10px] text-slate-500">{comprobante.color_celular}</span>}
                       </div>
                     ) : (
                       <span className="text-slate-600 text-xs">—</span>
                     )}
                   </td>
+                  <td className="px-4 py-4 text-center min-w-[120px]">
+                    <div className="flex items-center justify-center">
+                      {comprobante.imei ? (
+                        <span className="font-mono bg-slate-950 px-2.5 py-0.5 rounded-md border border-slate-800 text-secondary text-[11px] font-bold inline-block tracking-tight whitespace-nowrap">
+                          {comprobante.imei}
+                        </span>
+                      ) : (
+                        <span className="text-slate-600 text-xs">—</span>
+                      )}
+                    </div>
+                  </td>
                   <td className={styles.td}>
-                    <span className="text-slate-300">{formatCurrency(item.pago_recibido)}</span>
+                    {comprobante.vendedor ? (
+                      <div className="flex flex-col items-center">
+                        <span className="text-slate-100 font-bold">{comprobante.vendedor.username.charAt(0).toUpperCase() + comprobante.vendedor.username.slice(1)}</span>
+                        <span className="text-[10px] text-slate-500">{comprobante.vendedor.role}</span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-500">Desconocido</span>
+                    )}
+                  </td>
+                  <td className={`${styles.td} min-w-[110px] max-w-[130px] px-2`}>
+                    {comprobante.repartidor ? (
+                      <div className="flex flex-col items-center">
+                        <span className="text-slate-100 font-bold">{comprobante.repartidor.nombre}</span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-500">Desconocido</span>
+                    )}
                   </td>
                   <td className={styles.td}>
                     <a
-                      href={item.comprobante_url}
+                      href={comprobante.comprobante_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={styles.linkBtn}
@@ -248,8 +275,8 @@ export default function ComprobantesHistorial({
                     <div className="flex items-center justify-center">
                       <button
                         type="button"
-                        onClick={() => onDeleteRequest(item)}
-                        className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:border-red-500/30 transition-all flex items-center justify-center cursor-pointer animate-in duration-200"
+                        onClick={() => onDeleteRequest(comprobante)}
+                        className={styles.deleteBtn}
                         title="Eliminar Comprobante"
                       >
                         <span className="material-symbols-outlined text-base">delete</span>
@@ -265,7 +292,7 @@ export default function ComprobantesHistorial({
 
       {/* PAGINACIÓN */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-slate-800/80 px-6 py-4 bg-slate-950/60">
+        <div className="flex items-center justify-between border-t border-slate-800/80 px-6 py-4 bg-slate-950/60 rounded-b-3xl">
           <button
             type="button"
             onClick={() => handlePageChange(currentPage - 1)}
