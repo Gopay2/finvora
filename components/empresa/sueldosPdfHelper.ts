@@ -354,17 +354,33 @@ export async function exportarReciboPDF({
     : totalComision + config.bonoVal + config.sueldoVal - config.publicidadVal;
 
   const totalHeaders = ["Concepto", "Monto"];
-  const totalRows = [
-    ["Comisión Ventas/Entregas", formatCurrency(totalComision)],
-    ["Bono", formatCurrency(config.bonoVal)],
-    ["Sueldo Fijo", formatCurrency(config.sueldoVal)]
-  ];
+  const totalRows: any[][] = [];
 
-  if (!isRepartidor) {
+  if (isRepartidor) {
+    const totalPagosRecibidos = operaciones.reduce(
+      (acc, item) => acc + (Number(item.pago_recibido) || 0),
+      0
+    );
+    const totalFletesEntregas = operaciones.reduce((acc, item) => {
+      const rowEntrega = config.rowEntregaOverrides[item.id] !== undefined
+        ? (Number(config.rowEntregaOverrides[item.id]) || 0)
+        : config.entregaVal;
+      return acc + rowEntrega;
+    }, 0);
+
+    totalRows.push(["Sueldo Fijo", formatCurrency(config.sueldoVal)]);
+    totalRows.push(["Bono", formatCurrency(config.bonoVal)]);
+    totalRows.push(["Entregas", formatCurrency(totalFletesEntregas)]);
+    totalRows.push(["Pagos Recibidos", formatCurrency(-totalPagosRecibidos)]);
+    totalRows.push(["Comisión restante de entregas", formatCurrency(totalComision)]);
+    totalRows.push(["NETO A COBRAR", formatCurrency(netoACobrar)]);
+  } else {
+    totalRows.push(["Comisión Ventas/Entregas", formatCurrency(totalComision)]);
+    totalRows.push(["Bono", formatCurrency(config.bonoVal)]);
+    totalRows.push(["Sueldo Fijo", formatCurrency(config.sueldoVal)]);
     totalRows.push(["Descuento Publicidad", formatCurrency(-config.publicidadVal)]);
+    totalRows.push(["NETO A COBRAR", formatCurrency(netoACobrar)]);
   }
-
-  totalRows.push(["NETO A COBRAR", formatCurrency(netoACobrar)]);
 
   // Dibujamos la tabla de totales alineada e integrada con la de arriba
   autoTable(doc, {

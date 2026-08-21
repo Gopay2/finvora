@@ -192,8 +192,23 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         endDate = endOfWeek;
         chartViewMode = 'semanal';
       } else if (weekParam === 'anterior') {
-        startDate = new Date(startOfWeek.getTime() - 7 * 24 * 60 * 60 * 1000);
-        endDate = new Date(endOfWeek.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const prevMondayHelper = new Date(mondayDateHelper);
+        prevMondayHelper.setUTCDate(prevMondayHelper.getUTCDate() - 7);
+        startDate = getTijuanaDate(
+          prevMondayHelper.getUTCFullYear(),
+          prevMondayHelper.getUTCMonth(),
+          prevMondayHelper.getUTCDate(),
+          0, 0, 0, 0
+        );
+
+        const prevSundayHelper = new Date(sundayDateHelper);
+        prevSundayHelper.setUTCDate(prevSundayHelper.getUTCDate() - 7);
+        endDate = getTijuanaDate(
+          prevSundayHelper.getUTCFullYear(),
+          prevSundayHelper.getUTCMonth(),
+          prevSundayHelper.getUTCDate(),
+          23, 59, 59, 999
+        );
         chartViewMode = 'semanal';
       } else if (weekParam.startsWith('S')) {
         const weekNum = parseInt(weekParam.substring(1));
@@ -391,6 +406,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           sales={filteredSales}
           viewMode={chartViewMode}
           startDateStr={startDate ? startDate.toISOString() : undefined}
+          endDateStr={endDate ? endDate.toISOString() : undefined}
           weekParam={weekParam}
         />
       </div>

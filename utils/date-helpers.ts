@@ -20,10 +20,8 @@ export function getTijuanaDate(
   seconds = 0,
   ms = 0
 ): Date {
-  // Usamos Date.UTC para que JavaScript auto-corrija nativamente cualquier desborde (ej: día 32 -> día 2 del mes siguiente)
-  const tempUtc = new Date(Date.UTC(year, monthIndex, day, hours, minutes, seconds, ms));
+  const approx = new Date(Date.UTC(year, monthIndex, day, hours, minutes, seconds, ms));
   
-  // Formateamos en la timezone de Tijuana para obtener los componentes
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Tijuana',
     year: 'numeric',
@@ -35,21 +33,23 @@ export function getTijuanaDate(
     hour12: false
   });
   
-  const parts = formatter.formatToParts(tempUtc);
+  const parts = formatter.formatToParts(approx);
   const getVal = (type: string) => parseInt(parts.find(p => p.type === type)?.value || '0');
+  let h = getVal('hour');
+  if (h === 24) h = 0;
   
-  // Re-creamos el instante que resultó en Tijuana
-  const tzDate = new Date(Date.UTC(
+  const localAsUtc = Date.UTC(
     getVal('year'),
     getVal('month') - 1,
     getVal('day'),
-    getVal('hour') === 24 ? 0 : getVal('hour'), // Corrección para formateador de 24h
+    h,
     getVal('minute'),
-    getVal('second')
-  ));
+    getVal('second'),
+    ms
+  );
   
-  const diffMs = tempUtc.getTime() - tzDate.getTime();
-  return new Date(tempUtc.getTime() + diffMs);
+  const offsetMs = approx.getTime() - localAsUtc;
+  return new Date(approx.getTime() + offsetMs);
 }
 
 /**
@@ -79,15 +79,10 @@ export function getTijuanaMonthWeeks(year: number, monthIndex: number): { start:
     const [y, m, d] = tijuanaStr.split('-').map(Number);
     
     // Obtenemos el day of week en Tijuana
-    const tempDate = new Date(currentStart);
-    const dayOfWeek = tempDate.getUTCDay(); // Usamos UTC tras mapear a Tijuana
-
-    // getUTCDay: 0 = Domingo, 1 = Lunes...
-    // Sin embargo, para evitar desajustes del getDay del servidor, usamos una fecha auxiliar
     const dateHelper = new Date(Date.UTC(y, m - 1, d));
-    const dayOfWeekTijuana = dateHelper.getUTCDay(); 
+    const dayOfWeekTijuana = dateHelper.getUTCDay(); // 0 = Domingo, 1 = Lunes...
     
-    const daysToSunday = (7 - dayOfWeekTijuana) % 7;
+    const daysToSunday = dayOfWeekTijuana === 0 ? 0 : 7 - dayOfWeekTijuana;
     
     const sundayDate = getTijuanaDate(y, m - 1, d + daysToSunday, 23, 59, 59, 999);
     const currentEnd = sundayDate > lastDayDate ? new Date(lastDayDate) : sundayDate;
