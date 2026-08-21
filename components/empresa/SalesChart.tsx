@@ -12,7 +12,8 @@ interface SalesChartProps {
   sales: Sale[];
   viewMode: 'semanal' | 'mensual' | 'anual' | 'historico';
   startDateStr?: string; // Fecha de inicio del filtro actual
-  weekParam?: string; // El filtro de semana seleccionado ('actual', 'anterior', 'S1', etc.)
+  endDateStr?: string;   // Fecha de fin del filtro actual
+  weekParam?: string;    // El filtro de semana seleccionado ('actual', 'anterior', 'S1', etc.)
 }
 
 // ─── Helpers de Timezone Tijuana ──────────────────────────────────────────────
@@ -34,7 +35,7 @@ function getTijuanaParts(date: Date): { year: number; month: number; day: number
 }
 
 // ─── Componente Principal ──────────────────────────────────────────────────
-export default function SalesChart({ sales, viewMode, startDateStr, weekParam }: SalesChartProps) {
+export default function SalesChart({ sales, viewMode, startDateStr, endDateStr, weekParam }: SalesChartProps) {
   // Estado local para controlar el punto sobre el que el usuario hace hover
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -67,48 +68,53 @@ export default function SalesChart({ sales, viewMode, startDateStr, weekParam }:
 
       const startDate = new Date(startDateStr);
 
-      // 1. VISTA SEMANAL: Detalle de Lunes a Domingo
+      // 1. VISTA SEMANAL: Detalle de los días reales que componen la semana seleccionada
       if (viewMode === 'semanal') {
-        const days = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
-        
-        // Obtenemos los componentes de fecha del lunes en Tijuana (startDate)
         const startTijuanaStr = toTijuanaDateStr(startDate);
         const [startY, startM, startD] = startTijuanaStr.split('-').map(Number);
+        const startUtc = new Date(Date.UTC(startY, startM - 1, startD));
 
-        // Creamos una fecha auxiliar de referencia puramente en UTC
-        const refUtcDate = new Date(Date.UTC(startY, startM - 1, startD));
-        const targetMonth = startM - 1; // Mes de la semana seleccionada en Tijuana
+        let endUtc: Date;
+        if (endDateStr) {
+          const endTijuanaStr = toTijuanaDateStr(new Date(endDateStr));
+          const [endY, endM, endD] = endTijuanaStr.split('-').map(Number);
+          endUtc = new Date(Date.UTC(endY, endM - 1, endD));
+        } else {
+          endUtc = new Date(startUtc);
+          endUtc.setUTCDate(endUtc.getUTCDate() + 6);
+        }
 
-        const data = days.map((day, index) => {
-          // Generamos el día sumando index de forma matemática en UTC
-          const dayUtc = new Date(refUtcDate);
-          dayUtc.setUTCDate(refUtcDate.getUTCDate() + index);
-          
-          // Ahora construimos el string YYYY-MM-DD en Tijuana
-          const dayStr = `${dayUtc.getUTCFullYear()}-${String(dayUtc.getUTCMonth() + 1).padStart(2, '0')}-${String(dayUtc.getUTCDate()).padStart(2, '0')}`;
-          
-          return {
-            label: `${day} ${String(dayUtc.getUTCDate()).padStart(2, '0')}`,
+        const dayNames = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+        const data: { label: string; dateStr: string; value: number }[] = [];
+
+        const curr = new Date(startUtc);
+        while (curr <= endUtc) {
+          const y = curr.getUTCFullYear();
+          const m = curr.getUTCMonth();
+          const d = curr.getUTCDate();
+          const dow = curr.getUTCDay(); // 0 = Dom, 1 = Lun, 2 = Mar, 3 = Mie, 4 = Jue, 5 = Vie, 6 = Sab
+
+          const dayStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const dayLabel = `${dayNames[dow]} ${String(d).padStart(2, '0')}`;
+
+          data.push({
+            label: dayLabel,
             dateStr: dayStr,
-            monthIndex: dayUtc.getUTCMonth(),
             value: 0
-          };
-        });
+          });
 
-        // Solo se filtra por mes si el filtro corresponde a una semana del calendario específica (S1-S6)
-        const shouldFilterByMonth = weekParam && weekParam.startsWith('S');
-        const filteredData = shouldFilterByMonth
-          ? data.filter(d => d.monthIndex === targetMonth)
-          : data;
+          curr.setUTCDate(curr.getUTCDate() + 1);
+        }
 
         sales.forEach(sale => {
           const saleDateStr = toTijuanaDateStr(new Date(sale.fecha_venta));
-          const found = filteredData.find(d => d.dateStr === saleDateStr);
+          const found = data.find(d => d.dateStr === saleDateStr);
           if (found) {
             found.value++;
           }
         });
-        return filteredData;
+
+        return data;
       }
 
       // 2. VISTA MENSUAL: Detalle de los días del mes (1 al 28/30/31)
@@ -155,38 +161,30 @@ export default function SalesChart({ sales, viewMode, startDateStr, weekParam }:
       return [];
     })();
 
-    // Evitar divisiones por cero si hay exactamente 1 punto en los datos procesados
-    if (rawData.length === 1) {
-      const singleVal = rawData[0].value;
-      const singleLabel = rawData[0].label;
-      const numericLabel = parseInt(singleLabel);
-      if (!isNaN(numericLabel)) {
-        return [
-          { label: (numericLabel - 1).toString(), value: 0 },
-          { label: singleLabel, value: singleVal }
-        ];
-      }
-      return [
-        { label: '', value: 0 },
-        { label: singleLabel, value: singleVal }
-      ];
-    }
-
     return rawData;
-  }, [sales, viewMode, startDateStr, weekParam]);
+  }, [sales, viewMode, startDateStr, endDateStr, weekParam]);
 
   // Cálculos matemáticos de altura y proporciones para dibujar los polígonos del SVG
   const maxVal = Math.max(...chartData.map(d => d.value), 1);
-  const points = chartData.map((d, i) => {
-    const x = (i / (chartData.length - 1)) * 100;
-    const y = 100 - (d.value / maxVal) * 80; // dejamos un margen del 20% arriba
-    return `${x},${y}`;
-  }).join(' ');
+  const points = chartData.length <= 1
+    ? (chartData.length === 1
+        ? `0,${100 - (chartData[0].value / maxVal) * 80} 100,${100 - (chartData[0].value / maxVal) * 80}`
+        : '0,100 100,100')
+    : chartData.map((d, i) => {
+        const x = (i / (chartData.length - 1)) * 100;
+        const y = 100 - (d.value / maxVal) * 80; // dejamos un margen del 20% arriba
+        return `${x},${y}`;
+      }).join(' ');
 
   const areaPoints = `0,100 ${points} 100,100`;
 
   // Manejar movimiento del ratón para actualizar el foco del Tooltip
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (chartData.length === 0) return;
+    if (chartData.length === 1) {
+      setHoveredIndex(0);
+      return;
+    }
     const rect = event.currentTarget.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const width = rect.width;
@@ -199,8 +197,8 @@ export default function SalesChart({ sales, viewMode, startDateStr, weekParam }:
   const hoveredData = (hoveredIndex !== null && hoveredIndex >= 0 && hoveredIndex < chartData.length)
     ? chartData[hoveredIndex]
     : null;
-  const hoveredX = (hoveredIndex !== null && chartData.length > 1)
-    ? (hoveredIndex / (chartData.length - 1)) * 100
+  const hoveredX = (hoveredIndex !== null && chartData.length > 0)
+    ? (chartData.length === 1 ? 50 : (hoveredIndex / (chartData.length - 1)) * 100)
     : 0;
   const hoveredY = hoveredData
     ? 100 - (hoveredData.value / maxVal) * 80
@@ -316,7 +314,7 @@ export default function SalesChart({ sales, viewMode, startDateStr, weekParam }:
       </div>
 
       {/* Etiquetas del eje X */}
-      <div className={styles.axisX}>
+      <div className={`${styles.axisX} ${chartData.length === 1 ? '!justify-center' : ''}`}>
         {chartData.map((d, i) => {
           let shouldShow = false;
           if (viewMode === 'semanal') shouldShow = true;
