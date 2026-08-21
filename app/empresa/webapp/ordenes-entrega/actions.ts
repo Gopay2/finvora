@@ -98,6 +98,7 @@ export async function submitOrdenEntrega(formData: FormData) {
     .from("ordenes_entrega")
     .insert({
       vendedor_id: user.id,
+      vendedor_nombre: profile?.username || null,
       nombre_cliente: data.nombre,
       identificacion_fisica: data.identificacion || null,
       curp: data.curp || null,

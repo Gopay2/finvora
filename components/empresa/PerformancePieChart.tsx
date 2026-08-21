@@ -4,6 +4,7 @@ import React from "react";
 
 export interface VentaDashboard {
   fecha_venta: string;
+  vendedor_nombre?: string | null;
   vendedor: {
     username: string;
   } | null;
@@ -21,7 +22,7 @@ export default function PerformancePieChart({ sales }: PerformancePieChartProps)
   // Calcular rendimiento de vendedores para el período seleccionado
   const stats: Record<string, number> = {};
   sales.forEach((sale) => {
-    const name = sale.vendedor?.username || "Desconocido";
+    const name = sale.vendedor?.username || sale.vendedor_nombre || "Desconocido";
     stats[name] = (stats[name] || 0) + 1;
   });
 

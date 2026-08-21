@@ -112,7 +112,7 @@ export default function RegistrosClientView({
         const marcaMatch = venta.productos?.marca?.toLowerCase().includes(query);
         const modeloMatch = venta.productos?.modelo?.toLowerCase().includes(query);
         const colorMatch = venta.productos?.color?.toLowerCase().includes(query);
-        const vendedorMatch = venta.vendedor?.username?.toLowerCase().includes(query);
+        const vendedorMatch = (venta.vendedor?.username || venta.vendedor_nombre || "").toLowerCase().includes(query);
         const repartidorMatch = venta.repartidor?.nombre?.toLowerCase().includes(query);
 
         if (!imeiMatch && !marcaMatch && !modeloMatch && !colorMatch && !vendedorMatch && !repartidorMatch) {
@@ -159,7 +159,7 @@ export default function RegistrosClientView({
         const telefonoMatch = orden.telefono?.toLowerCase().includes(query);
         const celularMatch = orden.celular?.toLowerCase().includes(query);
         const imeiMatch = orden.imei?.toLowerCase().includes(query);
-        const vendedorMatch = orden.vendedor?.username?.toLowerCase().includes(query);
+        const vendedorMatch = (orden.vendedor?.username || orden.vendedor_nombre || "").toLowerCase().includes(query);
         const repartidorMatch = (orden.repartidor || orden.repartidores?.nombre || "").toLowerCase().includes(query);
 
         if (
@@ -207,7 +207,7 @@ export default function RegistrosClientView({
         const marcaMatch = garantia.productos?.marca?.toLowerCase().includes(query);
         const modeloMatch = garantia.productos?.modelo?.toLowerCase().includes(query);
         const colorMatch = garantia.productos?.color?.toLowerCase().includes(query);
-        const solicitanteMatch = garantia.solicitante?.username?.toLowerCase().includes(query);
+        const solicitanteMatch = (garantia.solicitante?.username || garantia.solicitante_nombre || "").toLowerCase().includes(query);
         const repartidorMatch = garantia.repartidor?.nombre?.toLowerCase().includes(query);
         const motivoMatch = garantia.motivo?.toLowerCase().includes(query);
 
@@ -260,7 +260,7 @@ export default function RegistrosClientView({
         const modeloMatch = orden.modelo?.toLowerCase().includes(query);
         const motivoMatch = orden.motivo_garantia?.toLowerCase().includes(query);
         const fallaMatch = orden.descripcion_falla?.toLowerCase().includes(query);
-        const vendedorMatch = orden.vendedor?.username?.toLowerCase().includes(query);
+        const vendedorMatch = (orden.vendedor?.username || orden.vendedor_nombre || "").toLowerCase().includes(query);
 
         if (
           !folioMatch && !clienteMatch && !telefonoMatch && !imeiMatch &&

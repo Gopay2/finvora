@@ -271,12 +271,26 @@ export async function getVendedores() {
  * @returns Objeto con éxito o error de la transacción
  */
 export async function registrarVenta(imei: string, vendedorId?: string) {
-  const { role, id: currentUserId } = await getUserProfile();
+  const { role, id: currentUserId, username: currentUsername } = await getUserProfile();
   if (!isAllowed(role, ["Admin", "Supervisor", "Developer", "Repartidor", "Cambaceador", "CambaCloser"])) {
     return { error: "No autorizado" };
   }
 
   const supabase = await createClient();
+
+  // Obtener el nombre del vendedor (o fallback al usuario actual)
+  let vendedorNombre = currentUsername;
+  const sellerId = vendedorId || currentUserId;
+  if (vendedorId && vendedorId !== currentUserId) {
+    const { data: sellerProfile } = await supabase
+      .from('perfiles')
+      .select('username')
+      .eq('id', vendedorId)
+      .single();
+    if (sellerProfile?.username) {
+      vendedorNombre = sellerProfile.username;
+    }
+  }
 
   // 1. Obtener datos del equipo antes de borrarlo del inventario activo (incluyendo el precio del catálogo de productos)
   const { data: item, error: fetchError } = await supabase
@@ -293,7 +307,8 @@ export async function registrarVenta(imei: string, vendedorId?: string) {
     .insert({
       imei: item.imei,
       producto_id: item.producto_id,
-      vendedor_id: vendedorId || currentUserId,
+      vendedor_id: sellerId,
+      vendedor_nombre: vendedorNombre,
       zona: item.zona,
       precio_costo: (item.productos as unknown as { precio: number } | null)?.precio || 0,
       fecha_ingreso: item.fecha_ingreso
@@ -337,6 +352,19 @@ export async function registrarRecambio(imei: string, solicitadoPorId: string, m
 
   const supabase = await createClient();
 
+  // Obtener nombre del solicitante
+  let solicitanteNombre: string | null = null;
+  if (solicitadoPorId) {
+    const { data: solProfile } = await supabase
+      .from('perfiles')
+      .select('username')
+      .eq('id', solicitadoPorId)
+      .single();
+    if (solProfile?.username) {
+      solicitanteNombre = solProfile.username;
+    }
+  }
+
   // 1. Obtener datos del equipo antes de borrarlo del inventario activo
   const { data: item, error: fetchError } = await supabase
     .from('stock')
@@ -353,6 +381,7 @@ export async function registrarRecambio(imei: string, solicitadoPorId: string, m
       imei: item.imei,
       producto_id: item.producto_id,
       solicitado_por: solicitadoPorId,
+      solicitante_nombre: solicitanteNombre,
       zona: item.zona,
       precio_costo: (item.productos as unknown as { precio: number } | null)?.precio || 0,
       motivo: motivo,

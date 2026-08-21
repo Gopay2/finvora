@@ -4,6 +4,7 @@ export interface Venta {
   precio_costo: number;
   fecha_ingreso: string;
   fecha_venta: string;
+  vendedor_nombre?: string;
   repartidor?: {
     id: string;
     nombre: string;
@@ -49,6 +50,7 @@ export interface OrdenEntrega {
   hora_entrega?: string;
   comentarios?: string;
   created_at: string;
+  vendedor_nombre?: string;
   vendedor?: {
     id: string;
     username: string;
@@ -76,6 +78,7 @@ export interface Garantia {
   motivo: string;
   fecha_ingreso: string;
   fecha_garantia: string;
+  solicitante_nombre?: string;
   repartidor?: {
     id: string;
     nombre: string;
@@ -114,6 +117,7 @@ export interface OrdenGarantia {
   estado_fisico?: string;
   observaciones?: string;
   created_at: string;
+  vendedor_nombre?: string;
   vendedor?: {
     id: string;
     username: string;
