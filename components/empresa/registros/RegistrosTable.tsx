@@ -77,7 +77,7 @@ export function RegistrosTable({
                     <td className={styles.td}>
                       <div className={styles.userBadge}>
                         <span className="material-symbols-outlined text-[10px]">person</span>
-                        {venta.vendedor?.username || "Desconocido"}
+                        {venta.vendedor?.username || venta.vendedor_nombre || "Desconocido"}
                       </div>
                     </td>
                     <td className={styles.td}>
@@ -158,7 +158,7 @@ export function RegistrosTable({
                     <td className={styles.td}>
                       <div className={styles.userBadge}>
                         <span className="material-symbols-outlined text-[10px]">person</span>
-                        {garantia.solicitante?.username || "Desconocido"}
+                        {garantia.solicitante?.username || garantia.solicitante_nombre || "Desconocido"}
                       </div>
                     </td>
                     <td className={styles.td}>
@@ -243,7 +243,7 @@ export function RegistrosTable({
                     <td className={styles.td}>
                       <div className={styles.userBadge}>
                         <span className="material-symbols-outlined text-[10px]">person</span>
-                        {orden.vendedor?.username || "Desconocido"}
+                        {orden.vendedor?.username || orden.vendedor_nombre || "Desconocido"}
                       </div>
                     </td>
                     <td className={styles.td}>
@@ -341,7 +341,7 @@ export function RegistrosTable({
                     <td className={styles.td}>
                       <div className={styles.userBadge}>
                         <span className="material-symbols-outlined text-[10px]">person</span>
-                        {orden.vendedor?.username || "Desconocido"}
+                        {orden.vendedor?.username || orden.vendedor_nombre || "Desconocido"}
                       </div>
                     </td>
                     <td className={styles.td}>

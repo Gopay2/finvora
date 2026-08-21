@@ -42,6 +42,7 @@ async function fetchSalesChunked(
       .from("ventas")
       .select(`
         fecha_venta,
+        vendedor_nombre,
         vendedor:perfiles(username),
         productos(marca, modelo)
       `)
@@ -274,14 +275,14 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   currentPeriodSales.forEach((sale: VentaDashboard) => {
     const saleDate = new Date(sale.fecha_venta);
     if (saleDate >= startOfMonth && saleDate <= endOfMonth) {
-      const vName = sale.vendedor?.username || "Desconocido";
+      const vName = sale.vendedor?.username || sale.vendedor_nombre || "Desconocido";
       vendedoresMesStats[vName] = (vendedoresMesStats[vName] || 0) + 1;
     }
   });
 
   const vendedoresHistoricoStats: Record<string, number> = {};
   historicalSales.forEach((sale: VentaDashboard) => {
-    const vName = sale.vendedor?.username || "Desconocido";
+    const vName = sale.vendedor?.username || sale.vendedor_nombre || "Desconocido";
     vendedoresHistoricoStats[vName] = (vendedoresHistoricoStats[vName] || 0) + 1;
   });
 

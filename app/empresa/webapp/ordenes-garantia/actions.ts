@@ -59,6 +59,7 @@ export async function submitOrdenGarantia(formData: FormData) {
     .from("ordenes_garantia")
     .insert({
       vendedor_id: user.id,
+      vendedor_nombre: profile?.username || null,
       zona: data.zona,
       nombre_cliente: data.nombre_cliente,
       telefono: data.telefono,
