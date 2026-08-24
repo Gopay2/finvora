@@ -7,6 +7,9 @@ interface CalculateComisionParams {
   entregaVal: number;
   plataformaVal: number;
   comisionPercent: number;
+  cancelacionesCount?: number;
+  recoleccionCount?: number;
+  garantiasCount?: number;
 }
 
 /**
@@ -18,16 +21,23 @@ export function calculateTotalComision({
   rowEntregaOverrides,
   entregaVal,
   plataformaVal,
-  comisionPercent
+  comisionPercent,
+  cancelacionesCount = 0,
+  recoleccionCount = 0,
+  garantiasCount = 0
 }: CalculateComisionParams): number {
   if (isRepartidorSelected) {
-    return filteredList.reduce((acc, item) => {
+    const entregasComision = filteredList.reduce((acc, item) => {
       const pagoRecibido = Number(item.pago_recibido) || 0;
       const rowEntrega = rowEntregaOverrides[item.id] !== undefined
         ? (Number(rowEntregaOverrides[item.id]) || 0)
         : entregaVal;
       return acc + (rowEntrega - pagoRecibido);
     }, 0);
+    const cancelacionesTotal = cancelacionesCount * 150;
+    const recoleccionesTotal = recoleccionCount * 150;
+    const garantiasTotal = garantiasCount * 450;
+    return entregasComision + cancelacionesTotal + recoleccionesTotal + garantiasTotal;
   }
 
   return filteredList.reduce((acc, item) => {

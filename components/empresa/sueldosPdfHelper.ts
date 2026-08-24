@@ -44,7 +44,7 @@ const formatTijuanaOnlyDate = (dateStr: string) => {
       month: '2-digit',
       day: '2-digit'
     }).format(new Date(dateStr));
-  } catch (error) {
+  } catch {
     return dateStr;
   }
 };
@@ -78,6 +78,9 @@ interface ExportarReciboPDFProps {
     bonoVal: number;
     sueldoVal: number;
     publicidadVal: number;
+    cancelacionesCount?: number;
+    recoleccionCount?: number;
+    garantiasCount?: number;
     rowEntregaOverrides: { [id: string]: string };
   };
   /** El período de fechas de los filtros aplicados */
@@ -103,6 +106,9 @@ export async function exportarReciboPDF({
   totalComision
 }: ExportarReciboPDFProps) {
   const isRepartidor = empleado.role?.toLowerCase() === "repartidor";
+  const cancelacionesCount = config.cancelacionesCount || 0;
+  const recoleccionCount = config.recoleccionCount || 0;
+  const garantiasCount = config.garantiasCount || 0;
 
   // Intentar cargar el logo de la empresa desde la ruta pública
   let logoImg: HTMLImageElement | null = null;
@@ -113,7 +119,7 @@ export async function exportarReciboPDF({
       img.onload = () => resolve(img);
       img.onerror = (err) => reject(err);
     });
-  } catch (e) {
+  } catch {
     console.warn("No se pudo cargar el logo de Finvora, se usará texto de respaldo.");
   }
 
@@ -185,7 +191,7 @@ export async function exportarReciboPDF({
   // Rellenar información adentro
   doc.setFontSize(9);
   const textPaddingX = marginX + 4;
-  let infoY = currentY + 6;
+  const infoY = currentY + 6;
 
   // Columna 1 de datos
   doc.setFont("helvetica", "bold");
@@ -235,10 +241,10 @@ export async function exportarReciboPDF({
 
   // ─── 5. DEFINICIÓN DE COLUMNAS Y FILAS DE DETALLE ───
   let headers: string[] = [];
-  let bodyRows: any[][] = [];
+  let bodyRows: (string | number)[][] = [];
 
   if (isRepartidor) {
-    headers = ["Fecha", "Equipo", "Entrega", "Pago Recibido", "Comisión"];
+    headers = ["Fecha", "Equipo", "Entrega", "Pago Recib.", "Cancelac.", "Recolecc.", "Garantías", "Comisión"];
     bodyRows = operaciones.map((item) => {
       const rowEntrega = config.rowEntregaOverrides[item.id] !== undefined
         ? (Number(config.rowEntregaOverrides[item.id]) || 0)
@@ -251,9 +257,60 @@ export async function exportarReciboPDF({
         item.celular ? `${item.celular}${item.color_celular ? ` (${item.color_celular})` : ""}` : "—",
         formatCurrency(rowEntrega),
         formatCurrency(-pagoRecibido),
+        "—",
+        "—",
+        "—",
         formatCurrency(comision)
       ];
     });
+
+    // Filas dinámicas de Cancelaciones ($150 c/u)
+    if (cancelacionesCount > 0) {
+      for (let i = 0; i < cancelacionesCount; i++) {
+        bodyRows.push([
+          "—",
+          `Cancelación #${i + 1}`,
+          "—",
+          "—",
+          formatCurrency(150),
+          "—",
+          "—",
+          formatCurrency(150)
+        ]);
+      }
+    }
+
+    // Filas dinámicas de Recolección ($150 c/u)
+    if (recoleccionCount > 0) {
+      for (let i = 0; i < recoleccionCount; i++) {
+        bodyRows.push([
+          "—",
+          `Recolección #${i + 1}`,
+          "—",
+          "—",
+          "—",
+          formatCurrency(150),
+          "—",
+          formatCurrency(150)
+        ]);
+      }
+    }
+
+    // Filas dinámicas de Garantías ($450 c/u)
+    if (garantiasCount > 0) {
+      for (let i = 0; i < garantiasCount; i++) {
+        bodyRows.push([
+          "—",
+          `Garantía #${i + 1}`,
+          "—",
+          "—",
+          "—",
+          "—",
+          formatCurrency(450),
+          formatCurrency(450)
+        ]);
+      }
+    }
   } else {
     headers = ["Fecha", "Equipo", "P. Compra", "Costo Eq.", "P. Inicial", "Plataf.", "Entrega", "P. Recib.", "Sub-Tot.", "Comisión"];
     bodyRows = operaciones.map((item) => {
@@ -285,7 +342,7 @@ export async function exportarReciboPDF({
 
   // Si no hay operaciones en el período, agregar fila de marcador para evitar que la tabla quede colapsada o vacía
   if (bodyRows.length === 0) {
-    const colCount = isRepartidor ? 5 : 10;
+    const colCount = isRepartidor ? 8 : 10;
     const placeholderRow = Array(colCount).fill("—");
     placeholderRow[1] = "Sin operaciones registradas en el período";
     bodyRows.push(placeholderRow);
@@ -317,11 +374,14 @@ export async function exportarReciboPDF({
       lineColor: PDF_CONFIG.colores.grisBorde,
     },
     columnStyles: isRepartidor ? {
-      0: { cellWidth: 28 }, // Fecha
-      1: { cellWidth: 50, halign: 'left' }, // Equipo
-      2: { cellWidth: 32 }, // Entrega
-      3: { cellWidth: 32 }, // Pago Recibido
-      4: { cellWidth: 44, fontStyle: 'bold', textColor: PDF_CONFIG.colores.primario } // Comisión
+      0: { cellWidth: 18 }, // Fecha
+      1: { cellWidth: 38, halign: 'left' }, // Equipo
+      2: { cellWidth: 20 }, // Entrega
+      3: { cellWidth: 20 }, // Pago Recibido
+      4: { cellWidth: 22 }, // Cancelaciones
+      5: { cellWidth: 22 }, // Recolección
+      6: { cellWidth: 22 }, // Garantías
+      7: { cellWidth: 24, fontStyle: 'bold', textColor: PDF_CONFIG.colores.primario } // Comisión
     } : {
       0: { cellWidth: 16 }, // Fecha
       1: { cellWidth: 38, halign: 'left' }, // Equipo
@@ -340,7 +400,7 @@ export async function exportarReciboPDF({
   });
 
   // Obtener la posición final para colocar la tabla resumen
-  let finalY = (doc as any).lastAutoTable.finalY + 8;
+  let finalY = ((doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY) + 8;
 
   // Si queda muy poco espacio vertical al final de la página (menos de 45mm), agregamos página nueva
   if (finalY > 250) {
@@ -354,7 +414,7 @@ export async function exportarReciboPDF({
     : totalComision + config.bonoVal + config.sueldoVal - config.publicidadVal;
 
   const totalHeaders = ["Concepto", "Monto"];
-  const totalRows: any[][] = [];
+  const totalRows: (string | number)[][] = [];
 
   if (isRepartidor) {
     const totalPagosRecibidos = operaciones.reduce(
@@ -368,18 +428,32 @@ export async function exportarReciboPDF({
       return acc + rowEntrega;
     }, 0);
 
+    const totalCancelaciones = cancelacionesCount * 150;
+    const totalRecoleccion = recoleccionCount * 150;
+    const totalGarantias = garantiasCount * 450;
+    const totalGenerado = config.sueldoVal + config.bonoVal + totalCancelaciones + totalRecoleccion + totalGarantias + totalFletesEntregas;
+
     totalRows.push(["Sueldo Fijo", formatCurrency(config.sueldoVal)]);
     totalRows.push(["Bono", formatCurrency(config.bonoVal)]);
+    if (cancelacionesCount > 0) {
+      totalRows.push(["Cancelaciones", formatCurrency(totalCancelaciones)]);
+    }
+    if (recoleccionCount > 0) {
+      totalRows.push(["Recolecciones", formatCurrency(totalRecoleccion)]);
+    }
+    if (garantiasCount > 0) {
+      totalRows.push(["Garantías", formatCurrency(totalGarantias)]);
+    }
     totalRows.push(["Entregas", formatCurrency(totalFletesEntregas)]);
-    totalRows.push(["Pagos Recibidos", formatCurrency(-totalPagosRecibidos)]);
-    totalRows.push(["Comisión restante de entregas", formatCurrency(totalComision)]);
-    totalRows.push(["NETO A COBRAR", formatCurrency(netoACobrar)]);
+    totalRows.push(["Total Generado", formatCurrency(totalGenerado)]);
+    totalRows.push(["Descuento por Pagos Recibidos", formatCurrency(-totalPagosRecibidos)]);
   } else {
+    const totalGenerado = totalComision + config.bonoVal + config.sueldoVal;
     totalRows.push(["Comisión Ventas/Entregas", formatCurrency(totalComision)]);
     totalRows.push(["Bono", formatCurrency(config.bonoVal)]);
     totalRows.push(["Sueldo Fijo", formatCurrency(config.sueldoVal)]);
+    totalRows.push(["Total Generado", formatCurrency(totalGenerado)]);
     totalRows.push(["Descuento Publicidad", formatCurrency(-config.publicidadVal)]);
-    totalRows.push(["NETO A COBRAR", formatCurrency(netoACobrar)]);
   }
 
   // Dibujamos la tabla de totales alineada e integrada con la de arriba
@@ -413,19 +487,265 @@ export async function exportarReciboPDF({
       1: { cellWidth: 46, fontStyle: 'bold', textColor: PDF_CONFIG.colores.textoOscuro }
     },
     didParseCell: (data) => {
-      // Estilo destacado para la fila final del NETO A COBRAR
-      if (data.row.index === totalRows.length - 1) {
+      // Estilo destacado para la fila de Total Generado
+      const rowFirstCell = data.row.raw && Array.isArray(data.row.raw) ? data.row.raw[0] : "";
+      if (rowFirstCell === "Total Generado") {
         data.cell.styles.fontStyle = 'bold';
-        data.cell.styles.fontSize = 10;
         data.cell.styles.textColor = [15, 23, 42]; // Slate 900
-        
-        // Agregar color de fondo para la celda del neto a cobrar
         data.cell.styles.fillColor = [241, 245, 249]; // Slate 100
       }
     }
   });
 
+  const finalTableY = ((doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY) + 4;
+
+  // Mini tabla destacada y separada para NETO A COBRAR
+  autoTable(doc, {
+    startY: finalTableY,
+    body: [
+      ["NETO A COBRAR", formatCurrency(netoACobrar)]
+    ],
+    margin: { left: marginX, right: marginX },
+    theme: 'grid',
+    styles: {
+      fontSize: 9.5,
+      cellPadding: 2.8,
+      font: 'helvetica',
+      fontStyle: 'bold',
+      textColor: [15, 23, 42], // Slate 900
+      lineColor: PDF_CONFIG.colores.grisBorde,
+      lineWidth: 0.2,
+      halign: 'left',
+      valign: 'middle',
+      fillColor: [241, 245, 249] // Slate 100
+    },
+    columnStyles: {
+      0: { cellWidth: 140, fontStyle: 'bold' },
+      1: { cellWidth: 46, fontStyle: 'bold', textColor: [15, 23, 42] }
+    }
+  });
+
   // ─── 8. GENERACIÓN Y DESCARGA DEL ARCHIVO PDF ───
   const filename = `Recibo_${empleado.username}_${fechaEmision.replace(/\//g, "-")}.pdf`;
+  doc.save(filename);
+}
+
+export interface ExportarConsolidadoPDFProps {
+  empleados: {
+    id: string;
+    username: string;
+    role: string;
+    operacionesCount: number;
+    totalPagar: number;
+  }[];
+  totalOperaciones: number;
+  granTotalPagar: number;
+  periodo?: {
+    desde?: string;
+    hasta?: string;
+  };
+}
+
+export async function exportarReciboConsolidadoPDF({
+  empleados,
+  totalOperaciones,
+  granTotalPagar,
+  periodo,
+}: ExportarConsolidadoPDFProps) {
+  // Intentar cargar el logo de la empresa desde la ruta pública
+  let logoImg: HTMLImageElement | null = null;
+  try {
+    logoImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.src = "/brands/logorecibo.png";
+      img.onload = () => resolve(img);
+      img.onerror = (err) => reject(err);
+    });
+  } catch {
+    console.warn("No se pudo cargar el logo de Finvora, se usará texto de respaldo.");
+  }
+
+  // ─── 1. INICIALIZACIÓN DEL DOCUMENTO A4 ───
+  const doc = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+  });
+
+  const marginX = 12;
+  const areaWidth = 210 - (2 * marginX); // 186mm
+  let currentY = 15;
+
+  // ─── 2. RENDERIZADO DEL ENCABEZADO Y LOGO DE LA EMPRESA ───
+  if (logoImg) {
+    // Dibujar logo de 32mm de ancho por 11mm de alto
+    doc.addImage(logoImg, "PNG", marginX, currentY - 3, 32, 11);
+    currentY += 14;
+  } else {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(PDF_CONFIG.colores.primario[0], PDF_CONFIG.colores.primario[1], PDF_CONFIG.colores.primario[2]);
+    doc.text(PDF_CONFIG.empresaNombre, marginX, currentY);
+    currentY += 6;
+  }
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(PDF_CONFIG.colores.secundario[0], PDF_CONFIG.colores.secundario[1], PDF_CONFIG.colores.secundario[2]);
+  doc.text(PDF_CONFIG.empresaSubtitulo, marginX, currentY);
+
+  // Fecha de Emisión (Alineado a la derecha en la misma línea superior, fija en Y = 16)
+  const fechaEmision = new Date().toLocaleDateString('es-MX');
+  doc.setFont("helvetica", "bold");
+  doc.text(`Emisión: ${fechaEmision}`, 210 - marginX, 16, { align: "right" });
+
+  currentY += 4.5;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(PDF_CONFIG.empresaDetalle, marginX, currentY);
+
+  currentY += 5.5;
+  // Línea divisoria superior
+  doc.setDrawColor(PDF_CONFIG.colores.grisBorde[0], PDF_CONFIG.colores.grisBorde[1], PDF_CONFIG.colores.grisBorde[2]);
+  doc.setLineWidth(0.5);
+  doc.line(marginX, currentY, 210 - marginX, currentY);
+
+  currentY += 8;
+
+  // ─── 3. TÍTULO PRINCIPAL DEL RECIBO ───
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(PDF_CONFIG.colores.primario[0], PDF_CONFIG.colores.primario[1], PDF_CONFIG.colores.primario[2]);
+  doc.text("DETALLE DE PAGO GENERAL", marginX, currentY);
+
+  currentY += 4;
+
+  // ─── 4. CUADRO DE INFORMACIÓN GENERAL DEL REPORTE ───
+  const infoBoxHeight = 20;
+  doc.setFillColor(PDF_CONFIG.colores.grisClaro[0], PDF_CONFIG.colores.grisClaro[1], PDF_CONFIG.colores.grisClaro[2]);
+  doc.rect(marginX, currentY, areaWidth, infoBoxHeight, "F");
+
+  // Bordes del cuadro de información
+  doc.setDrawColor(PDF_CONFIG.colores.grisBorde[0], PDF_CONFIG.colores.grisBorde[1], PDF_CONFIG.colores.grisBorde[2]);
+  doc.setLineWidth(0.2);
+  doc.rect(marginX, currentY, areaWidth, infoBoxHeight, "S");
+
+  // Rellenar información adentro
+  doc.setFontSize(9);
+  const textPaddingX = marginX + 4;
+  const infoY = currentY + 6;
+
+  // Columna 1 de datos
+  doc.setFont("helvetica", "bold");
+  doc.text("Tipo de Reporte:", textPaddingX, infoY);
+  doc.setFont("helvetica", "normal");
+  doc.text("Resumen General de Haberes", textPaddingX + 28, infoY);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Alcance:", textPaddingX, infoY + 8);
+  doc.setFont("helvetica", "normal");
+  doc.text("Todos los Empleados", textPaddingX + 16, infoY + 8);
+
+  // Columna 2 de datos (mitad de cuadro)
+  const col2X = marginX + (areaWidth / 2) + 10;
+  doc.setFont("helvetica", "bold");
+  doc.text("Período:", col2X, infoY);
+  doc.setFont("helvetica", "normal");
+  let periodStr = "Todos los registros";
+  if (periodo?.desde && periodo?.hasta) {
+    periodStr = `${formatTijuanaOnlyDate(periodo.desde)} al ${formatTijuanaOnlyDate(periodo.hasta)}`;
+  } else if (periodo?.desde) {
+    periodStr = `Desde ${formatTijuanaOnlyDate(periodo.desde)}`;
+  } else if (periodo?.hasta) {
+    periodStr = `Hasta ${formatTijuanaOnlyDate(periodo.hasta)}`;
+  }
+  doc.text(periodStr, col2X + 16, infoY);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Total Empleados:", col2X, infoY + 8);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${empleados.length} empleados listados`, col2X + 28, infoY + 8);
+
+  currentY += infoBoxHeight + 8;
+
+  // ─── 5. DEFINICIÓN DE TABLA CONSOLIDADA ───
+  const headers = ["Empleado", "Rol", "Operaciones", "Total a Pagar"];
+  const bodyRows = empleados.map(emp => {
+    const displayName = emp.username.charAt(0).toUpperCase() + emp.username.slice(1);
+    const roleCapitalized = emp.role ? (emp.role.charAt(0).toUpperCase() + emp.role.slice(1)) : "Sin Rol";
+    return [
+      displayName,
+      roleCapitalized,
+      `${emp.operacionesCount} ops.`,
+      formatCurrency(emp.totalPagar)
+    ];
+  });
+
+  autoTable(doc, {
+    startY: currentY,
+    head: [headers],
+    body: bodyRows,
+    margin: { left: marginX, right: marginX },
+    theme: 'grid',
+    styles: {
+      fontSize: 8.5,
+      cellPadding: 2.8,
+      font: 'helvetica',
+      textColor: PDF_CONFIG.colores.textoPrincipal,
+      lineColor: PDF_CONFIG.colores.grisBorde,
+      lineWidth: 0.1,
+      halign: 'center',
+      valign: 'middle',
+    },
+    headStyles: {
+      fillColor: PDF_CONFIG.colores.grisClaro,
+      textColor: PDF_CONFIG.colores.textoOscuro,
+      fontStyle: 'bold',
+      fontSize: 9,
+      lineColor: PDF_CONFIG.colores.grisBorde,
+      lineWidth: 0.2,
+      halign: 'center',
+    },
+    columnStyles: {
+      0: { cellWidth: 60, halign: 'left', fontStyle: 'bold', textColor: PDF_CONFIG.colores.textoOscuro },
+      1: { cellWidth: 40, halign: 'center' },
+      2: { cellWidth: 40, halign: 'center' },
+      3: { cellWidth: 46, halign: 'right', fontStyle: 'bold', textColor: PDF_CONFIG.colores.primario },
+    },
+    alternateRowStyles: {
+      fillColor: [253, 254, 255]
+    }
+  });
+
+  const finalTableY = ((doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY) + 5;
+
+  // ─── 6. RECUADRO DE GRAN TOTAL DESTACADO ───
+  autoTable(doc, {
+    startY: finalTableY,
+    body: [
+      ["TOTAL GENERAL A PAGAR APROX.", `${totalOperaciones} ops.`, formatCurrency(granTotalPagar)]
+    ],
+    margin: { left: marginX, right: marginX },
+    theme: 'grid',
+    styles: {
+      fontSize: 9.5,
+      cellPadding: 3,
+      font: 'helvetica',
+      fontStyle: 'bold',
+      textColor: [15, 23, 42],
+      lineColor: PDF_CONFIG.colores.grisBorde,
+      lineWidth: 0.2,
+      halign: 'left',
+      valign: 'middle',
+      fillColor: [241, 245, 249]
+    },
+    columnStyles: {
+      0: { cellWidth: 100, fontStyle: 'bold' },
+      1: { cellWidth: 40, halign: 'center', fontStyle: 'bold' },
+      2: { cellWidth: 46, halign: 'right', fontStyle: 'bold', textColor: [15, 23, 42] }
+    }
+  });
+
+  const filename = `Liquidacion_Consolidada_Todos_${fechaEmision.replace(/\//g, "-")}.pdf`;
   doc.save(filename);
 }

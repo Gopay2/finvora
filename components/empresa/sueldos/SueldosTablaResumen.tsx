@@ -31,10 +31,10 @@ export function SueldosTablaResumen({
           <thead className="bg-slate-950 border-b border-slate-800 text-slate-400 font-semibold uppercase text-xs tracking-wider">
             {isRepartidorSelected ? (
               <tr>
-                <th className={customTh} colSpan={2} style={{ width: "40%" }}></th>
-                <th className={customTh} style={{ width: "20%" }}>Bono</th>
-                <th className={customTh} style={{ width: "20%" }}>Sueldo</th>
-                <th className={customTh} style={{ width: "20%" }}>Total</th>
+                <th className={customTh} colSpan={5} style={{ width: "64%" }}></th>
+                <th className={customTh} style={{ width: "12%" }}>Bono</th>
+                <th className={customTh} style={{ width: "12%" }}>Sueldo</th>
+                <th className={customTh} style={{ width: "12%" }}>Total</th>
               </tr>
             ) : (
               <tr>
@@ -55,14 +55,14 @@ export function SueldosTablaResumen({
             <tr className="border-b border-slate-800/50 hover:bg-slate-900/20 transition-colors">
               {isRepartidorSelected ? (
                 <>
-                  <td className={customTd} colSpan={2} style={{ width: "40%" }}></td>
-                  <td className={customTd} style={{ width: "20%" }}>
+                  <td className={customTd} colSpan={5} style={{ width: "64%" }}></td>
+                  <td className={customTd} style={{ width: "12%" }}>
                     <span className="text-slate-300">{formatCurrency(bonoVal)}</span>
                   </td>
-                  <td className={customTd} style={{ width: "20%" }}>
+                  <td className={customTd} style={{ width: "12%" }}>
                     <span className="text-slate-300">{formatCurrency(sueldoVal)}</span>
                   </td>
-                  <td className={customTd} style={{ width: "20%" }}>
+                  <td className={customTd} style={{ width: "12%" }}>
                     <span className="text-secondary font-bold">{formatCurrency(totalComision + bonoVal + sueldoVal)}</span>
                   </td>
                 </>
