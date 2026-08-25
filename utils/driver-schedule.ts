@@ -18,6 +18,7 @@ export const WEEKDAY_NAMES = [
  */
 export const DRIVER_REST_DAYS: Record<string, number[]> = {
   felix: [3], // 3 = Miércoles
+  angel: [2], // 2 = Martes
 };
 
 /**
