@@ -61,7 +61,7 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
       </head>
-      <body className="font-body bg-background text-on-background selection:bg-tertiary/30 selection:text-tertiary antialiased">
+      <body className="font-body bg-background text-on-background selection:bg-tertiary/30 selection:text-tertiary antialiased" suppressHydrationWarning>
         {children}
       </body>
     </html>

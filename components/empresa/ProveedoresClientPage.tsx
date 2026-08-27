@@ -13,15 +13,15 @@ import { AsignarProductoForm } from "./proveedores/AsignarProductoForm";
 import { ProveedoresTable } from "./proveedores/ProveedoresTable";
 import { DeleteProveedorCostModal } from "./proveedores/DeleteProveedorCostModal";
 
-interface CalculadoraProveedoresClientPageProps {
+interface ProveedoresClientPageProps {
   catalogProducts: CatalogProduct[];
   initialAssignedCosts: SupplierCostRecord[];
 }
 
-export default function CalculadoraProveedoresClientPage({
+export default function ProveedoresClientPage({
   catalogProducts,
   initialAssignedCosts,
-}: CalculadoraProveedoresClientPageProps) {
+}: ProveedoresClientPageProps) {
   const router = useRouter();
   const [proveedorActive, setProveedorActive] = useState<ProveedorNombre>("Tijuana");
 

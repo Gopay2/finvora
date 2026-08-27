@@ -74,14 +74,14 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
-      {/* Calculadora de Crédito */}
-      <Link href="/empresa/webapp/calculadora-credito" className={styles.card}>
+      {/* Cotizaciones de crédito */}
+      <Link href="/empresa/webapp/cotizaciones-credito" className={styles.card}>
         <div className={styles.cardGlow} />
         <div className={styles.iconWrapper}>
           <span className={styles.icon}>credit_score</span>
         </div>
         <div>
-          <h2 className={styles.cardTitle}>Calculadora de Crédito</h2>
+          <h2 className={styles.cardTitle}>Cotizaciones de crédito</h2>
           <p className={styles.cardDesc}>Cotizador rápido de enganches por zona y modelo.</p>
         </div>
         <div className={styles.cardButton}>Acceder</div>
