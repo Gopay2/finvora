@@ -35,8 +35,19 @@ export interface CostoItem {
 }
 
 export interface ConfigEngancheItem {
+  id?: string;
   cliente_historial: string;
+  zona?: string | null;
+  vendedor_id?: string | null;
+  vendedor_nombre?: string | null;
   porcentajes: number[];
+  permitir_enganche_libre?: boolean;
+}
+
+export interface VendedorDisponible {
+  id: string;
+  nombre: string;
+  role?: string;
 }
 
 export interface RepartoExistente {

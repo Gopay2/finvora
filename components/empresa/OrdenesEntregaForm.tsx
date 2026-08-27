@@ -1,8 +1,19 @@
 'use client';
 
+// 1. React y Next.js
 import React, { useState, useRef, useMemo, useEffect } from "react";
+
+// 2. Componentes internos
+import { FormDatosCliente } from "./ordenes-entrega/FormDatosCliente";
+import { FormSeleccionEquipo } from "./ordenes-entrega/FormSeleccionEquipo";
+import { FormProgramacionEntrega } from "./ordenes-entrega/FormProgramacionEntrega";
+
+// 3. Acciones y Utilidades
 import { submitOrdenEntrega } from "@/app/empresa/webapp/ordenes-entrega/actions";
 import { getDriverRestDayInfo, getDriverScheduleConfig } from "@/utils/driver-schedule";
+import { PORCENTAJE_EXTRA_SOBRE_COSTO, getPlazaCostoPrincipal } from "@/config/cotizaciones";
+
+// 4. Tipos
 import type {
   Producto,
   RepartoZonaInfo,
@@ -11,9 +22,6 @@ import type {
   ConfigEngancheItem,
   RepartoExistente
 } from "@/types/ordenes-entrega";
-import { FormDatosCliente } from "./ordenes-entrega/FormDatosCliente";
-import { FormSeleccionEquipo } from "./ordenes-entrega/FormSeleccionEquipo";
-import { FormProgramacionEntrega } from "./ordenes-entrega/FormProgramacionEntrega";
 
 export type { Producto, RepartoZonaInfo, StockItem, CostoItem, ConfigEngancheItem, RepartoExistente };
 
@@ -24,6 +32,7 @@ interface OrdenesEntregaFormProps {
   costos: CostoItem[];
   configEnganches: ConfigEngancheItem[];
   repartosExistentes?: RepartoExistente[];
+  currentUserId?: string | null;
 }
 
 const styles = {
@@ -98,16 +107,16 @@ function computeAvailableHours(
   for (let m = startTotalMinutes; m <= endTotalMinutes; m += 30) {
     const h = Math.floor(m / 60);
     const min = m % 60;
-    const slotStr = `${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
-    allSlots.push(slotStr);
-  }
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const slotStr = `${pad(h)}:${pad(min)}`;
 
-  if (fechaEntrega === zoneTime.dateStr) {
-    const minAllowedMinutes = (zoneTime.hour * 60 + zoneTime.minute) + 60; // 1 hora de anticipación
-    return allSlots.filter((slot) => {
-      const [sh, sm] = slot.split(':').map(Number);
-      return (sh * 60 + sm) >= minAllowedMinutes;
-    });
+    // Si es hoy, filtrar horarios pasados
+    if (fechaEntrega === zoneTime.dateStr) {
+      if (h < zoneTime.hour || (h === zoneTime.hour && min <= zoneTime.minute)) {
+        continue;
+      }
+    }
+    allSlots.push(slotStr);
   }
 
   return allSlots;
@@ -119,7 +128,8 @@ export default function OrdenesEntregaForm({
   stockItems, 
   costos, 
   configEnganches,
-  repartosExistentes = []
+  repartosExistentes = [],
+  currentUserId,
 }: OrdenesEntregaFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
@@ -140,19 +150,132 @@ export default function OrdenesEntregaForm({
 
   const selectedProductCost = useMemo(() => {
     if (!selectedImei) return 0;
-    const stockItem = stockItems.find((s) => s.imei === selectedImei);
+    const stockItem = stockItems.find((stock) => stock.imei === selectedImei);
     if (!stockItem) return 0;
-    const costoRecord = costos.find((c) => c.producto_id === stockItem.producto_id);
-    return costoRecord ? Number(costoRecord.costo) : 0;
+    const costoRecord = costos.find((costo) => costo.producto_id === stockItem.producto_id);
+    if (!costoRecord) return 0;
+    const baseCosto = Number(costoRecord.costo) || 0;
+    return baseCosto * (1 + PORCENTAJE_EXTRA_SOBRE_COSTO / 100);
   }, [selectedImei, stockItems, costos]);
 
+  // Hook jerárquico de Porcentajes: Nivel 1 (Vendedor) -> Nivel 2 (Zona) -> Nivel 3 (General)
   const enganchePorcentajes = useMemo(() => {
     if (!clienteHistorial) return [];
-    const config = configEnganches.find(
-      (c) => c.cliente_historial.toLowerCase() === clienteHistorial.toLowerCase()
+    
+    // Nivel 1 (Máxima Prioridad): Regla por Vendedor
+    if (currentUserId) {
+      const vendedorConfig = configEnganches.find(
+        (config) =>
+          config.vendedor_id === currentUserId &&
+          config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+      );
+      if (vendedorConfig && vendedorConfig.porcentajes && vendedorConfig.porcentajes.length > 0) {
+        return vendedorConfig.porcentajes;
+      }
+    }
+
+    // Nivel 2: Regla por Zona
+    if (selectedZona) {
+      const normZona = selectedZona.toLowerCase().trim();
+      const plazaPrincipal = getPlazaCostoPrincipal(selectedZona).toLowerCase().trim();
+
+      // Regla individual de la zona
+      const zoneConfig = configEnganches.find(
+        (config) =>
+          !config.vendedor_id &&
+          config.zona &&
+          config.zona.toLowerCase().trim() === normZona &&
+          config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+      );
+      if (zoneConfig && zoneConfig.porcentajes && zoneConfig.porcentajes.length > 0) {
+        return zoneConfig.porcentajes;
+      }
+
+      // Regla de plaza cabecera si no tiene individual
+      if (plazaPrincipal !== normZona) {
+        const parentZoneConfig = configEnganches.find(
+          (config) =>
+            !config.vendedor_id &&
+            config.zona &&
+            config.zona.toLowerCase().trim() === plazaPrincipal &&
+            config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+        );
+        if (parentZoneConfig && parentZoneConfig.porcentajes && parentZoneConfig.porcentajes.length > 0) {
+          return parentZoneConfig.porcentajes;
+        }
+      }
+    }
+
+    // Nivel 3 (Fallback Base): Configuración General
+    const generalConfig = configEnganches.find(
+      (config) =>
+        !config.vendedor_id &&
+        !config.zona &&
+        config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
     );
-    return config ? config.porcentajes : [];
-  }, [clienteHistorial, configEnganches]);
+    return generalConfig ? generalConfig.porcentajes : [];
+  }, [clienteHistorial, selectedZona, configEnganches, currentUserId]);
+
+  /**
+   * Determina si el enganche libre está habilitado siguiendo la jerarquía de 3 niveles:
+   * 1. Nivel 1 (Máxima Prioridad): Regla asignada al Vendedor logueado.
+   * 2. Nivel 2: Regla de la Zona seleccionada (o su plaza principal).
+   * 3. Nivel 3 (Fallback): Configuración General del sistema.
+   */
+  const isEngancheLibre = useMemo(() => {
+    if (!clienteHistorial) return false;
+
+    // Nivel 1 (Máxima Prioridad): Regla por Vendedor
+    if (currentUserId) {
+      const vendedorConfig = configEnganches.find(
+        (config) =>
+          config.vendedor_id === currentUserId &&
+          config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+      );
+      if (vendedorConfig !== undefined && typeof vendedorConfig.permitir_enganche_libre === "boolean") {
+        return vendedorConfig.permitir_enganche_libre;
+      }
+    }
+
+    // Nivel 2: Regla por Zona
+    if (selectedZona) {
+      const normZona = selectedZona.toLowerCase().trim();
+      const plazaPrincipal = getPlazaCostoPrincipal(selectedZona).toLowerCase().trim();
+
+      const zoneConfig = configEnganches.find(
+        (config) =>
+          !config.vendedor_id &&
+          config.zona &&
+          config.zona.toLowerCase().trim() === normZona &&
+          config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+      );
+      if (zoneConfig !== undefined && typeof zoneConfig.permitir_enganche_libre === "boolean") {
+        return zoneConfig.permitir_enganche_libre;
+      }
+
+      if (plazaPrincipal !== normZona) {
+        const parentZoneConfig = configEnganches.find(
+          (config) =>
+            !config.vendedor_id &&
+            config.zona &&
+            config.zona.toLowerCase().trim() === plazaPrincipal &&
+            config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+        );
+        if (parentZoneConfig !== undefined && typeof parentZoneConfig.permitir_enganche_libre === "boolean") {
+          return parentZoneConfig.permitir_enganche_libre;
+        }
+      }
+    }
+
+    // Nivel 3 (Fallback Base): Configuración General
+    const generalConfig = configEnganches.find(
+      (config) =>
+        !config.vendedor_id &&
+        !config.zona &&
+        config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+    );
+    return Boolean(generalConfig?.permitir_enganche_libre);
+  }, [clienteHistorial, selectedZona, configEnganches, currentUserId]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -453,6 +576,7 @@ export default function OrdenesEntregaForm({
         engancheValue={engancheValue}
         setEngancheValue={setEngancheValue}
         enganchePorcentajes={enganchePorcentajes}
+        isEngancheLibre={isEngancheLibre}
       />
 
       {/* 3. Programación de entrega y verificación */}

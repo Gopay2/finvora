@@ -2,7 +2,7 @@ import React from "react";
 import { getUserProfile } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
 import { createClient } from "@/utils/supabase/server";
-import CalculadoraProveedoresClientPage from "@/components/empresa/CalculadoraProveedoresClientPage";
+import ProveedoresClientPage from "@/components/empresa/ProveedoresClientPage";
 
 export const revalidate = 0;
 
@@ -123,7 +123,7 @@ export default async function ProveedoresPage() {
   });
 
   return (
-    <CalculadoraProveedoresClientPage
+    <ProveedoresClientPage
       catalogProducts={catalogProducts}
       initialAssignedCosts={initialAssignedCosts}
     />

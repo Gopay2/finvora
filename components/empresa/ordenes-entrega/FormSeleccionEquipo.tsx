@@ -35,6 +35,7 @@ interface FormSeleccionEquipoProps {
   engancheValue: string;
   setEngancheValue: (val: string) => void;
   enganchePorcentajes: number[];
+  isEngancheLibre?: boolean;
 }
 
 /**
@@ -62,7 +63,8 @@ export function FormSeleccionEquipo({
   selectedProductCost,
   engancheValue,
   setEngancheValue,
-  enganchePorcentajes
+  enganchePorcentajes,
+  isEngancheLibre = false,
 }: FormSeleccionEquipoProps) {
   const styles = {
     inputGroup: "space-y-2",
@@ -276,7 +278,7 @@ export function FormSeleccionEquipo({
         </select>
       </div>
 
-      {selectedProductCost > 0 ? (
+      {selectedProductCost > 0 && !isEngancheLibre ? (
         <div className={styles.inputGroup}>
           <label className={styles.label}>Enganche</label>
           <select
@@ -304,7 +306,9 @@ export function FormSeleccionEquipo({
         </div>
       ) : (
         <div className={styles.inputGroup}>
-          <label className={styles.label}>Enganche</label>
+          <label className={styles.label}>
+            Enganche {isEngancheLibre && selectedProductCost > 0 ? "(Libre)" : ""}
+          </label>
           <div className={styles.relativeInputContainer}>
             <span className={styles.enganchePrefix}>$</span>
             <input

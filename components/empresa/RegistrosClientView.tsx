@@ -93,7 +93,7 @@ export default function RegistrosClientView({
     if ('showPicker' in HTMLInputElement.prototype) {
       try {
         lastPickerOpen.current = now;
-        (event.currentTarget as any).showPicker();
+        (event.currentTarget as HTMLInputElement).showPicker();
       } catch (err) {
         lastPickerOpen.current = 0;
       }

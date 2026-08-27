@@ -17,7 +17,8 @@ const styles = {
 };
 
 export default async function OrdenesEntregaPage() {
-  const { role: userRole } = await getUserProfile();
+  const userProfile = await getUserProfile();
+  const userRole = userProfile.role;
 
   if (!isAllowed(userRole, ["Admin", "Closer", "Cambaceador", "Supervisor", "Developer", "CambaCloser"])) {
     return <AccessDenied role={userRole} sectionName="Orden de Entrega" />;
@@ -50,7 +51,7 @@ export default async function OrdenesEntregaPage() {
   // 4. Obtenemos las configuraciones de enganche
   const { data: configEnganches } = await supabase
     .from("configuracion_enganche")
-    .select("cliente_historial, porcentajes");
+    .select("id, cliente_historial, zona, vendedor_id, porcentajes, permitir_enganche_libre");
 
   // 5. Obtenemos las zonas de reparto con sus repartidores asociados
   const { data: zonasRepartoRaw } = await supabase
@@ -136,6 +137,7 @@ export default async function OrdenesEntregaPage() {
         costos={costos || []}
         configEnganches={configEnganches || []}
         repartosExistentes={repartosExistentes}
+        currentUserId={userProfile.id}
       />
     </div>
   );

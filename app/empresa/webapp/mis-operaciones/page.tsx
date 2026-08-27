@@ -5,6 +5,27 @@ import { createClient } from "@/utils/supabase/server";
 import MisOperacionesClientPage from "@/components/empresa/MisOperacionesClientPage";
 import type { ComprobanteRecord } from "@/app/empresa/webapp/comprobantes/comprobantes-actions";
 
+interface RawComprobanteItem {
+  id: string;
+  nombre_cliente: string;
+  comentarios: string | null;
+  precio_compra: number | string;
+  pago_inicial: number | string;
+  pago_recibido: number | string;
+  pago_semanal: number | string | null;
+  plazos: number | string | null;
+  precio_total: number | string | null;
+  tag: string | null;
+  celular: string | null;
+  color_celular: string | null;
+  imei: string | null;
+  comprobante_url: string;
+  created_at: string;
+  vendedor: { id: string; username: string; role: string } | { id: string; username: string; role: string }[] | null;
+  repartidor: { id: string; nombre: string } | { id: string; nombre: string }[] | null;
+  creador: { id: string; username: string; role: string } | { id: string; username: string; role: string }[] | null;
+}
+
 export const revalidate = 0;
 
 export default async function MisOperacionesPage() {
@@ -68,8 +89,8 @@ export default async function MisOperacionesPage() {
   }
 
   // 4. Mapear y formatear los datos para el componente de cliente
-  const rawComprobantes = (data as any) || [];
-  const comprobantesList: ComprobanteRecord[] = rawComprobantes.map((comprobanteRaw: any) => ({
+  const rawComprobantes = (data as unknown as RawComprobanteItem[]) || [];
+  const comprobantesList: ComprobanteRecord[] = rawComprobantes.map((comprobanteRaw: RawComprobanteItem) => ({
     id: comprobanteRaw.id,
     nombre_cliente: comprobanteRaw.nombre_cliente,
     comentarios: comprobanteRaw.comentarios || null,
@@ -85,9 +106,9 @@ export default async function MisOperacionesPage() {
     imei: comprobanteRaw.imei || null,
     comprobante_url: comprobanteRaw.comprobante_url,
     created_at: comprobanteRaw.created_at,
-    vendedor: Array.isArray(comprobanteRaw.vendedor) ? comprobanteRaw.vendedor[0] : comprobanteRaw.vendedor,
-    repartidor: Array.isArray(comprobanteRaw.repartidor) ? comprobanteRaw.repartidor[0] : comprobanteRaw.repartidor,
-    creador: Array.isArray(comprobanteRaw.creador) ? comprobanteRaw.creador[0] : comprobanteRaw.creador,
+    vendedor: comprobanteRaw.vendedor ? (Array.isArray(comprobanteRaw.vendedor) ? (comprobanteRaw.vendedor[0] || null) : comprobanteRaw.vendedor) : null,
+    repartidor: comprobanteRaw.repartidor ? (Array.isArray(comprobanteRaw.repartidor) ? (comprobanteRaw.repartidor[0] || null) : comprobanteRaw.repartidor) : null,
+    creador: comprobanteRaw.creador ? (Array.isArray(comprobanteRaw.creador) ? (comprobanteRaw.creador[0] || null) : comprobanteRaw.creador) : null,
   }));
 
   return (

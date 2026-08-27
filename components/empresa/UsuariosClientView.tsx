@@ -245,7 +245,7 @@ export default function UsuariosClientView({ perfiles, currentUserRole, currentU
                               >
                                 {/* Aseguramos que si el rol actual del usuario no está en las opciones filtradas del Supervisor,
                                     se renderice igual de forma temporal para que no rompa la visualización inicial */}
-                                {!rolesOpciones.includes(perfil.role as any) && (
+                                {!(rolesOpciones as readonly string[]).includes(perfil.role) && (
                                   <option value={perfil.role}>{perfil.role}</option>
                                 )}
                                 {rolesOpciones.map((role) => (
