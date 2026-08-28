@@ -34,6 +34,7 @@ export interface CostoProveedorItem {
   producto_id: string;
   proveedor: string;
   costo: number | string;
+  costo_payjoy: number | string;
 }
 
 export interface ConfigEngancheItem {
@@ -76,6 +77,7 @@ export default async function CotizacionesCreditoPage() {
     producto_id: string;
     proveedor: string;
     costo: number | string;
+    costo_payjoy?: number | string | null;
   }
 
   interface RawConfigEnganche {
@@ -99,13 +101,14 @@ export default async function CotizacionesCreditoPage() {
   // 2. Obtenemos la tabla de costos de proveedores (plazas: Tijuana, Monterrey, Guadalajara)
   const { data: costosData } = await supabase
     .from("producto_costos_proveedores")
-    .select("id, producto_id, proveedor, costo");
+    .select("id, producto_id, proveedor, costo, costo_payjoy");
 
   const costos: CostoProveedorItem[] = ((costosData as unknown as RawCosto[]) || []).map((c: RawCosto) => ({
     id: c.id,
     producto_id: c.producto_id,
     proveedor: c.proveedor,
     costo: Number(c.costo) || 0,
+    costo_payjoy: Number(c.costo_payjoy) || 0,
   }));
 
   // 3. Obtenemos las configuraciones de enganche (Si / No, Generales, por Zona y por Vendedor)

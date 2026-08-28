@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   agregarProductoProveedor,
   actualizarCostoProveedor,
+  actualizarCostoPayjoyProveedor,
   eliminarProductoProveedor,
 } from "@/app/empresa/webapp/sueldos/proveedores/proveedores-actions";
 import type { CatalogProduct, SupplierCostRecord, ProveedorNombre } from "@/types/proveedores";
@@ -29,14 +30,20 @@ export default function ProveedoresClientPage({
   const [selectedMarca, setSelectedMarca] = useState("");
   const [selectedProdId, setSelectedProdId] = useState("");
   const [costoInput, setCostoInput] = useState("0");
+  const [costoPayjoyInput, setCostoPayjoyInput] = useState("0");
   const [isPending, startTransition] = useTransition();
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  // Estados de guardado inline
+  // Estados de guardado inline - Costo Equipo
   const [editCosts, setEditCosts] = useState<{ [id: string]: string }>({});
   const [savingMap, setSavingMap] = useState<{ [id: string]: boolean }>({});
   const [savedMap, setSavedMap] = useState<{ [id: string]: boolean }>({});
+
+  // Estados de guardado inline - Costo PayJoy
+  const [editCostsPayjoy, setEditCostsPayjoy] = useState<{ [id: string]: string }>({});
+  const [savingMapPayjoy, setSavingMapPayjoy] = useState<{ [id: string]: boolean }>({});
+  const [savedMapPayjoy, setSavedMapPayjoy] = useState<{ [id: string]: boolean }>({});
 
   // Modal de confirmación de eliminación
   const [deleteModal, setDeleteModal] = useState<{ id: string; name: string } | null>(null);
@@ -98,9 +105,15 @@ export default function ProveedoresClientPage({
     setSuccessMsg("");
 
     const initialCosto = Number(costoInput) || 0;
+    const initialCostoPayjoy = Number(costoPayjoyInput) || 0;
 
     startTransition(async () => {
-      const res = await agregarProductoProveedor(selectedProdId, proveedorActive, initialCosto);
+      const res = await agregarProductoProveedor(
+        selectedProdId,
+        proveedorActive,
+        initialCosto,
+        initialCostoPayjoy
+      );
       if (res.error) {
         setErrorMsg(res.error);
       } else {
@@ -108,6 +121,7 @@ export default function ProveedoresClientPage({
         setSelectedMarca("");
         setSelectedProdId("");
         setCostoInput("0");
+        setCostoPayjoyInput("0");
         router.refresh();
       }
     });
@@ -141,6 +155,42 @@ export default function ProveedoresClientPage({
       }, 2000);
 
       setEditCosts((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+      router.refresh();
+    }
+  };
+
+  const handleSaveCostoPayjoy = async (id: string, originalCostoPayjoy: number) => {
+    const currentVal = editCostsPayjoy[id];
+    if (currentVal === undefined) return;
+
+    const numericVal = Number(currentVal) || 0;
+
+    if (numericVal === originalCostoPayjoy) {
+      setEditCostsPayjoy((prev) => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+      return;
+    }
+
+    setSavingMapPayjoy((prev) => ({ ...prev, [id]: true }));
+    const res = await actualizarCostoPayjoyProveedor(id, numericVal);
+    setSavingMapPayjoy((prev) => ({ ...prev, [id]: false }));
+
+    if (res.error) {
+      alert(res.error);
+    } else {
+      setSavedMapPayjoy((prev) => ({ ...prev, [id]: true }));
+      setTimeout(() => {
+        setSavedMapPayjoy((prev) => ({ ...prev, [id]: false }));
+      }, 2000);
+
+      setEditCostsPayjoy((prev) => {
         const copy = { ...prev };
         delete copy[id];
         return copy;
@@ -185,7 +235,7 @@ export default function ProveedoresClientPage({
               Costos de Proveedores
             </h1>
             <p className="text-xs text-slate-400">
-              Administra qué productos se surten por proveedor y edita sus respectivos costos de compra.
+              Administra los costos de compra de equipos y costos base PayJoy para cada proveedor y plaza.
             </p>
           </div>
 
@@ -226,6 +276,8 @@ export default function ProveedoresClientPage({
         setSelectedProdId={setSelectedProdId}
         costoInput={costoInput}
         setCostoInput={setCostoInput}
+        costoPayjoyInput={costoPayjoyInput}
+        setCostoPayjoyInput={setCostoPayjoyInput}
         marcas={marcas}
         filteredProducts={filteredProducts}
         targetSigla={targetSigla}
@@ -244,6 +296,11 @@ export default function ProveedoresClientPage({
         savingMap={savingMap}
         savedMap={savedMap}
         handleSaveCosto={handleSaveCosto}
+        editCostsPayjoy={editCostsPayjoy}
+        setEditCostsPayjoy={setEditCostsPayjoy}
+        savingMapPayjoy={savingMapPayjoy}
+        savedMapPayjoy={savedMapPayjoy}
+        handleSaveCostoPayjoy={handleSaveCostoPayjoy}
         handleEliminar={handleEliminar}
       />
 

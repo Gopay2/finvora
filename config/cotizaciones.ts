@@ -2,17 +2,6 @@
  * Configuración central de parámetros comerciales, recargos y reglas de zonas para Cotizaciones y Órdenes de Entrega.
  */
 
-/**
- * Porcentaje adicional que se suma sobre el costo base del equipo antes de calcular el enganche.
- * Aplica de forma sincronizada tanto al Cotizador de Crédito como al formulario de Órdenes de Entrega.
- *
- * Ejemplos:
- *  0  -> Costo original (sin recargo).
- *  10 -> +10% sobre el costo base (ej. $5,000 -> cálculo sobre $5,500).
- *  15 -> +15% sobre el costo base.
- */
-export const PORCENTAJE_EXTRA_SOBRE_COSTO = 4.32;
-
 export interface TerminoPagoConfig {
   meses: number;
   semanas: number;

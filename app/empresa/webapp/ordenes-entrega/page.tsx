@@ -46,7 +46,7 @@ export default async function OrdenesEntregaPage() {
   // 3. Obtenemos los costos de productos por proveedor
   const { data: costos } = await supabase
     .from("producto_costos_proveedores")
-    .select("producto_id, costo");
+    .select("producto_id, costo, costo_payjoy");
 
   // 4. Obtenemos las configuraciones de enganche
   const { data: configEnganches } = await supabase

@@ -21,6 +21,7 @@ export interface SupplierCostRecord {
   producto_id: string;
   proveedor: string;
   costo: number;
+  costo_payjoy: number;
   producto: {
     id: string;
     marca: string;
@@ -46,6 +47,7 @@ interface CostoProveedorRaw {
   producto_id: string;
   proveedor: string;
   costo: number | string;
+  costo_payjoy?: number | string | null;
   producto: ProductoRaw | ProductoRaw[] | null;
 }
 
@@ -79,6 +81,7 @@ export default async function ProveedoresPage() {
       producto_id,
       proveedor,
       costo,
+      costo_payjoy,
       producto:productos (
         id,
         marca,
@@ -111,6 +114,7 @@ export default async function ProveedoresPage() {
       producto_id: costoRecord.producto_id,
       proveedor: costoRecord.proveedor,
       costo: Number(costoRecord.costo) || 0,
+      costo_payjoy: Number(costoRecord.costo_payjoy) || 0,
       producto: prod ? {
         id: prod.id,
         marca: prod.marca,

@@ -3,7 +3,6 @@
 import React, { useState, useMemo } from "react";
 import type { CatalogProduct, CostoProveedorItem, ConfigEngancheItem } from "@/app/empresa/webapp/cotizaciones-credito/page";
 import {
-  PORCENTAJE_EXTRA_SOBRE_COSTO,
   ZONAS_PREDETERMINADAS,
   getSiglaZonaPorNombre,
   getPlazaCostoPrincipal,
@@ -226,7 +225,7 @@ export function CotizacionesCreditoClient({
     return productosFiltrados.find((producto) => producto.id === selectedProductId) || null;
   }, [selectedProductId, productosFiltrados]);
 
-  // Costo asociado a la plaza y producto seleccionado (con porcentaje extra sobre costo configurado)
+  // Costo PayJoy asociado a la plaza y producto seleccionado (base directa para cotizaciones)
   const matchedCosto = useMemo(() => {
     if (!selectedProductId || !selectedPlaza) return null;
     const normPlaza = selectedPlaza.toLowerCase().trim();
@@ -265,15 +264,17 @@ export function CotizacionesCreditoClient({
 
     // 4. Fallback: si hay un costo único para el producto en cualquier plaza
     if (!match) {
-      const productCosts = costos.filter((c) => c.producto_id === selectedProductId && Number(c.costo) > 0);
+      const productCosts = costos.filter(
+        (c) => c.producto_id === selectedProductId && (Number(c.costo_payjoy) > 0 || Number(c.costo) > 0)
+      );
       if (productCosts.length === 1) {
         match = productCosts[0];
       }
     }
 
     if (!match) return 0;
-    const baseCosto = Number(match.costo) || 0;
-    return baseCosto * (1 + PORCENTAJE_EXTRA_SOBRE_COSTO / 100);
+    const baseCostoPayjoy = Number(match.costo_payjoy) || 0;
+    return baseCostoPayjoy;
   }, [selectedProductId, selectedPlaza, costos]);
 
   /**
@@ -539,15 +540,15 @@ export function CotizacionesCreditoClient({
             </div>
           </div>
         ) : !hasCost ? (
-          /* CASO: FALTA AGREGAR COSTO */
+          /* CASO: FALTA AGREGAR COSTO PAYJOY */
           <div className={styles.warningCard}>
             <div className={styles.warningIconBox}>
               <span className="material-symbols-outlined text-3xl">warning</span>
             </div>
             <div>
-              <h3 className="text-xl font-bold text-amber-400">Falta agregar costo</h3>
+              <h3 className="text-xl font-bold text-amber-400">Falta agregar Costo PayJoy</h3>
               <p className="text-sm text-slate-300 mt-2 max-w-lg mx-auto leading-relaxed">
-                El modelo <strong className="text-white">{selectedProduct?.marca} {selectedProduct?.modelo}</strong> ({selectedProduct?.almacenamiento}) aún no tiene un costo asignado en el sistema para la zona de <strong className="text-white">{selectedPlaza}</strong>.
+                El modelo <strong className="text-white">{selectedProduct?.marca} {selectedProduct?.modelo}</strong> ({selectedProduct?.almacenamiento}) aún no tiene un costo PayJoy asignado en el sistema para la zona de <strong className="text-white">{selectedPlaza}</strong>.
               </p>
             </div>
           </div>

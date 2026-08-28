@@ -11,7 +11,7 @@ import { FormProgramacionEntrega } from "./ordenes-entrega/FormProgramacionEntre
 // 3. Acciones y Utilidades
 import { submitOrdenEntrega } from "@/app/empresa/webapp/ordenes-entrega/actions";
 import { getDriverRestDayInfo, getDriverScheduleConfig } from "@/utils/driver-schedule";
-import { PORCENTAJE_EXTRA_SOBRE_COSTO, getPlazaCostoPrincipal } from "@/config/cotizaciones";
+import { getPlazaCostoPrincipal } from "@/config/cotizaciones";
 
 // 4. Tipos
 import type {
@@ -154,8 +154,8 @@ export default function OrdenesEntregaForm({
     if (!stockItem) return 0;
     const costoRecord = costos.find((costo) => costo.producto_id === stockItem.producto_id);
     if (!costoRecord) return 0;
-    const baseCosto = Number(costoRecord.costo) || 0;
-    return baseCosto * (1 + PORCENTAJE_EXTRA_SOBRE_COSTO / 100);
+    const baseCostoPayjoy = Number(costoRecord.costo_payjoy) || 0;
+    return baseCostoPayjoy;
   }, [selectedImei, stockItems, costos]);
 
   // Hook jerárquico de Porcentajes: Nivel 1 (Vendedor) -> Nivel 2 (Zona) -> Nivel 3 (General)
