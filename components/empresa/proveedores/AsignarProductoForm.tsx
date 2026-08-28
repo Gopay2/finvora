@@ -10,6 +10,8 @@ interface AsignarProductoFormProps {
   setSelectedProdId: (id: string) => void;
   costoInput: string;
   setCostoInput: (costo: string) => void;
+  costoPayjoyInput: string;
+  setCostoPayjoyInput: (costo: string) => void;
   marcas: string[];
   filteredProducts: CatalogProduct[];
   targetSigla: string;
@@ -26,6 +28,8 @@ export function AsignarProductoForm({
   setSelectedProdId,
   costoInput,
   setCostoInput,
+  costoPayjoyInput,
+  setCostoPayjoyInput,
   marcas,
   filteredProducts,
   targetSigla,
@@ -41,9 +45,9 @@ export function AsignarProductoForm({
         Asignar nuevo producto
       </h3>
 
-      <div className="flex flex-col md:flex-row gap-4 items-end">
+      <div className="flex flex-col lg:flex-row gap-4 items-end">
         {/* Selector de Marca */}
-        <div className="space-y-2 w-full md:w-56 shrink-0">
+        <div className="space-y-2 w-full lg:w-52 shrink-0">
           <label className="text-xs font-semibold text-slate-400 ml-1">Marca:</label>
           <div className="relative flex items-center w-full">
             <select
@@ -106,9 +110,9 @@ export function AsignarProductoForm({
           </div>
         </div>
 
-        {/* Costo Inicial */}
-        <div className="space-y-2 w-full md:w-44 shrink-0">
-          <label className="text-xs font-semibold text-slate-400 ml-1">Costo:</label>
+        {/* Costo Equipo */}
+        <div className="space-y-2 w-full sm:w-1/2 lg:w-36 shrink-0">
+          <label className="text-xs font-semibold text-slate-400 ml-1">Costo Equipo:</label>
           <div className="relative flex items-center w-full">
             <span className="absolute left-3 text-slate-400 font-bold text-xs pointer-events-none">$</span>
             <input
@@ -141,12 +145,47 @@ export function AsignarProductoForm({
           </div>
         </div>
 
+        {/* Costo PayJoy */}
+        <div className="space-y-2 w-full sm:w-1/2 lg:w-36 shrink-0">
+          <label className="text-xs font-semibold text-slate-400 ml-1">Costo PayJoy:</label>
+          <div className="relative flex items-center w-full">
+            <span className="absolute left-3 text-slate-400 font-bold text-xs pointer-events-none">$</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={costoPayjoyInput}
+              onFocus={(e) => {
+                if (costoPayjoyInput === "0") {
+                  setCostoPayjoyInput("");
+                }
+                e.target.select();
+              }}
+              onBlur={() => {
+                if (!costoPayjoyInput || costoPayjoyInput.trim() === "") {
+                  setCostoPayjoyInput("0");
+                }
+              }}
+              onChange={(e) => {
+                let val = e.target.value;
+                if (/^0\d+$/.test(val)) {
+                  val = val.replace(/^0+/, "");
+                }
+                if (val === "" || /^\d*$/.test(val)) {
+                  setCostoPayjoyInput(val);
+                }
+              }}
+              className="bg-slate-950 border border-slate-800 rounded-xl pl-6 pr-4 py-2.5 text-[16px] sm:text-sm text-slate-200 focus:outline-none focus:border-secondary transition-all h-[42px] w-full text-center"
+              suppressHydrationWarning
+            />
+          </div>
+        </div>
+
         {/* Botón de Agregar */}
         <button
           type="button"
           disabled={isPending}
           onClick={handleAgregar}
-          className="h-[42px] px-6 bg-secondary text-slate-950 font-bold rounded-xl hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/10 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto text-xs"
+          className="h-[42px] px-6 bg-secondary text-slate-950 font-bold rounded-xl hover:bg-secondary/90 transition-all shadow-lg shadow-secondary/10 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full lg:w-auto text-xs shrink-0"
         >
           {isPending ? (
             <span className="animate-spin h-4 w-4 border-2 border-slate-950 border-t-transparent rounded-full" />

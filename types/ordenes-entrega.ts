@@ -32,6 +32,7 @@ export interface StockItem {
 export interface CostoItem {
   producto_id: string;
   costo: number | string;
+  costo_payjoy?: number | string;
 }
 
 export interface ConfigEngancheItem {
