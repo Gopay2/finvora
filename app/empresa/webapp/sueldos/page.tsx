@@ -77,8 +77,8 @@ interface RawComprobante {
 export default async function SueldosPage() {
   const { id: currentUserId, role: userRole } = await getUserProfile();
 
-  // 1. Control de acceso: Solo Admin y Developer
-  const isHighPrivilege = userRole === "Admin" || userRole === "Developer";
+  // 1. Control de acceso: Solo Admin, Supervisor y Developer
+  const isHighPrivilege = userRole === "Admin" || userRole === "Developer" || userRole === "Supervisor";
   if (!currentUserId || !isHighPrivilege) {
     return <AccessDenied role={userRole} sectionName="Calculadora de sueldos" />;
   }
