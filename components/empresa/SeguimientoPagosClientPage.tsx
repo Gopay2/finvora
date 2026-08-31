@@ -179,6 +179,8 @@ export default function SeguimientoPagosClientPage({
     let vencidosCount = 0;
     let enRevisionCount = 0;
     let noVerificablesCount = 0;
+    let pagadoFinvoraCount = 0;
+    let clientePositivoCount = 0;
 
     filteredData.forEach((row) => {
       const estadoActual = row.estadoSemana;
@@ -188,6 +190,8 @@ export default function SeguimientoPagosClientPage({
       else if (estadoActual === 'Vencido') vencidosCount++;
       else if (estadoActual === 'En revisión') enRevisionCount++;
       else if (estadoActual === 'No Verificable') noVerificablesCount++;
+      else if (estadoActual === 'Pagado por Finvora') pagadoFinvoraCount++;
+      else if (estadoActual === 'Cliente Positivo') clientePositivoCount++;
     });
 
     return {
@@ -196,7 +200,9 @@ export default function SeguimientoPagosClientPage({
       alDiaCount,
       porVencerCount,
       vencidosCount,
-      enRevisionCount
+      enRevisionCount,
+      pagadoFinvoraCount,
+      clientePositivoCount
     };
   }, [filteredData]);
 
@@ -229,13 +235,15 @@ export default function SeguimientoPagosClientPage({
       setRegistrosSeguimiento(prev => prev.map(row => {
         if (row.id === item.id) {
           let nuevosEstados: Record<string, EstadoCuota> = { ...(row.estados_semanales || {}) };
-          if (nuevoEstado === 'No Verificable') {
+          const estadosPropagables: EstadoCuota[] = ['No Verificable', 'Pagado por Finvora', 'Cliente Positivo'];
+
+          if (estadosPropagables.includes(nuevoEstado)) {
             const plazosCount = Math.max(row.plazos || 0, Object.keys(nuevosEstados).length, 1);
             for (let i = 1; i <= plazosCount; i++) {
-              nuevosEstados[`semana_${i}`] = 'No Verificable';
+              nuevosEstados[`semana_${i}`] = nuevoEstado;
             }
             Object.keys(nuevosEstados).forEach(k => {
-              nuevosEstados[k] = 'No Verificable';
+              nuevosEstados[k] = nuevoEstado;
             });
           } else {
             nuevosEstados[semanaKey] = nuevoEstado;
@@ -317,13 +325,15 @@ export default function SeguimientoPagosClientPage({
           setRegistrosSeguimiento((prev: SeguimientoPagoRecord[]) => prev.map((row: SeguimientoPagoRecord) => {
             if (row.id === selectedForDetail.id) {
               let nuevosEstados: Record<string, EstadoCuota> = { ...(row.estados_semanales || {}) };
-              if (nuevoEstado === 'No Verificable') {
+              const estadosPropagables: EstadoCuota[] = ['No Verificable', 'Pagado por Finvora', 'Cliente Positivo'];
+
+              if (estadosPropagables.includes(nuevoEstado)) {
                 const plazosCount = Math.max(row.plazos || 0, Object.keys(nuevosEstados).length, 1);
                 for (let i = 1; i <= plazosCount; i++) {
-                  nuevosEstados[`semana_${i}`] = 'No Verificable';
+                  nuevosEstados[`semana_${i}`] = nuevoEstado;
                 }
                 Object.keys(nuevosEstados).forEach(k => {
-                  nuevosEstados[k] = 'No Verificable';
+                  nuevosEstados[k] = nuevoEstado;
                 });
               } else {
                 nuevosEstados[semanaKey] = nuevoEstado;
