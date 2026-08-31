@@ -101,6 +101,8 @@ export function SeguimientoFilters({
               <option value="Vencido" className="bg-slate-950 text-white text-xs text-left" style={{ textAlign: 'left' }}>VENCIDO</option>
               <option value="Pagado" className="bg-slate-950 text-white text-xs text-left" style={{ textAlign: 'left' }}>PAGADO</option>
               <option value="No Verificable" className="bg-slate-950 text-white text-xs text-left" style={{ textAlign: 'left' }}>NO VERIFICABLE</option>
+              <option value="Pagado por Finvora" className="bg-slate-950 text-white text-xs text-left" style={{ textAlign: 'left' }}>PAGADO POR FINVORA</option>
+              <option value="Cliente Positivo" className="bg-slate-950 text-white text-xs text-left" style={{ textAlign: 'left' }}>CLIENTE POSITIVO</option>
             </select>
           </div>
         </div>

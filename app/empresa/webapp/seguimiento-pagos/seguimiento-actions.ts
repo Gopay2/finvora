@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getUserProfile, isAllowed } from "@/utils/auth-check";
 import { fetchAllFromTable } from "@/utils/supabase/pagination";
 
-export type EstadoCuota = 'En revisión' | 'Pagado' | 'Por vencer' | 'Vencido' | 'No Verificable';
+export type EstadoCuota = 'En revisión' | 'Pagado' | 'Por vencer' | 'Vencido' | 'No Verificable' | 'Pagado por Finvora' | 'Cliente Positivo';
 
 export interface SeguimientoPagoRecord {
   id: string;
@@ -150,7 +150,7 @@ export async function getSeguimientoPagos(): Promise<{
 
 /**
  * Actualiza el estado de una semana específica en el JSONB de estados_semanales.
- * Si el nuevo estado es 'No Verificable', se propaga automáticamente a todas las semanas.
+ * Si el nuevo estado es 'No Verificable', 'Pagado por Finvora' o 'Cliente Positivo', se propaga automáticamente a todas las semanas.
  */
 export async function updateEstadoSemana(
   id: string,
@@ -179,13 +179,15 @@ export async function updateEstadoSemana(
     const estadosActuales = record.estados_semanales || {};
     let nuevosEstados: Record<string, EstadoCuota> = { ...estadosActuales };
 
-    if (nuevoEstado === 'No Verificable') {
+    const estadosPropagables: EstadoCuota[] = ['No Verificable', 'Pagado por Finvora', 'Cliente Positivo'];
+
+    if (estadosPropagables.includes(nuevoEstado)) {
       const plazosCount = Math.max(Number(record.plazos) || 0, Object.keys(estadosActuales).length, 1);
       for (let i = 1; i <= plazosCount; i++) {
-        nuevosEstados[`semana_${i}`] = 'No Verificable';
+        nuevosEstados[`semana_${i}`] = nuevoEstado;
       }
       Object.keys(estadosActuales).forEach(k => {
-        nuevosEstados[k] = 'No Verificable';
+        nuevosEstados[k] = nuevoEstado;
       });
     } else {
       nuevosEstados[semanaKey] = nuevoEstado;

@@ -14,4 +14,6 @@ export const ESTADOS_DISPONIBLES: EstadoConfig[] = [
   { value: 'Vencido', label: 'Vencido', bg: 'bg-red-500/10', text: 'text-red-500', border: 'border-red-500/20' },
   { value: 'Pagado', label: 'Pagado', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
   { value: 'No Verificable', label: 'No Verificable', bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/20' },
+  { value: 'Pagado por Finvora', label: 'P. Finvora', bg: 'bg-orange-500/10', text: 'text-orange-400', border: 'border-orange-500/20' },
+  { value: 'Cliente Positivo', label: 'Cliente Positivo', bg: 'bg-teal-500/10', text: 'text-teal-400', border: 'border-teal-500/20' },
 ];

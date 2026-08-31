@@ -81,14 +81,11 @@ export function SeguimientoTable({
         <table className="w-full text-left text-xs sm:text-sm border-collapse">
           <thead className="bg-slate-950 text-xs text-slate-400 border-b border-slate-800 uppercase tracking-wider font-semibold whitespace-nowrap">
             <tr>
-              <th className="px-8 py-4 text-left w-[58%]">Cliente</th>
+              <th className="px-6 py-4 text-left">Cliente</th>
               <th className="px-4 py-4 text-center">Vendedor</th>
               <th className="px-4 py-4 text-center">TAG / IMEI</th>
-              <th className="w-[12%]"></th>
               <th className="px-4 py-4 text-center">Próximo Pago</th>
-              <th className="w-[12%]"></th>
               <th className="px-4 py-4 text-center">Saldo Restante</th>
-              <th className="w-[12%]"></th>
               <th className="px-4 py-4 text-center">Estado Semana</th>
               <th className="px-6 py-4 text-center whitespace-nowrap">Acciones</th>
             </tr>
@@ -96,7 +93,7 @@ export function SeguimientoTable({
           <tbody className="divide-y divide-slate-800/50">
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                   No se encontraron registros de seguimiento de pagos con los filtros aplicados.
                 </td>
               </tr>
@@ -116,8 +113,8 @@ export function SeguimientoTable({
 
                 return (
                   <tr key={row.rowKey} className="hover:bg-slate-900/20 transition-colors group border-b border-slate-800/50">
-                    {/* Cliente */}
-                    <td className="px-8 py-4">
+                    {/* 1. Cliente */}
+                    <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
                         <button
                           onClick={() => setSelectedForDetail(item)}
@@ -137,12 +134,12 @@ export function SeguimientoTable({
                       </div>
                     </td>
 
-                    {/* Vendedor */}
+                    {/* 2. Vendedor */}
                     <td className="px-4 py-4 whitespace-nowrap text-center text-slate-300 font-medium">
                       {item.vendedor?.username || <span className="text-xs text-slate-500">—</span>}
                     </td>
 
-                    {/* Tag / IMEI */}
+                    {/* 3. Tag / IMEI */}
                     <td className="px-4 py-4 whitespace-nowrap text-center">
                       <div className="flex flex-col items-center justify-center">
                         <div className="relative flex items-center justify-center">
@@ -171,9 +168,7 @@ export function SeguimientoTable({
                       </div>
                     </td>
 
-                    <td></td>
-
-                    {/* Próximo Pago */}
+                    {/* 4. Próximo Pago */}
                     <td className="px-4 py-4 whitespace-nowrap text-center">
                       {fechaProximoPagoDinamica ? (
                         <span className="text-xs sm:text-sm font-semibold text-slate-300">
@@ -186,9 +181,7 @@ export function SeguimientoTable({
                       )}
                     </td>
 
-                    <td></td>
-
-                    {/* Saldo Restante */}
+                    {/* 5. Saldo Restante */}
                     <td className="px-4 py-4 whitespace-nowrap text-center">
                       <span className="text-sm sm:text-base font-extrabold text-emerald-400 block">
                         ${saldoRestante.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
@@ -200,9 +193,7 @@ export function SeguimientoTable({
                       )}
                     </td>
 
-                    <td></td>
-
-                    {/* Estado Semana */}
+                    {/* 6. Estado Semana */}
                     <td className="px-4 py-4 text-center whitespace-nowrap">
                       <div className="relative inline-flex flex-col items-center">
                         <div className="relative flex items-center justify-center">
@@ -232,7 +223,7 @@ export function SeguimientoTable({
                       </div>
                     </td>
 
-                    {/* Acciones */}
+                    {/* 7. Acciones */}
                     <td className="px-6 py-4 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-3">
                         {whatsappUrl ? (
