@@ -48,6 +48,19 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
+      {/* Guías - Acceso para todos los roles excepto Sin rol */}
+      <Link href="/empresa/webapp/guias" className={styles.card}>
+        <div className={styles.cardGlow} />
+        <div className={styles.iconWrapper}>
+          <span className={styles.icon}>auto_stories</span>
+        </div>
+        <div>
+          <h2 className={styles.cardTitle}>Guías</h2>
+          <p className={styles.cardDesc}>Manuales, procesos y documentación interna de la empresa.</p>
+        </div>
+        <div className={styles.cardButton}>Acceder</div>
+      </Link>
+
       {/* Orden de Entrega - Acceso para todos */}
       <Link href="/empresa/webapp/ordenes-entrega" className={styles.card}>
         <div className={styles.cardGlow} />
@@ -200,19 +213,6 @@ export default function WebAppPage() {
         <div>
           <h2 className={styles.cardTitle}>Dashboard</h2>
           <p className={styles.cardDesc}>Visualiza métricas, reportes y el rendimiento de la empresa.</p>
-        </div>
-        <div className={styles.cardButton}>Acceder</div>
-      </Link>
-
-      {/* Guía / Base de Conocimiento - Acceso para todos los roles excepto Sin rol */}
-      <Link href="/empresa/webapp/guias" className={styles.card}>
-        <div className={styles.cardGlow} />
-        <div className={styles.iconWrapper}>
-          <span className={styles.icon}>auto_stories</span>
-        </div>
-        <div>
-          <h2 className={styles.cardTitle}>Guía</h2>
-          <p className={styles.cardDesc}>Manuales, procesos y documentación interna de la empresa.</p>
         </div>
         <div className={styles.cardButton}>Acceder</div>
       </Link>
