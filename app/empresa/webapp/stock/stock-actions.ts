@@ -472,4 +472,68 @@ export async function getDistinctBrands(): Promise<string[]> {
   return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 }
 
+/**
+ * Modifica el IMEI de una unidad existente en la tabla 'stock' y actualiza
+ * en cascada las referencias asociadas en tablas secundarias.
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Developer
+ * @param imeiActual IMEI actual de la unidad
+ * @param nuevoImei Nuevo IMEI deseado para la unidad
+ * @returns Objeto con resultado de la operación ({ success: true, nuevoImei: string } o { error: string })
+ */
+export async function actualizarImeiStock(imeiActual: string, nuevoImei: string) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+    return { error: "No tienes permisos para realizar esta acción" };
+  }
+
+  const imeiLimpioActual = imeiActual.trim();
+  const imeiLimpioNuevo = nuevoImei.trim();
+
+  if (!imeiLimpioNuevo) {
+    return { error: "El IMEI no puede estar vacío." };
+  }
+
+  if (imeiLimpioActual === imeiLimpioNuevo) {
+    return { success: true, nuevoImei: imeiLimpioNuevo };
+  }
+
+  const supabase = await createClient();
+
+  // 1. Validar que el nuevo IMEI no exista previamente en la tabla stock
+  const { data: existente } = await supabase
+    .from('stock')
+    .select('imei')
+    .eq('imei', imeiLimpioNuevo)
+    .maybeSingle();
+
+  if (existente) {
+    return { error: "El IMEI ingresado ya pertenece a otro equipo en inventario." };
+  }
+
+  // 2. Actualizar el registro en la tabla 'stock'
+  const { error: updateError } = await supabase
+    .from('stock')
+    .update({ imei: imeiLimpioNuevo })
+    .eq('imei', imeiLimpioActual);
+
+  if (updateError) {
+    console.error("Error al actualizar IMEI en stock:", updateError);
+    return { error: "No se pudo actualizar el IMEI en el inventario." };
+  }
+
+  // 3. Actualizar en cascada en tablas secundarias para mantener la integridad
+  await Promise.all([
+    supabase.from('repartos').update({ imei: imeiLimpioNuevo }).eq('imei', imeiLimpioActual),
+    supabase.from('ventas').update({ imei: imeiLimpioNuevo }).eq('imei', imeiLimpioActual),
+    supabase.from('ordenes_entrega').update({ imei: imeiLimpioNuevo }).eq('imei', imeiLimpioActual),
+    supabase.from('garantias').update({ imei: imeiLimpioNuevo }).eq('imei', imeiLimpioActual),
+    supabase.from('recambios').update({ imei: imeiLimpioNuevo }).eq('imei', imeiLimpioActual),
+    supabase.from('comprobantes_pago').update({ imei: imeiLimpioNuevo }).eq('imei', imeiLimpioActual),
+  ]);
+
+  revalidatePath('/empresa/webapp/stock');
+  return { success: true, nuevoImei: imeiLimpioNuevo };
+}
+
 

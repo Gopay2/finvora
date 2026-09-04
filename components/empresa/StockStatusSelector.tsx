@@ -9,8 +9,31 @@ interface StockStatusSelectorProps {
   imei: string;
   estadoActual: string;
   fechaEnEnvio?: string | null;
+  fechaIngreso?: string | null;
   disabled?: boolean;
   vendedores?: Vendedor[];
+}
+
+function formatFechaIngreso(fechaStr?: string | null): string {
+  if (!fechaStr) return "";
+  try {
+    const [datePart] = fechaStr.split("T");
+    const parts = datePart.split("-");
+    if (parts.length === 3) {
+      const year = Number(parts[0]);
+      const month = Number(parts[1]);
+      const day = Number(parts[2]);
+      if (year && month && day) {
+        const meses = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+        const nombreMes = meses[month - 1] || "";
+        return `${day} de ${nombreMes} de ${year}`;
+      }
+    }
+    const d = new Date(fechaStr);
+    return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch {
+    return fechaStr;
+  }
 }
 
 interface Vendedor {
@@ -23,6 +46,7 @@ export default function StockStatusSelector({
   imei,
   estadoActual,
   fechaEnEnvio = null,
+  fechaIngreso = null,
   disabled = false,
   vendedores = []
 }: StockStatusSelectorProps) {
@@ -40,7 +64,7 @@ export default function StockStatusSelector({
   const [motivoRecambio, setMotivoRecambio] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  
+
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -56,11 +80,11 @@ export default function StockStatusSelector({
   }, [estadoActual, fechaEnEnvio]);
 
   const colors: Record<string, string> = {
-    Disponible: "bg-green-500/10 text-green-400 border-green-500/20",
-    "En envío": "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    Vendido: "bg-red-500/10 text-red-400 border-red-500/20",
-    "A consultar": "bg-purple-500/10 text-purple-400 border-purple-500/20",
-    Recambio: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+    Disponible: "bg-green-500/10 text-green-400 border-green-500/30",
+    "En envío": "bg-amber-500/10 text-amber-400 border-amber-500/30",
+    Vendido: "bg-red-500/10 text-red-400 border-red-500/30",
+    "A consultar": "bg-purple-500/10 text-purple-400 border-purple-500/30",
+    Recambio: "bg-indigo-500/10 text-indigo-400 border-indigo-500/30"
   };
 
   useEffect(() => {
@@ -170,9 +194,9 @@ export default function StockStatusSelector({
 
   const handleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     if (disabled) return;
-    
+
     const nuevoEstado = e.target.value;
-    
+
     if (nuevoEstado === "Vendido") {
       setError(null);
       setShowSellerModal(true);
@@ -243,16 +267,23 @@ export default function StockStatusSelector({
 
   if (disabled) {
     return (
-      <div className="relative inline-flex flex-col items-center" suppressHydrationWarning>
-        <div className={`
-          inline-flex items-center justify-center px-4 h-6 min-w-[110px] rounded-lg text-[10px] font-bold uppercase border
-          ${colors[estado] || colors.Disponible}
-        `}>
-          {estado}
+      <div className="flex flex-col items-start" suppressHydrationWarning>
+        <div className="flex items-center gap-2">
+          <span className={`
+            inline-flex items-center justify-center px-2 py-0.5 rounded-lg text-[11px] font-bold uppercase tracking-wide border w-[98px] text-center
+            ${colors[estado] || colors.Disponible}
+          `}>
+            {estado.toUpperCase()}
+          </span>
+          {fechaIngreso && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-medium text-slate-400 bg-slate-900/50 border border-slate-700/60 whitespace-nowrap">
+              {formatFechaIngreso(fechaIngreso)}
+            </span>
+          )}
         </div>
         {mounted && estado === "En envío" && envioCountdown !== null && (
-          <div className="mt-1 flex items-center justify-center gap-1 text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-            <span className="material-symbols-outlined text-[11px]">{isProgramado ? "event" : "schedule"}</span>
+          <div className={`mt-1.5 flex items-center justify-center gap-1.5 px-2 py-0.5 text-[11px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg w-[98px] ${isProgramado ? "" : "animate-pulse"}`}>
+            <span className="material-symbols-outlined text-[12px] leading-none">calendar_month</span>
             <span className="font-bold tracking-wider">{formatHHMMSS(envioCountdown)}</span>
           </div>
         )}
@@ -261,56 +292,71 @@ export default function StockStatusSelector({
   }
 
   return (
-    <div className="relative inline-flex flex-col items-center" suppressHydrationWarning>
-      <div className="relative flex items-center justify-center">
-        <select
-          value={estado}
-          onChange={handleChange}
-          disabled={loading}
-          suppressHydrationWarning
-          className={`
-            appearance-none cursor-pointer rounded-lg text-[10px] font-bold uppercase border transition-all
-            ${colors[estado] || colors.Disponible}
-            ${loading ? 'opacity-50' : 'opacity-100'}
-            outline-none m-0 p-0 h-6 min-w-[110px] text-center
-          `}
-          style={{ 
-            colorScheme: 'dark',
-            textAlignLast: 'center',
-            paddingLeft: '0',
-            paddingRight: '0'
-          }}
-        >
-          <option value="Disponible" className="bg-slate-950 text-white">Disponible</option>
-          <option value="A consultar" className="bg-slate-950 text-white">A consultar</option>
-          <option value="En envío" className="bg-slate-950 text-white">En envío</option>
-          <option value="Vendido" className="bg-slate-950 text-white">Vendido</option>
-          <option value="Recambio" className="bg-slate-950 text-white">Recambio</option>
-        </select>
-        
-        {loading && !timeLeft && (
-          <span className="absolute -right-6 animate-spin h-3 w-3 border-2 border-slate-500 border-t-transparent rounded-full" />
+    <div className="flex flex-col items-start" suppressHydrationWarning>
+      <div className="flex items-center gap-2">
+        <div className="relative inline-flex items-center">
+          {/* Chip visual de Estado - 100% perfectamente centrado y con padding simétrico */}
+          <div
+            className={`
+              inline-flex items-center justify-center px-2 py-0.5 rounded-lg text-[11px] font-bold uppercase tracking-wide border transition-all text-center select-none w-[98px]
+              ${colors[estado] || colors.Disponible}
+              ${loading ? 'opacity-50' : 'opacity-100'}
+            `}
+          >
+            <span className="uppercase tracking-wide">{estado.toUpperCase()}</span>
+          </div>
+
+          {/* Select invisible superpuesto para capturar clicks y abrir el dropdown nativo */}
+          <select
+            value={estado}
+            onChange={handleChange}
+            disabled={loading}
+            suppressHydrationWarning
+            aria-label="Cambiar estado"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer uppercase text-center text-xs"
+            style={{
+              colorScheme: 'dark',
+              textAlign: 'center',
+              textAlignLast: 'center',
+              fontSize: '12px'
+            }}
+          >
+            <option value="Disponible" className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>DISPONIBLE</option>
+            <option value="A consultar" className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>A CONSULTAR</option>
+            <option value="En envío" className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>EN ENVÍO</option>
+            <option value="Vendido" className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>VENDIDO</option>
+            <option value="Recambio" className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>RECAMBIO</option>
+          </select>
+
+          {loading && !timeLeft && (
+            <span className="absolute -right-5 animate-spin h-3 w-3 border-2 border-slate-500 border-t-transparent rounded-full" />
+          )}
+        </div>
+
+        {fechaIngreso && (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-medium text-slate-400 bg-slate-900/50 border border-slate-700/60 whitespace-nowrap">
+            {formatFechaIngreso(fechaIngreso)}
+          </span>
         )}
       </div>
 
       {/* Temporizador regresivo si está En envío (renderizado solo tras el montaje cliente) */}
       {mounted && estado === "En envío" && envioCountdown !== null && (
-        <div className={`mt-1 flex items-center justify-center gap-1 text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 shadow-sm ${isProgramado ? "" : "animate-pulse"}`}>
-          <span className="material-symbols-outlined text-[11px]">{isProgramado ? "event" : "schedule"}</span>
+        <div className={`mt-1.5 flex items-center justify-center gap-1.5 px-2 py-0.5 text-[11px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg w-[98px] ${isProgramado ? "" : "animate-pulse"}`}>
+          <span className="material-symbols-outlined text-[12px] leading-none">calendar_month</span>
           <span className="font-bold tracking-wider">{formatHHMMSS(envioCountdown)}</span>
         </div>
       )}
 
       {timeLeft !== null && (
-        <div className="mt-1">
-          <span className="text-[11px] text-red-400 font-black tracking-tighter animate-pulse uppercase">
-            Confirmando en {timeLeft}...
-          </span>
+        <div className="mt-1.5 flex items-center justify-center gap-1.5 px-2 py-0.5 text-[11px] font-mono text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg w-[98px] animate-pulse">
+          <span className="material-symbols-outlined text-[12px] leading-none">timer</span>
+          <span className="font-bold uppercase tracking-tight">Confirmando en {timeLeft}...</span>
         </div>
       )}
 
       {error && !showSellerModal && (
-        <div className="absolute -bottom-6 w-max">
+        <div className="mt-1">
           <span className="text-[10px] text-red-400 font-bold bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
             {error}
           </span>
