@@ -41,13 +41,14 @@ export default function DeleteStockButton({ imei }: DeleteStockButtonProps) {
         </span>
       </button>
 
-      {/* Modal de Confirmación */}
+      {/* Modal de Confirmación Restrictivo */}
       <ConfirmModal
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
         onConfirm={handleConfirm}
-        title="¿Eliminar unidad del stock?"
+        title="¿Eliminar?"
         message={`¿Estás seguro de que quieres eliminar del inventario el equipo con IMEI ${imei}? Esta acción es irreversible.`}
+        requiredText="confirmar"
       />
 
       {/* Modal de Error */}

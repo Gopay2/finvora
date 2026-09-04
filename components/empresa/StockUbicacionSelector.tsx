@@ -47,55 +47,62 @@ export default function StockUbicacionSelector({
 
   if (disabled) {
     return (
-      <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase border ${
-        ubicacion 
-          ? "bg-blue-500/10 text-blue-400 border-blue-500/20" 
-          : "bg-slate-800 text-slate-500 border-slate-700/50"
-      }`}>
-        {nombreActual}
+      <span className={`inline-flex items-center justify-center px-3.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider border min-w-[120px] text-center ${ubicacion
+          ? "bg-blue-950/40 text-blue-400 border-blue-500/40"
+          : "bg-slate-900/40 text-slate-400 border-slate-700/60"
+        }`}>
+        {nombreActual.toUpperCase()}
       </span>
     );
   }
 
   return (
-    <div className="relative inline-flex flex-col items-center" suppressHydrationWarning>
-      <div className="relative flex items-center justify-center">
-        <select
-          value={ubicacion}
-          onChange={handleChange}
-          disabled={loading}
-          suppressHydrationWarning
-          className={`
-            appearance-none cursor-pointer rounded-lg text-[10px] font-bold uppercase border transition-all
-            ${ubicacion 
-              ? "bg-blue-500/10 text-blue-400 border-blue-500/20" 
-              : "bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-slate-300"
-            }
-            ${loading ? 'opacity-50' : 'opacity-100'}
-            outline-none m-0 p-0 h-6 min-w-[145px] text-center
-          `}
-          style={{ 
-            colorScheme: 'dark',
-            textAlignLast: 'center',
-            paddingLeft: '4px',
-            paddingRight: '4px'
-          }}
-        >
-          <option value="" className="bg-slate-950 text-slate-500 italic">Sin Asignar</option>
-          {repartidores.map(repartidor => (
-            <option key={repartidor.id} value={repartidor.id} className="bg-slate-950 text-white">
-              {repartidor.nombre}
-            </option>
-          ))}
-        </select>
-        
-        {loading && (
-          <span className="absolute -right-6 animate-spin h-3 w-3 border-2 border-slate-500 border-t-transparent rounded-full" />
-        )}
+    <div className="relative inline-flex items-center" suppressHydrationWarning>
+      {/* Chip visual perfectamente centrado y con padding simétrico */}
+      <div
+        className={`
+          inline-flex items-center justify-center px-3.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider border transition-all text-center select-none
+          ${ubicacion
+            ? "bg-blue-950/40 text-blue-400 border-blue-500/40 hover:border-blue-400/80"
+            : "bg-slate-900/40 text-slate-400 border-slate-700/60 hover:border-slate-500"
+          }
+          ${loading ? 'opacity-50' : 'opacity-100'}
+        `}
+      >
+        <span className="uppercase tracking-wider">{nombreActual.toUpperCase()}</span>
       </div>
 
+      {/* Select invisible superpuesto para capturar clicks y abrir el menú nativo */}
+      <select
+        value={ubicacion}
+        onChange={handleChange}
+        disabled={loading}
+        suppressHydrationWarning
+        aria-label="Seleccionar ubicación"
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer uppercase text-center text-xs"
+        style={{
+          colorScheme: 'dark',
+          textAlign: 'center',
+          textAlignLast: 'center',
+          fontSize: '12px'
+        }}
+      >
+        <option value="" className="bg-slate-950 text-slate-400 italic text-center text-xs" style={{ fontSize: '12px' }}>
+          SIN ASIGNAR
+        </option>
+        {repartidores.map(repartidor => (
+          <option key={repartidor.id} value={repartidor.id} className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>
+            {repartidor.nombre.toUpperCase()}
+          </option>
+        ))}
+      </select>
+
+      {loading && (
+        <span className="absolute -right-5 animate-spin h-3 w-3 border-2 border-slate-500 border-t-transparent rounded-full" />
+      )}
+
       {error && (
-        <div className="absolute -bottom-6 w-max">
+        <div className="absolute -bottom-5 left-0 w-max z-10">
           <span className="text-[10px] text-red-400 font-bold bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
             {error}
           </span>
