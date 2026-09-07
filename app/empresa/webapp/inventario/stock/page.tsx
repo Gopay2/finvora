@@ -25,7 +25,7 @@ export default async function StockPage() {
   const canEdit = isAllowed(userRole, ["Admin", "Supervisor", "Developer"]);
 
   if (!isAllowed(userRole, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser"])) {
-    return <AccessDenied role={userRole} sectionName="Stock de Ventas" />;
+    return <AccessDenied role={userRole} sectionName="Stock Disponible" />;
   }
 
   const supabase = await createClient();
@@ -71,24 +71,24 @@ export default async function StockPage() {
       <header className={styles.header}>
         <div className={styles.titleGroup}>
           <h1 className={styles.title}>Stock Disponible</h1>
-          <p className="text-slate-500 text-sm">Listado detallado de unidades disponibles</p>
+          <p className="text-slate-500 text-sm">Listado detallado de unidades físicas disponibles</p>
         </div>
 
         <div className={styles.actions}>
           {canEdit && (
             <>
-              <Link href="/empresa/webapp/stock/productos" className={styles.btnPrimary} title="Catálogo de Productos">
+              <Link href="/empresa/webapp/inventario/stock/productos" className={styles.btnPrimary} title="Catálogo de Productos">
                 <span className="material-symbols-outlined text-lg">smartphone</span>
                 Productos
               </Link>
-              <Link href="/empresa/webapp/stock/cargar" className={styles.btnOutline} title="Cargar nuevo Stock">
+              <Link href="/empresa/webapp/inventario/stock/cargar" className={styles.btnOutline} title="Cargar nuevo Stock">
                 <span className="material-symbols-outlined text-lg">inventory_2</span>
                 Stock
               </Link>
             </>
           )}
-          <Link href="/empresa/webapp" className={styles.btnHome} title="Volver al Inicio">
-            <span className="material-symbols-outlined text-xl">home</span>
+          <Link href="/empresa/webapp/inventario" className={styles.btnHome} title="Volver a Inventario">
+            <span className="material-symbols-outlined text-xl">arrow_back</span>
           </Link>
         </div>
       </header>

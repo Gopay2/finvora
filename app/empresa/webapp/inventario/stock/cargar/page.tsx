@@ -87,7 +87,7 @@ export default async function CargarStockPage() {
           <h1 className={styles.title}>Cargar Stock</h1>
           <p className="text-slate-500 text-sm">Registra una unidad física (IMEI) al inventario</p>
         </div>
-        <Link href="/empresa/webapp/stock" className="text-slate-500 hover:text-slate-300 flex items-center gap-2 text-sm transition-colors">
+        <Link href="/empresa/webapp/inventario/stock" className="text-slate-500 hover:text-slate-300 flex items-center gap-2 text-sm transition-colors">
           <span className="material-symbols-outlined text-base">arrow_back</span>
           Volver
         </Link>

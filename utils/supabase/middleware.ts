@@ -41,6 +41,12 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Redirecciones de seguridad centralizadas
+  if (request.nextUrl.pathname === '/login') {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/empresa/login'
+    return NextResponse.redirect(redirectUrl)
+  }
+
   const isWebappRoute = request.nextUrl.pathname.startsWith('/empresa/webapp')
   const isLoginRoute = request.nextUrl.pathname === '/empresa/login'
 

@@ -12,6 +12,16 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '10mb',
     },
   },
+
+  async redirects() {
+    return [
+      {
+        source: '/login',
+        destination: '/empresa/login',
+        permanent: false,
+      },
+    ];
+  },
   
   // Configuración de cabeceras HTTP de seguridad
   async headers() {
@@ -22,7 +32,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: `default-src 'self'; script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ""}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' blob: data: https://*.supabase.co https://img.youtube.com https://i.ytimg.com; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.discord.com; frame-ancestors 'none';`
+            value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ""}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' blob: data: https://*.supabase.co https://img.youtube.com https://i.ytimg.com; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.discord.com; frame-ancestors 'none';`
           },
           {
             key: 'X-DNS-Prefetch-Control',
@@ -47,9 +57,9 @@ const nextConfig: NextConfig = {
             value: 'origin-when-cross-origin'
           },
           {
-            // Limita a qué APIs del navegador tiene acceso la web
+            // Permite uso de la cámara a páginas del mismo origen y bloquea micrófono/geolocalización
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(), browsing-topics=()'
+            value: 'camera=(self), microphone=(), geolocation=(), browsing-topics=()'
           }
         ]
       }
