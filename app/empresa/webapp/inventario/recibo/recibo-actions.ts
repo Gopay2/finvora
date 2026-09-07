@@ -108,3 +108,68 @@ export async function eliminarEquipoRecibo(id: string) {
   revalidatePath("/empresa/webapp/inventario/recibo");
   return { success: true };
 }
+
+/**
+ * Actualiza los datos de un equipo en la tabla intermedia 'recibo_stock' (IMEI y/o Producto/Modelo).
+ */
+export async function actualizarEquipoRecibo(
+  id: string,
+  data: { imei: string; producto_id: string }
+) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ALLOWED_ROLES)) {
+    return { error: "No tienes permisos para editar equipos en recibo." };
+  }
+
+  const imei = (data.imei || "").trim();
+  const producto_id = (data.producto_id || "").trim();
+
+  if (!id) {
+    return { error: "Identificador de registro no válido." };
+  }
+  if (!imei) {
+    return { error: "Debes ingresar el IMEI del equipo." };
+  }
+  if (!producto_id) {
+    return { error: "Debes seleccionar un modelo del catálogo." };
+  }
+
+  const supabase = await createClient();
+
+  // Validar si el nuevo IMEI ya existe en otro registro de recibo_stock
+  const { data: existing, error: checkError } = await supabase
+    .from("recibo_stock")
+    .select("id, imei")
+    .eq("imei", imei)
+    .neq("id", id)
+    .maybeSingle();
+
+  if (checkError && !checkError.message.includes("Could not find the table")) {
+    console.error("Error al validar IMEI único en recibo_stock:", checkError);
+  }
+
+  if (existing) {
+    return { error: `El IMEI ${imei} ya está registrado en otro equipo de esta lista.` };
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from("recibo_stock")
+    .update({
+      imei,
+      producto_id,
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (updateError) {
+    console.error("Error al actualizar en recibo_stock:", updateError);
+    if (updateError.code === "23505") {
+      return { error: `El IMEI ${imei} ya se encuentra registrado en el sistema.` };
+    }
+    return { error: `Error de base de datos: ${updateError.message}` };
+  }
+
+  revalidatePath("/empresa/webapp/inventario/recibo");
+  return { success: true, item: updated };
+}

@@ -16,7 +16,7 @@ const styles = {
   titleGroup: "space-y-1",
   title: "text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent",
   subtitle: "text-slate-500 text-sm",
-  btnBack: "flex items-center gap-2 px-4 py-2 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl hover:bg-slate-700 hover:text-white transition-all cursor-pointer text-sm font-semibold",
+  btnBack: "text-slate-500 hover:text-slate-300 flex items-center gap-2 text-sm transition-colors",
 };
 
 export default async function ReciboPage() {
@@ -72,9 +72,9 @@ export default async function ReciboPage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.titleGroup}>
-          <h1 className={styles.title}>Recibo de Equipos</h1>
+          <h1 className={styles.title}>Recibo</h1>
           <p className={styles.subtitle}>
-            Control, escaneo e ingreso previo de unidades por proveedor
+            Ingreso de unidades por proveedor
           </p>
         </div>
         <Link href="/empresa/webapp/inventario" className={styles.btnBack} title="Volver a Inventario">
