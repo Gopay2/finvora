@@ -100,15 +100,15 @@ export default function WebAppPage() {
         <div className={styles.cardButton}>Acceder</div>
       </Link>
 
-      {/* Stock de Ventas - Bloqueado para Closer en la subpágina */}
-      <Link href="/empresa/webapp/stock" className={styles.card}>
+      {/* Inventario */}
+      <Link href="/empresa/webapp/inventario" className={styles.card}>
         <div className={styles.cardGlow} />
         <div className={styles.iconWrapper}>
           <span className={styles.icon}>inventory_2</span>
         </div>
         <div>
-          <h2 className={styles.cardTitle}>Stock disponible</h2>
-          <p className={styles.cardDesc}>Consulta y actualiza stock de los productos.</p>
+          <h2 className={styles.cardTitle}>Inventario</h2>
+          <p className={styles.cardDesc}>Gestión de stock disponible y recepción de equipos.</p>
         </div>
         <div className={styles.cardButton}>Acceder</div>
       </Link>

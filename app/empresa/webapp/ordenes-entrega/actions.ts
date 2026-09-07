@@ -257,7 +257,7 @@ export async function submitOrdenEntrega(formData: FormData) {
         console.error("Error RLS/DB al actualizar estado de stock a 'En envío':", stockUpdateErr);
       } else {
         const { revalidatePath } = await import("next/cache");
-        revalidatePath("/empresa/webapp/stock");
+        revalidatePath("/empresa/webapp/inventario/stock");
         revalidatePath("/empresa/webapp/ordenes-entrega");
       }
     } catch (stockErr) {
@@ -274,14 +274,14 @@ export async function submitOrdenEntrega(formData: FormData) {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_6;
   } else if (repartidorNormalizado.includes("cambaceo angel") && process.env.DISCORD_WEBHOOK_URL_5) {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_5;
-  } else if (repartidorNormalizado.includes("cambaceo brenda") && process.env.DISCORD_WEBHOOK_URL_7) {
-    webhookUrl = process.env.DISCORD_WEBHOOK_URL_7;
   } else if (zonaNormalizada === "monterrey") {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_2 || process.env.DISCORD_WEBHOOK_URL;
   } else if (zonaNormalizada === "mexicali") {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_9 || process.env.DISCORD_WEBHOOK_URL;
   } else if (zonaNormalizada === "guadalajara") {
     webhookUrl = process.env.DISCORD_WEBHOOK_URL_4 || process.env.DISCORD_WEBHOOK_URL;
+  } else if (zonaNormalizada.includes("rosarito")) {
+    webhookUrl = process.env.DISCORD_WEBHOOK_URL_7 || process.env.DISCORD_WEBHOOK_URL;
   }
 
   if (!webhookUrl) {
@@ -352,9 +352,7 @@ export async function submitOrdenEntrega(formData: FormData) {
   }
 
   // Mención opcional a un rol específico de Discord (ej. Coordinadores o Closers) si está configurado
-  const isCambaceo = 
-    repartidorNormalizado.includes("cambaceo angel") ||
-    repartidorNormalizado.includes("cambaceo brenda");
+  const isCambaceo = repartidorNormalizado.includes("cambaceo angel");
   const isCT = repartidorNormalizado.includes("ct");
   const roleId = ((isCambaceo || isCT) && process.env.DISCORD_ROLE_ID_2)
     ? process.env.DISCORD_ROLE_ID_2

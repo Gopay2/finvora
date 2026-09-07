@@ -46,8 +46,8 @@ export async function crearProducto(formData: FormData) {
   }
 
   // Limpiamos la caché y redirigimos al usuario a la vista de administración de productos
-  revalidatePath('/empresa/webapp/stock/productos');
-  redirect('/empresa/webapp/stock/productos');
+  revalidatePath('/empresa/webapp/inventario/stock/productos');
+  redirect('/empresa/webapp/inventario/stock/productos');
 }
 
 /**
@@ -89,7 +89,7 @@ export async function editarProducto(formData: FormData) {
     return { error: "No se pudo actualizar el producto." };
   }
 
-  revalidatePath('/empresa/webapp/stock/productos');
+  revalidatePath('/empresa/webapp/inventario/stock/productos');
   return { success: true };
 }
 
@@ -134,7 +134,7 @@ export async function eliminarProducto(formData: FormData) {
     return { error: "No se pudo eliminar el producto del catálogo." };
   }
 
-  revalidatePath('/empresa/webapp/stock/productos');
+  revalidatePath('/empresa/webapp/inventario/stock/productos');
   return { success: true };
 }
 
@@ -171,8 +171,8 @@ export async function cargarStock(formData: FormData) {
     return { error: error.message };
   }
 
-  revalidatePath('/empresa/webapp/stock');
-  redirect('/empresa/webapp/stock');
+  revalidatePath('/empresa/webapp/inventario/stock');
+  redirect('/empresa/webapp/inventario/stock');
 }
 
 /**
@@ -201,7 +201,7 @@ export async function actualizarEstadoStock(imei: string, nuevoEstado: string) {
     return { error: error.message };
   }
 
-  revalidatePath('/empresa/webapp/stock');
+  revalidatePath('/empresa/webapp/inventario/stock');
   return { success: true };
 }
 
@@ -231,7 +231,7 @@ export async function actualizarZonaStock(imei: string, nuevaZona: string | null
     return { error: error.message };
   }
 
-  revalidatePath('/empresa/webapp/stock');
+  revalidatePath('/empresa/webapp/inventario/stock');
   return { success: true };
 }
 
@@ -330,7 +330,7 @@ export async function registrarVenta(imei: string, vendedorId?: string) {
     return { error: "Error al remover del stock, pero la venta fue registrada" };
   }
 
-  revalidatePath('/empresa/webapp/stock');
+  revalidatePath('/empresa/webapp/inventario/stock');
   return { success: true };
 }
 
@@ -404,7 +404,7 @@ export async function registrarRecambio(imei: string, solicitadoPorId: string, m
     return { error: "Error al remover del stock, pero la garantía fue registrada" };
   }
 
-  revalidatePath('/empresa/webapp/stock');
+  revalidatePath('/empresa/webapp/inventario/stock');
   return { success: true };
 }
 
@@ -434,7 +434,7 @@ export async function eliminarStock(imei: string) {
     return { error: "No se pudo eliminar el equipo del inventario." };
   }
 
-  revalidatePath('/empresa/webapp/stock');
+  revalidatePath('/empresa/webapp/inventario/stock');
   return { success: true };
 }
 
@@ -532,7 +532,7 @@ export async function actualizarImeiStock(imeiActual: string, nuevoImei: string)
     supabase.from('comprobantes_pago').update({ imei: imeiLimpioNuevo }).eq('imei', imeiLimpioActual),
   ]);
 
-  revalidatePath('/empresa/webapp/stock');
+  revalidatePath('/empresa/webapp/inventario/stock');
   return { success: true, nuevoImei: imeiLimpioNuevo };
 }
 
