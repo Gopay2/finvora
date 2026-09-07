@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState, useMemo, useTransition } from 'react';
+import React, { useState, useMemo, useTransition, useRef } from 'react';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
-import { registrarEquipoRecibo, eliminarEquipoRecibo } from '@/app/empresa/webapp/inventario/recibo/recibo-actions';
+import { registrarEquipoRecibo, eliminarEquipoRecibo, actualizarEquipoRecibo } from '@/app/empresa/webapp/inventario/recibo/recibo-actions';
 import BarcodeScannerModal from '@/components/empresa/BarcodeScannerModal';
-import SubmitButton from '@/components/empresa/SubmitButton';
+import ManualImeiModal from '@/components/empresa/ManualImeiModal';
+import EditReciboModal from '@/components/empresa/EditReciboModal';
+import ConfirmModal from '@/components/empresa/ConfirmModal';
+import AlertModal from '@/components/empresa/AlertModal';
 import type { Product } from '@/types/stock';
 
 export interface ReciboItem {
@@ -81,8 +84,14 @@ export default function ReciboClientView({
   const [selectedProductoId, setSelectedProductoId] = useState<string>('');
   const [imeiInput, setImeiInput] = useState<string>('');
 
-  // Estados de escáner y notificaciones
+  // Estados de escáner, modal manual, edición y notificaciones
   const [isScannerOpen, setIsScannerOpen] = useState<boolean>(false);
+  const [isManualModalOpen, setIsManualModalOpen] = useState<boolean>(false);
+  const [editingItem, setEditingItem] = useState<ReciboItem | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [itemToDelete, setItemToDelete] = useState<ReciboItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [deleteErrorMsg, setDeleteErrorMsg] = useState<string | null>(null);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Lista local de items para respuesta reactiva inmediata
@@ -135,82 +144,148 @@ export default function ReciboClientView({
     setSelectedProductoId('');
   };
 
-  // Callback al detectar escaneo exitoso
-  const handleScanSuccess = (scannedImei: string) => {
-    setImeiInput(scannedImei);
-    setStatus({
-      type: 'success',
-      message: `Código escaneado con éxito: ${scannedImei}`,
-    });
-  };
-
-  // Acción de registro
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setStatus(null);
+  // Acción de registro de IMEI (usado por modal manual y por escáner con cámara)
+  const handleRegisterImei = async (imeiToRegister: string): Promise<{ success: boolean; error?: string }> => {
+    const cleanImei = imeiToRegister.trim();
+    if (!cleanImei) {
+      return { success: false, error: 'Debes ingresar un número de IMEI.' };
+    }
+    if (!selectedProveedor) {
+      return { success: false, error: 'Debes seleccionar el área del proveedor.' };
+    }
+    if (!selectedTipoEquipo) {
+      return { success: false, error: 'Debes seleccionar el tipo de equipo.' };
+    }
+    if (!selectedProductoId) {
+      return { success: false, error: 'Debes seleccionar Marca y Modelo en el formulario antes de registrar.' };
+    }
 
     const formData = new FormData();
-    formData.append('imei', imeiInput);
+    formData.append('imei', cleanImei);
     formData.append('producto_id', selectedProductoId);
     formData.append('proveedor', selectedProveedor);
     formData.append('tipo_equipo', selectedTipoEquipo);
 
-    startTransition(async () => {
-      const result = await registrarEquipoRecibo(formData);
-      if (result.error) {
-        setStatus({ type: 'error', message: result.error });
-      } else if (result.success && result.item) {
-        // Encontrar datos del producto para la vista inmediata
-        const prodData = productos.find((p) => p.id === selectedProductoId);
-        const newItem: ReciboItem = {
-          ...result.item,
-          productos: prodData
-            ? {
-                marca: prodData.marca,
-                modelo: prodData.modelo,
-                color: prodData.color,
-                almacenamiento: prodData.almacenamiento,
-                ram: prodData.ram,
-              }
-            : null,
-        };
-        setItems((prev) => [newItem, ...prev]);
-        setImeiInput('');
-        setStatus({
-          type: 'success',
-          message: `Equipo con IMEI ${result.item.imei} registrado con éxito en recibo.`,
-        });
-      }
-    });
-  };
-
-  // Eliminar un item del listado de recibo
-  const handleDeleteItem = async (id: string, imei: string) => {
-    if (!confirm(`¿Estás seguro de que deseas eliminar el IMEI ${imei} de esta lista de recibo?`)) {
-      return;
+    const result = await registrarEquipoRecibo(formData);
+    if (result.error) {
+      return { success: false, error: result.error };
     }
 
-    startTransition(async () => {
-      const res = await eliminarEquipoRecibo(id);
-      if (res.error) {
-        alert(res.error);
-      } else {
-        setItems((prev) => prev.filter((item) => item.id !== id));
-      }
+    if (result.success && result.item) {
+      const prodData = productos.find((p) => p.id === selectedProductoId);
+      const newItem: ReciboItem = {
+        ...result.item,
+        productos: prodData
+          ? {
+              marca: prodData.marca,
+              modelo: prodData.modelo,
+              color: prodData.color,
+              almacenamiento: prodData.almacenamiento,
+              ram: prodData.ram,
+            }
+          : null,
+      };
+      setItems((prev) => [newItem, ...prev]);
+      setStatus({
+        type: 'success',
+        message: `Equipo con IMEI ${result.item.imei} registrado con éxito en recibo.`,
+      });
+      return { success: true };
+    }
+
+    return { success: false, error: 'No se pudo completar el registro del equipo.' };
+  };
+
+  // Callback al detectar escaneo exitoso con la cámara
+  const handleScanSuccess = async (scannedImei: string): Promise<{ success: boolean; error?: string }> => {
+    const cleanImei = scannedImei.trim();
+    if (!selectedProductoId) {
+      return {
+        success: false,
+        error: 'Debes seleccionar primero Marca y Modelo en el formulario antes de registrar.',
+      };
+    }
+
+    return await handleRegisterImei(cleanImei);
+  };
+
+  // Abrir modal de edición
+  const handleOpenEditModal = (item: ReciboItem) => {
+    setEditingItem(item);
+    setIsEditModalOpen(true);
+  };
+
+  // Guardar cambios de edición de un equipo
+  const handleSaveEdit = async (
+    id: string,
+    newImei: string,
+    newProductoId: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const res = await actualizarEquipoRecibo(id, { imei: newImei, producto_id: newProductoId });
+    if (res.error) {
+      return { success: false, error: res.error };
+    }
+
+    const prodData = productos.find((p) => p.id === newProductoId);
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === id
+          ? {
+              ...it,
+              imei: newImei,
+              producto_id: newProductoId,
+              productos: prodData
+                ? {
+                    marca: prodData.marca,
+                    modelo: prodData.modelo,
+                    color: prodData.color,
+                    almacenamiento: prodData.almacenamiento,
+                    ram: prodData.ram,
+                  }
+                : it.productos,
+            }
+          : it
+      )
+    );
+
+    setStatus({
+      type: 'success',
+      message: `Equipo con IMEI ${newImei} actualizado correctamente.`,
     });
+
+    return { success: true };
+  };
+
+  // Confirmar eliminación de equipo de recibo
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
+
+    const res = await eliminarEquipoRecibo(itemToDelete.id);
+    if (res.error) {
+      setDeleteErrorMsg(res.error);
+    } else {
+      setItems((prev) => prev.filter((item) => item.id !== itemToDelete.id));
+      setStatus({
+        type: 'success',
+        message: `Equipo con IMEI ${itemToDelete.imei} eliminado de la lista de recibo.`,
+      });
+      setItemToDelete(null);
+    }
+
+    setIsDeleting(false);
   };
 
   // Exportar a Excel
   const handleExportExcel = () => {
     if (items.length === 0) {
-      alert('No hay equipos escaneados para exportar.');
+      alert('No hay equipos registrados para exportar.');
       return;
     }
 
-    const dataParaExcel = items.map((item, idx) => {
+    const dataParaExcel = items.map((item) => {
       const { fecha, hora } = formatFecha(item.fecha_ingreso);
       return {
-        '#': idx + 1,
         IMEI: item.imei,
         Proveedor: item.proveedor,
         Marca: item.productos?.marca || 'N/A',
@@ -240,9 +315,50 @@ export default function ReciboClientView({
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
         onScanSuccess={handleScanSuccess}
+        hasSelectedProduct={Boolean(selectedProductoId)}
       />
 
-      <form onSubmit={handleSubmit} className="space-y-8" suppressHydrationWarning autoComplete="off">
+      {/* Modal de ingreso manual de IMEI */}
+      <ManualImeiModal
+        isOpen={isManualModalOpen}
+        onClose={() => setIsManualModalOpen(false)}
+        onSubmit={handleRegisterImei}
+      />
+
+      {/* Modal de edición de IMEI / Modelo */}
+      <EditReciboModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingItem(null);
+        }}
+        item={editingItem}
+        productos={productos}
+        onSave={handleSaveEdit}
+      />
+
+      {/* Modal de confirmación para eliminar equipo */}
+      <ConfirmModal
+        isOpen={Boolean(itemToDelete)}
+        onClose={() => {
+          if (!isDeleting) setItemToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title="¿Eliminar?"
+        message={`¿Estás seguro de que quieres eliminar de esta lista de recibo el equipo con IMEI ${itemToDelete?.imei}? Esta acción es irreversible.`}
+        requiredText="confirmar"
+      />
+
+      {/* Modal de error si falla la eliminación */}
+      <AlertModal
+        isOpen={Boolean(deleteErrorMsg)}
+        onClose={() => setDeleteErrorMsg(null)}
+        title="No se pudo eliminar"
+        message={deleteErrorMsg || ''}
+        type="error"
+      />
+
+      <div className="space-y-8">
         {/* Notificaciones de error o éxito */}
         {status && (
           <div
@@ -260,11 +376,11 @@ export default function ReciboClientView({
         )}
 
         {/* SECCIÓN 1: Selecciona el área del proveedor */}
-        <div className="space-y-3">
-          <label className="text-sm font-medium text-slate-300 ml-1">
+        <div className="space-y-4">
+          <label className="block text-base font-semibold text-slate-200 ml-0.5">
             Selecciona el área del proveedor
           </label>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {PROVEEDORES.map((prov) => {
               const isActive = selectedProveedor === prov.label;
               return (
@@ -272,10 +388,10 @@ export default function ReciboClientView({
                   key={prov.label}
                   type="button"
                   onClick={() => handleProveedorChange(prov.label)}
-                  className={`px-6 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                  className={`px-3.5 sm:px-5 py-2.5 rounded-xl sm:rounded-2xl text-sm font-semibold border transition-all duration-200 cursor-pointer ${
                     isActive
-                      ? 'bg-secondary text-slate-950 font-bold shadow-lg shadow-secondary/25 ring-2 ring-secondary/40'
-                      : 'bg-[#0a1120] text-slate-300 border border-[#16233a] hover:border-slate-700 hover:text-white hover:bg-[#0f192d]'
+                      ? 'bg-secondary border-secondary text-slate-950'
+                      : 'bg-[#0a1120] border-[#16233a] text-slate-300 hover:border-slate-700 hover:text-white hover:bg-[#0f192d]'
                   }`}
                 >
                   {prov.label}
@@ -286,8 +402,8 @@ export default function ReciboClientView({
         </div>
 
         {/* SECCIÓN 2: Tipo de equipos */}
-        <div className="space-y-3">
-          <label className="text-sm font-medium text-slate-300 ml-1">
+        <div className="space-y-4">
+          <label className="block text-base font-semibold text-slate-200 ml-0.5">
             Tipo de equipos
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -357,145 +473,138 @@ export default function ReciboClientView({
           </div>
         </div>
 
-        {/* SECCIÓN 3: Selección de Producto (Marca y Modelo en cascada) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#060b18] border border-[#16233a] p-6 rounded-3xl">
-          {/* Marca */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300 ml-1">
-              Marca
-            </label>
-            <div className="relative">
-              <select
-                value={selectedMarca}
-                onChange={(e) => handleMarcaChange(e.target.value)}
-                suppressHydrationWarning
-                className="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all appearance-none cursor-pointer"
-                style={{ colorScheme: 'dark' }}
-              >
-                {marcasDisponibles.length === 0 ? (
-                  <option value="" className="bg-slate-950 text-slate-500 italic">
-                    Sin productos con sigla ({activeSigla})
-                  </option>
-                ) : (
-                  <>
-                    <option value="" className="bg-slate-950 text-slate-500 italic">
-                      Elegir marca...
-                    </option>
-                    {marcasDisponibles.map((marca) => (
-                      <option key={marca} value={marca} className="bg-slate-950 text-white">
-                        {marca}
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-base">
-                expand_more
-              </span>
-            </div>
-          </div>
-
-          {/* Seleccionar Producto */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300 ml-1">
-              Seleccionar Producto
-            </label>
-            <div className="relative">
-              <select
-                name="producto_id"
-                required
-                value={selectedProductoId}
-                onChange={(e) => setSelectedProductoId(e.target.value)}
-                disabled={!selectedMarca}
-                suppressHydrationWarning
-                className="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ colorScheme: 'dark' }}
-              >
-                {!selectedMarca ? (
-                  <option value="" className="bg-slate-950 text-slate-500 italic">
-                    Selecciona una marca primero...
-                  </option>
-                ) : (
-                  <>
-                    <option value="" className="bg-slate-950 text-white">
-                      Elegir modelo del catálogo...
-                    </option>
-                    {modelosFiltrados.map((p) => (
-                      <option key={p.id} value={p.id} className="bg-slate-950 text-white">
-                        {p.modelo} - {p.color} ({p.almacenamiento} / {p.ram})
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-base">
-                expand_more
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* SECCIÓN 4: Escáner código de barras e IMEI */}
+        {/* SECCIÓN 3: Producto (Marca y Modelo en cascada) */}
         <div className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-300 ml-1">
-              Escáner código de barras
-            </label>
-            <p className="text-xs text-slate-400 ml-1">
-              Escanea el código de barras o IMEI del equipo con la cámara o ingrésalo manualmente.
-            </p>
-          </div>
-
-          {/* Visor interactivo para abrir escáner */}
-          <button
-            type="button"
-            onClick={() => setIsScannerOpen(true)}
-            className="w-full bg-[#060b18] hover:bg-[#0b1324] border-2 border-dashed border-[#1e2d4a] hover:border-secondary/60 rounded-3xl p-8 sm:p-10 flex flex-col items-center justify-center text-center space-y-3 transition-all duration-200 group cursor-pointer shadow-xl shadow-black/20"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-[#0c1424] border border-[#1e2a44] flex items-center justify-center text-secondary group-hover:scale-110 transition-transform">
-              <span className="material-symbols-outlined text-3xl">barcode_scanner</span>
-            </div>
-            <div className="space-y-1">
-              <h5 className="text-base font-bold text-white group-hover:text-secondary transition-colors">
-                Listo para escanear
-              </h5>
-              <p className="text-xs text-slate-400">
-                Apunta la cámara al código de barras del equipo.
-              </p>
-            </div>
-          </button>
-
-          {/* Campo IMEI manual o autocompletado */}
-          <div className="flex flex-col sm:flex-row gap-4 pt-2">
-            <div className="flex-1 space-y-1">
-              <input
-                type="text"
-                name="imei"
-                value={imeiInput}
-                onChange={(e) => setImeiInput(e.target.value.trim())}
-                placeholder="Ingresar o escanear IMEI (15 dígitos)"
-                required
-                autoComplete="off"
-                data-lpignore="true"
-                suppressHydrationWarning
-                className="w-full bg-[#060b18] border border-[#16233a] rounded-2xl px-5 py-3.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-secondary transition-all font-mono tracking-wider"
-              />
+          <label className="block text-base font-semibold text-slate-200 ml-0.5">
+            Producto
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#060b18] border border-[#16233a] p-6 rounded-3xl">
+            {/* Marca */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300 ml-1">
+                Marca
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedMarca}
+                  onChange={(e) => handleMarcaChange(e.target.value)}
+                  suppressHydrationWarning
+                  className="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all appearance-none cursor-pointer"
+                  style={{ colorScheme: 'dark' }}
+                >
+                  {marcasDisponibles.length === 0 ? (
+                    <option value="" className="bg-slate-950 text-slate-500 italic">
+                      Sin productos con sigla ({activeSigla})
+                    </option>
+                  ) : (
+                    <>
+                      <option value="" className="bg-slate-950 text-slate-500 italic">
+                        Elegir marca...
+                      </option>
+                      {marcasDisponibles.map((marca) => (
+                        <option key={marca} value={marca} className="bg-slate-950 text-white">
+                          {marca}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-base">
+                  expand_more
+                </span>
+              </div>
             </div>
 
-            <SubmitButton
-              label="Registrar"
-              loadingLabel="Guardando..."
-            />
+            {/* Modelo */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300 ml-1">
+                Modelo
+              </label>
+              <div className="relative">
+                <select
+                  name="producto_id"
+                  required
+                  value={selectedProductoId}
+                  onChange={(e) => setSelectedProductoId(e.target.value)}
+                  disabled={!selectedMarca}
+                  suppressHydrationWarning
+                  className="w-full bg-slate-950/70 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-secondary transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ colorScheme: 'dark' }}
+                >
+                  {!selectedMarca ? (
+                    <option value="" className="bg-slate-950 text-slate-500 italic">
+                      Selecciona una marca primero...
+                    </option>
+                  ) : (
+                    <>
+                      <option value="" className="bg-slate-950 text-white">
+                        Elegir modelo del catálogo...
+                      </option>
+                      {modelosFiltrados.map((p) => (
+                        <option key={p.id} value={p.id} className="bg-slate-950 text-white">
+                          {p.modelo} - {p.color} ({p.almacenamiento} / {p.ram})
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-base">
+                  expand_more
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-      </form>
 
-      {/* SECCIÓN 5: Equipos escaneados (Tabla) */}
+        {/* SECCIÓN 4: IMEI */}
+        <div className="space-y-4">
+          <label className="block text-base font-semibold text-slate-200 ml-0.5">
+            IMEI
+          </label>
+
+          {/* 2 Botones en formato cuadrado y más altos */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => setIsScannerOpen(true)}
+              className="flex flex-col items-center justify-center gap-2 p-4 sm:p-5 rounded-3xl bg-[#060b18] hover:bg-[#0c1424] border border-[#16233a] hover:border-secondary/60 transition-all cursor-pointer group shadow-xl shadow-black/20 h-[140px]"
+            >
+              <span 
+                className="material-symbols-outlined text-slate-300 group-hover:text-secondary group-hover:scale-110 transition-all select-none leading-none"
+                style={{ fontSize: '58px', fontVariationSettings: "'opsz' 48" }}
+              >
+                barcode_scanner
+              </span>
+              <span className="text-base font-bold text-white group-hover:text-secondary transition-colors">
+                Escanear
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsManualModalOpen(true)}
+              className="flex flex-col items-center justify-center gap-2 p-4 sm:p-5 rounded-3xl bg-[#060b18] hover:bg-[#0c1424] border border-[#16233a] hover:border-secondary/60 transition-all cursor-pointer group shadow-xl shadow-black/20 h-[140px]"
+            >
+              <span
+                className="material-symbols-outlined text-slate-300 group-hover:text-secondary group-hover:scale-110 transition-all select-none leading-none"
+                style={{ fontSize: '58px', fontVariationSettings: "'opsz' 48" }}
+              >
+                keyboard
+              </span>
+              <span className="text-base font-bold text-white group-hover:text-secondary transition-colors">
+                Ingreso manual
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* SECCIÓN 5: Equipos registrados (Tabla) */}
       <div className="space-y-4 pt-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <h3 className="text-xl font-bold text-white tracking-wide">
-              Equipos escaneados
+              Equipos registrados
             </h3>
             <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-[#0c1424] text-secondary border border-[#1c2a44]">
               {items.length}
@@ -505,90 +614,137 @@ export default function ReciboClientView({
           <button
             type="button"
             onClick={handleExportExcel}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md hover:text-white"
+            disabled={items.length === 0}
+            className={`flex items-center justify-center px-3 md:px-4 py-2 md:py-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl transition-all ${
+              items.length === 0
+                ? 'opacity-40 cursor-not-allowed'
+                : 'hover:bg-slate-700 hover:text-white cursor-pointer'
+            }`}
+            title="Descargar Excel"
           >
-            <span className="material-symbols-outlined text-base">download</span>
-            Descargar Excel
+            <span className="material-symbols-outlined text-base md:text-xl shrink-0">download</span>
           </button>
         </div>
 
         {/* Tabla contenedora */}
-        <div className="bg-[#060b18] border border-[#16233a] rounded-3xl overflow-hidden shadow-2xl">
+        <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
+              <colgroup>
+                <col className="w-[32%] md:w-[26%]" />
+                <col className="w-[24%] md:w-[22%]" />
+                <col className="w-[14%] md:w-[15%]" />
+                <col className="w-[18%] md:w-[21%]" />
+                <col className="w-[12%] md:w-[16%]" />
+              </colgroup>
               <thead>
-                <tr className="border-b border-[#16233a] bg-[#091122] text-slate-400 uppercase tracking-wider font-semibold">
-                  <th className="py-4 px-4 w-12 text-center">#</th>
-                  <th className="py-4 px-4">IMEI</th>
-                  <th className="py-4 px-4">Modelo</th>
-                  <th className="py-4 px-4">Color</th>
-                  <th className="py-4 px-4">Tipo</th>
-                  <th className="py-4 px-4">Fecha Ingreso</th>
-                  <th className="py-4 px-4 text-center w-16">Acción</th>
+                <tr className="border-b border-slate-800 bg-[#091122]/70 text-slate-400 uppercase tracking-wider font-semibold text-xs">
+                  <th className="py-4 pl-8 md:pl-11 pr-3 text-left">PRODUCTO</th>
+                  <th className="py-4 px-2 sm:px-3 text-center">IMEI</th>
+                  <th className="py-4 px-3 text-center">
+                    <span className="inline-block -translate-x-3 sm:-translate-x-4">COLOR</span>
+                  </th>
+                  <th className="py-4 px-3 text-center">FECHA INGRESO</th>
+                  <th className="py-4 pr-5 md:pr-6 pl-3 text-center">ACCIONES</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#121c2e]">
+              <tbody className="divide-y divide-slate-800/50">
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-500">
+                    <td colSpan={5} className="py-16 text-center text-slate-500 italic text-sm">
                       No hay equipos registrados en esta lista de recibo aún.
                     </td>
                   </tr>
                 ) : (
-                  items.map((item, index) => {
+                  items.map((item) => {
                     const { fecha, hora } = formatFecha(item.fecha_ingreso);
                     const colorHex = getColorHex(item.productos?.color || '');
                     return (
                       <tr
                         key={item.id}
-                        className="hover:bg-[#0b1426] transition-colors group"
+                        className="hover:bg-slate-800/20 transition-colors group border-b border-slate-800/40"
                       >
-                        <td className="py-4 px-4 text-center text-slate-500 font-mono">
-                          {index + 1}
+                        <td className="py-4 pl-5 md:pl-6 pr-3">
+                          <div className="flex items-start gap-3">
+                            <div className="pt-1 text-slate-500 shrink-0 select-none">
+                              <span className="material-symbols-outlined text-[20px] leading-none">
+                                smartphone
+                              </span>
+                            </div>
+                            <div className="flex flex-col items-start gap-1 min-w-0 max-w-sm">
+                              <span className="font-bold text-white text-sm">
+                                {item.productos
+                                  ? `${item.productos.marca} ${item.productos.modelo}`
+                                  : 'Cargando modelo...'}
+                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {item.productos?.ram && (
+                                  <span className="text-[11px] font-bold bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md uppercase tracking-tight">
+                                    RAM {item.productos.ram}
+                                  </span>
+                                )}
+                                {item.productos?.almacenamiento && (
+                                  <span className="text-[11px] font-bold bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md uppercase tracking-tight">
+                                    ALM {item.productos.almacenamiento}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </td>
-                        <td className="py-4 px-4 font-mono font-medium text-slate-200">
-                          {item.imei}
+                        <td className="py-4 px-2 sm:px-3 text-center whitespace-nowrap">
+                          <span className="font-mono bg-slate-950 px-3.5 py-1.5 rounded-xl border border-slate-800 text-secondary text-xs font-semibold inline-flex items-center justify-center shadow-sm tracking-wider">
+                            {item.imei}
+                          </span>
                         </td>
-                        <td className="py-4 px-4 text-white font-medium">
-                          {item.productos
-                            ? `${item.productos.marca} ${item.productos.modelo}`
-                            : 'Cargando modelo...'}
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
+                        <td className="py-4 px-3">
+                          <div className="flex items-center gap-2.5">
                             <span
-                              className="w-3 h-3 rounded-full shrink-0 border border-white/20"
+                              className="w-4 h-4 rounded-full shrink-0 border border-white/20 shadow-sm"
                               style={{ backgroundColor: colorHex }}
                             />
-                            <span className="text-slate-300">
+                            <span className="text-slate-200 font-semibold text-sm">
                               {item.productos?.color || 'N/A'}
                             </span>
                           </div>
                         </td>
-                        <td className="py-4 px-4">
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              item.tipo_equipo === 'concesion'
-                                ? 'bg-purple-500/10 text-purple-300 border border-purple-500/20'
-                                : 'bg-secondary/10 text-secondary border border-secondary/20'
-                            }`}
-                          >
-                            {item.tipo_equipo === 'concesion' ? 'Concesión' : 'Crédito'}
-                          </span>
+                        <td className="py-4 px-3 text-center whitespace-nowrap" suppressHydrationWarning>
+                          <div className="flex flex-col items-center justify-center leading-tight">
+                            <span className="text-sm font-semibold text-slate-100">{fecha}</span>
+                            <span className="text-[11px] font-mono text-slate-400">{hora}</span>
+                          </div>
                         </td>
-                        <td className="py-4 px-4 text-slate-400 font-mono text-[11px]" suppressHydrationWarning>
-                          <div>{fecha}</div>
-                          <div className="text-slate-500 text-[10px]">{hora}</div>
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteItem(item.id, item.imei)}
-                            title="Eliminar de recibo"
-                            className="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 flex items-center justify-center transition-colors cursor-pointer"
-                          >
-                            <span className="material-symbols-outlined text-base">delete</span>
-                          </button>
+                        <td className="py-4 pr-5 md:pr-6 pl-3 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              title="Agregar"
+                              className="text-emerald-400 hover:text-emerald-300 transition-colors p-2 rounded-lg hover:bg-emerald-500/15 cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-xl">add</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditModal(item)}
+                              title="Editar equipo"
+                              className="text-slate-400 hover:text-secondary transition-colors p-2 rounded-lg hover:bg-secondary/10 cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-xl">edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setItemToDelete(item)}
+                              disabled={isDeleting && itemToDelete?.id === item.id}
+                              title="Eliminar de recibo"
+                              className={`text-red-500/50 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-500/10 cursor-pointer ${
+                                isDeleting && itemToDelete?.id === item.id ? 'opacity-30' : ''
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-xl">
+                                {isDeleting && itemToDelete?.id === item.id ? 'sync' : 'delete'}
+                              </span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
