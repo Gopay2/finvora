@@ -22,8 +22,8 @@ const styles = {
 export default async function CargarStockPage() {
   const { role: userRole } = await getUserProfile();
 
-  // Solo Admin, Supervisor y Developer pueden cargar stock
-  if (!isAllowed(userRole, ["Admin", "Supervisor", "Developer"])) {
+  // Solo Admin, Supervisor, Developer y JCI pueden cargar stock
+  if (!isAllowed(userRole, ["Admin", "Supervisor", "Developer", "JCI"])) {
     return <AccessDenied role={userRole} sectionName="Carga de Stock" />;
   }
 

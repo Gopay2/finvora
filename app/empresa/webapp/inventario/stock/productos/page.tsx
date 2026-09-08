@@ -16,7 +16,7 @@ const styles = {
 export default async function ProductosPage() {
   const { role: userRole } = await getUserProfile();
 
-  if (!isAllowed(userRole, ["Admin", "Supervisor", "Developer"])) {
+  if (!isAllowed(userRole, ["Admin", "Supervisor", "Developer", "JCI"])) {
     return <AccessDenied role={userRole} sectionName="Productos" />;
   }
 

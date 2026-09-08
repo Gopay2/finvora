@@ -16,8 +16,8 @@ export const revalidate = 0;
 export default async function GuiasPage() {
   const currentUser = await getUserProfile();
 
-  // Control de acceso: Permitido para todos los roles excepto "Sin rol"
-  if (!currentUser.id || currentUser.role === 'Sin rol') {
+  // Control de acceso: Bodega y JCI solo tienen acceso a Inventario
+  if (!currentUser.id || currentUser.role === 'Sin rol' || currentUser.role === 'Bodega' || currentUser.role === 'JCI') {
     return <AccessDenied role={currentUser.role} sectionName="Guía" />;
   }
 

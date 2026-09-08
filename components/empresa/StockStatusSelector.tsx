@@ -81,10 +81,11 @@ export default function StockStatusSelector({
 
   const colors: Record<string, string> = {
     Disponible: "bg-green-500/10 text-green-400 border-green-500/30",
-    "En envío": "bg-amber-500/10 text-amber-400 border-amber-500/30",
+    "En envío": "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
     Vendido: "bg-red-500/10 text-red-400 border-red-500/30",
     "A consultar": "bg-purple-500/10 text-purple-400 border-purple-500/30",
-    Recambio: "bg-indigo-500/10 text-indigo-400 border-indigo-500/30"
+    Recambio: "bg-indigo-500/10 text-indigo-400 border-indigo-500/30",
+    Concesión: "bg-orange-500/10 text-orange-400 border-orange-500/30"
   };
 
   useEffect(() => {
@@ -282,7 +283,7 @@ export default function StockStatusSelector({
           )}
         </div>
         {mounted && estado === "En envío" && envioCountdown !== null && (
-          <div className={`mt-1.5 flex items-center justify-center gap-1.5 px-2 py-0.5 text-[11px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg w-[98px] ${isProgramado ? "" : "animate-pulse"}`}>
+          <div className={`mt-1.5 flex items-center justify-center gap-1.5 px-2 py-0.5 text-[11px] font-mono text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded-lg w-[98px] ${isProgramado ? "" : "animate-pulse"}`}>
             <span className="material-symbols-outlined text-[12px] leading-none">calendar_month</span>
             <span className="font-bold tracking-wider">{formatHHMMSS(envioCountdown)}</span>
           </div>
@@ -326,10 +327,11 @@ export default function StockStatusSelector({
             <option value="En envío" className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>EN ENVÍO</option>
             <option value="Vendido" className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>VENDIDO</option>
             <option value="Recambio" className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>RECAMBIO</option>
+            <option value="Concesión" className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>CONCESIÓN</option>
           </select>
 
           {loading && !timeLeft && (
-            <span className="absolute -right-5 animate-spin h-3 w-3 border-2 border-slate-500 border-t-transparent rounded-full" />
+            <span className="absolute -left-5 top-1/2 -translate-y-1/2 animate-spin h-3 w-3 border-2 border-slate-500 border-t-transparent rounded-full" />
           )}
         </div>
 
@@ -342,7 +344,7 @@ export default function StockStatusSelector({
 
       {/* Temporizador regresivo si está En envío (renderizado solo tras el montaje cliente) */}
       {mounted && estado === "En envío" && envioCountdown !== null && (
-        <div className={`mt-1.5 flex items-center justify-center gap-1.5 px-2 py-0.5 text-[11px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-lg w-[98px] ${isProgramado ? "" : "animate-pulse"}`}>
+        <div className={`mt-1.5 flex items-center justify-center gap-1.5 px-2 py-0.5 text-[11px] font-mono text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded-lg w-[98px] ${isProgramado ? "" : "animate-pulse"}`}>
           <span className="material-symbols-outlined text-[12px] leading-none">calendar_month</span>
           <span className="font-bold tracking-wider">{formatHHMMSS(envioCountdown)}</span>
         </div>

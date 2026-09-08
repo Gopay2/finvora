@@ -83,7 +83,7 @@ export default function StockClientView({
   const [selectedEstados, setSelectedEstados] = useState<string[]>([]);
 
   // Lista de estados disponibles
-  const statusList = estados.length > 0 ? estados : ["Disponible", "A consultar", "En envío", "Vendido", "Recambio"];
+  const statusList = estados.length > 0 ? estados : ["Disponible", "A consultar", "En envío", "Concesión", "Vendido", "Recambio"];
 
   // Toggle de filtro por estado
   const toggleEstado = (st: string) => {
@@ -124,8 +124,13 @@ export default function StockClientView({
     }
     if (norm.includes("envío") || norm.includes("envio")) {
       return isSelected
-        ? "bg-amber-950/60 text-amber-300 border-amber-500/80 shadow-amber-950/50"
-        : "bg-slate-950/40 text-amber-500/80 border-amber-900/40 hover:border-amber-500/40 hover:text-amber-300";
+        ? "bg-yellow-950/60 text-yellow-300 border-yellow-400/80 shadow-yellow-950/50"
+        : "bg-slate-950/40 text-yellow-400 border-yellow-500/60 hover:border-yellow-400/70 hover:text-yellow-300";
+    }
+    if (norm.includes("concesion") || norm.includes("concesión")) {
+      return isSelected
+        ? "bg-orange-950/60 text-orange-300 border-orange-500/80 shadow-orange-950/50"
+        : "bg-slate-950/40 text-orange-500/80 border-orange-900/40 hover:border-orange-500/40 hover:text-orange-300";
     }
     if (norm.includes("vendido")) {
       return isSelected
@@ -151,8 +156,13 @@ export default function StockClientView({
     }
     if (norm.includes("envío") || norm.includes("envio")) {
       return isSelected
-        ? "bg-amber-500 text-slate-950 font-bold"
-        : "bg-amber-950/80 text-amber-400 border border-amber-800/40";
+        ? "bg-yellow-400 text-slate-950 font-bold"
+        : "bg-yellow-950/80 text-yellow-400 border border-yellow-500/60";
+    }
+    if (norm.includes("concesion") || norm.includes("concesión")) {
+      return isSelected
+        ? "bg-orange-500 text-slate-950 font-bold"
+        : "bg-orange-950/80 text-orange-400 border border-orange-800/40";
     }
     if (norm.includes("vendido")) {
       return isSelected
@@ -232,13 +242,13 @@ export default function StockClientView({
         </div>
 
         {/* Fila 2: Salto de línea con Estado y Acciones (Limpiar Filtros Rojo + Descargar Excel) */}
-        <div className="pt-3.5 border-t border-slate-800/60 flex flex-wrap items-end justify-between gap-4">
-          <div className="flex flex-col gap-2 min-w-0 max-w-full">
+        <div className="pt-3.5 border-t border-slate-800/60 flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4">
+          <div className="flex flex-col gap-2 w-full sm:w-auto min-w-0">
             <label className={styles.label}>
               <span className="material-symbols-outlined text-xs">published_with_changes</span>
               Estado
             </label>
-            <div className="flex flex-nowrap sm:flex-wrap items-center gap-1.5 sm:gap-2.5 overflow-x-auto custom-scrollbar pb-1 max-w-full">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5 sm:gap-2.5">
               {statusList.map((st) => {
                 const isSelected = selectedEstados.includes(st);
                 const count = unidades.filter(u =>
@@ -253,15 +263,17 @@ export default function StockClientView({
                     type="button"
                     onClick={() => toggleEstado(st)}
                     className={`
-                      inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl border text-[11px] sm:text-xs font-semibold transition-all cursor-pointer select-none shadow-sm shrink-0 sm:shrink
+                      inline-flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-xl border text-[11px] sm:text-xs font-semibold transition-all cursor-pointer select-none shadow-sm
                       ${getStatusChipStyle(st, isSelected)}
                     `}
                   >
-                    <span className="material-symbols-outlined text-[15px] sm:text-[16px] leading-none">
-                      {isSelected ? "check_box" : "check_box_outline_blank"}
-                    </span>
-                    <span className="whitespace-nowrap">{st}</span>
-                    <span className={`h-5 min-w-[20px] px-1.5 inline-flex items-center justify-center rounded-full text-[11px] sm:text-[12px] font-extrabold leading-none text-center ${getStatusBadgeStyle(st, isSelected)}`}>
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                      <span className="material-symbols-outlined text-[15px] sm:text-[16px] leading-none shrink-0">
+                        {isSelected ? "check_box" : "check_box_outline_blank"}
+                      </span>
+                      <span className="truncate whitespace-nowrap">{st}</span>
+                    </div>
+                    <span className={`h-5 min-w-[20px] px-1.5 inline-flex items-center justify-center rounded-full text-[11px] sm:text-[12px] font-extrabold leading-none text-center shrink-0 ${getStatusBadgeStyle(st, isSelected)}`}>
                       {count}
                     </span>
                   </button>
@@ -271,7 +283,7 @@ export default function StockClientView({
           </div>
 
           {/* Acciones de Limpieza (Rojo) y Descarga en la Parte Baja (Extremo Derecho) */}
-          <div className="flex items-center gap-2.5 ml-auto self-end mt-auto">
+          <div className="flex items-center gap-2.5 self-end ml-auto mt-auto pt-1 sm:pt-0">
             {hasActiveFilters && (
               <button
                 type="button"

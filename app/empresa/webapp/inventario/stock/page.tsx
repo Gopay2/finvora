@@ -22,9 +22,9 @@ const styles = {
 
 export default async function StockPage() {
   const { role: userRole } = await getUserProfile();
-  const canEdit = isAllowed(userRole, ["Admin", "Supervisor", "Developer"]);
+  const canEdit = isAllowed(userRole, ["Admin", "Supervisor", "Developer", "JCI"]);
 
-  if (!isAllowed(userRole, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser"])) {
+  if (!isAllowed(userRole, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser", "JCI"])) {
     return <AccessDenied role={userRole} sectionName="Stock Disponible" />;
   }
 
@@ -41,7 +41,7 @@ export default async function StockPage() {
   const repartidores = repartidoresRaw || [];
 
   // Definir estados disponibles según el rol (excluyendo 'Vendido' ya que las unidades vendidas se mueven al histórico)
-  const estados = ["Disponible", "A consultar", "En envío"];
+  const estados = ["Disponible", "A consultar", "En envío", "Concesión"];
 
   const unidades = await fetchAllFromTable(
     supabase,

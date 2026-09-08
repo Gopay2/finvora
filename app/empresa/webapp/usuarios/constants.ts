@@ -6,6 +6,8 @@ export const ROLES_DISPONIBLES = [
   "Supervisor",
   "Developer",
   "Repartidor",
+  "Bodega",
+  "JCI",
   "Sin rol"
 ] as const;
 

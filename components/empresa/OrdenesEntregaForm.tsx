@@ -312,7 +312,9 @@ export default function OrdenesEntregaForm({
       .filter(producto => idsConStock.has(producto.id))
       .map(producto => {
         const unidadesValidas = stockFiltrado.filter(stockItem => stockItem.producto_id === producto.id);
-        const cantidadDisponible = unidadesValidas.filter(stockItem => stockItem.estado === 'Disponible').length;
+        const cantidadDisponible = unidadesValidas.filter(
+          stockItem => stockItem.estado === 'Disponible' || stockItem.estado === 'Concesión' || stockItem.estado === 'Concesion'
+        ).length;
         const cantidadAConsultar = unidadesValidas.filter(stockItem => stockItem.estado === 'A consultar').length;
         
         return {
@@ -368,7 +370,9 @@ export default function OrdenesEntregaForm({
     );
     const matchingProductIds = new Set(matchingProducts.map(producto => producto.id));
     return stockFiltrado.filter(
-      stockItem => matchingProductIds.has(stockItem.producto_id) && stockItem.estado === 'Disponible' && stockItem.imei
+      stockItem => matchingProductIds.has(stockItem.producto_id) && 
+        (stockItem.estado === 'Disponible' || stockItem.estado === 'Concesión' || stockItem.estado === 'Concesion') && 
+        stockItem.imei
     );
   }, [selectedModelKey, selectedColor, productosConStock, stockFiltrado]);
 

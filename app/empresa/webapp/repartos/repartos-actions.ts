@@ -138,7 +138,7 @@ export async function getLogisticsFormData() {
       )
     `,
     {
-      filterFn: (q) => (role === "Repartidor" ? q.eq('estado', 'Disponible') : q.in('estado', ['Disponible', 'A consultar'])),
+      filterFn: (q) => (role === "Repartidor" ? q.in('estado', ['Disponible', 'Concesión']) : q.in('estado', ['Disponible', 'Concesión', 'A consultar'])),
       orderColumn: 'fecha_ingreso',
       ascending: false
     }
