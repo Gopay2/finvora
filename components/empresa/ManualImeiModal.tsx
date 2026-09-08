@@ -125,9 +125,12 @@ export default function ManualImeiModal({
                 id="manual-imei-input"
                 ref={inputRef}
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={imei}
                 onChange={(e) => {
-                  setImei(e.target.value);
+                  const soloNumeros = e.target.value.replace(/\D/g, '');
+                  setImei(soloNumeros);
                   if (error) setError('');
                 }}
                 placeholder="Ingresar IMEI"
@@ -137,7 +140,7 @@ export default function ManualImeiModal({
                 disabled={isSubmitting}
                 /* font-size: 16px estricto para evitar zoom automático en Safari iOS y Chrome móvil */
                 style={{ fontSize: '16px' }}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-secondary rounded-xl px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:outline-none transition-all font-mono tracking-wider text-base h-12"
+                className="w-full bg-slate-950 border border-slate-800 focus:border-secondary rounded-xl pl-4 pr-11 py-3 text-slate-100 placeholder:text-slate-500 focus:outline-none transition-all font-mono tracking-wider text-base h-12"
               />
               {imei && !isSubmitting && (
                 <button
@@ -146,10 +149,12 @@ export default function ManualImeiModal({
                     setImei('');
                     inputRef.current?.focus();
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-1 transition-colors cursor-pointer"
-                  title="Borrar"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-300 hover:bg-slate-800/60 rounded-lg transition-colors cursor-pointer"
+                  title="Borrar IMEI"
                 >
-                  <span className="material-symbols-outlined text-lg">cancel</span>
+                  <span className="material-symbols-outlined text-lg leading-none block select-none">
+                    cancel
+                  </span>
                 </button>
               )}
             </div>

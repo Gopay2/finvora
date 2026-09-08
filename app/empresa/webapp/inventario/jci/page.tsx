@@ -8,7 +8,7 @@ export const revalidate = 0;
 export default async function JciPage() {
   const { role: userRole } = await getUserProfile();
 
-  if (!isAllowed(userRole, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser"])) {
+  if (!isAllowed(userRole, ["Admin", "Supervisor", "Developer", "JCI"])) {
     return <AccessDenied role={userRole} sectionName="JCI" />;
   }
 

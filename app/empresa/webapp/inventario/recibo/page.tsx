@@ -3,12 +3,13 @@ import Link from "next/link";
 import { getUserProfile, isAllowed } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
 import { createClient } from "@/utils/supabase/server";
-import ReciboClientView, { ReciboItem } from "@/components/empresa/ReciboClientView";
+import ReciboClientView from "@/components/empresa/ReciboClientView";
+import type { ReciboItem } from "@/types/recibo";
 import type { Product } from "@/types/stock";
 
 export const revalidate = 0;
 
-const ALLOWED_ROLES = ["Developer"];
+const ALLOWED_ROLES = ["Admin", "Supervisor", "Developer", "Bodega", "JCI"];
 
 const styles = {
   container: "max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500",
@@ -36,7 +37,24 @@ export default async function ReciboPage() {
 
   const productos: Product[] = productosRaw || [];
 
-  // 2. Obtener lista actual de equipos en la tabla de recibo
+  // 2. Obtener repartidores activos para asignar ubicación al transferir a stock
+  const { data: repartidoresRaw } = await supabase
+    .from("repartidores")
+    .select("id, nombre")
+    .eq("activo", true)
+    .order("nombre", { ascending: true });
+
+  const repartidores = repartidoresRaw || [];
+
+  // 3. Obtener zonas de reparto con su repartidor asignado y sigla de plaza
+  const { data: zonasRepartoRaw } = await supabase
+    .from("zonas_reparto")
+    .select("id, nombre_zona, sigla, repartidor_id")
+    .order("nombre_zona", { ascending: true });
+
+  const zonasReparto = zonasRepartoRaw || [];
+
+  // 4. Obtener lista actual de equipos en la tabla de recibo
   let itemsIniciales: ReciboItem[] = [];
   try {
     const { data: reciboData, error: reciboError } = await supabase
@@ -47,8 +65,6 @@ export default async function ReciboPage() {
         producto_id,
         proveedor,
         tipo_equipo,
-        ubicacion_default,
-        estado,
         fecha_ingreso,
         creado_por_username,
         productos (
@@ -87,6 +103,9 @@ export default async function ReciboPage() {
       <ReciboClientView
         productos={productos}
         itemsIniciales={itemsIniciales}
+        userRole={userRole}
+        repartidores={repartidores}
+        zonasReparto={zonasReparto}
       />
     </div>
   );

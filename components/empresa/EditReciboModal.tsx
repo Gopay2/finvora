@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import type { ReciboItem } from './ReciboClientView';
+import { PROVEEDORES } from '@/utils/recibo';
+import type { ReciboItem } from '@/types/recibo';
 import type { Product } from '@/types/stock';
 
 interface EditReciboModalProps {
@@ -12,12 +13,6 @@ interface EditReciboModalProps {
   productos: Product[];
   onSave: (id: string, imei: string, productoId: string) => Promise<{ success: boolean; error?: string }>;
 }
-
-const PROVEEDORES = [
-  { label: 'Tijuana', sigla: 'TIJ' },
-  { label: 'Guadalajara', sigla: 'GDL' },
-  { label: 'Monterrey', sigla: 'MTY' },
-];
 
 export default function EditReciboModal({
   isOpen,
@@ -165,9 +160,6 @@ export default function EditReciboModal({
               <h3 className="text-base sm:text-lg font-bold text-white tracking-wide leading-tight">
                 Editar equipo
               </h3>
-              <p className="text-xs text-slate-400">
-                Proveedor: <span className="text-slate-200 font-semibold">{item.proveedor}</span>
-              </p>
             </div>
           </div>
 
@@ -184,49 +176,31 @@ export default function EditReciboModal({
 
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5 bg-slate-900" autoComplete="off">
-          {/* Campo IMEI */}
+          {/* 1. Campo Proveedor (Bloqueado) */}
           <div className="space-y-2">
             <label
-              htmlFor="edit-imei-input"
+              htmlFor="edit-proveedor-input"
               className="block text-xs font-semibold text-slate-300 ml-0.5 tracking-wider uppercase"
             >
-              IMEI
+              Proveedor
             </label>
             <div className="relative">
               <input
-                id="edit-imei-input"
-                ref={inputRef}
+                id="edit-proveedor-input"
                 type="text"
-                value={imei}
-                onChange={(e) => {
-                  setImei(e.target.value);
-                  if (error) setError('');
-                }}
-                placeholder="Ingresar IMEI"
-                required
-                autoComplete="off"
-                data-lpignore="true"
-                disabled={isSubmitting}
+                value={item.proveedor}
+                disabled
+                readOnly
                 style={{ fontSize: '16px' }}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-secondary rounded-xl px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:outline-none transition-all font-mono tracking-wider text-base h-12"
+                className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-3 pr-10 text-slate-400 font-medium text-sm sm:text-base cursor-not-allowed opacity-80"
               />
-              {imei && !isSubmitting && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImei('');
-                    inputRef.current?.focus();
-                  }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-1 transition-colors cursor-pointer"
-                  title="Borrar"
-                >
-                  <span className="material-symbols-outlined text-lg">cancel</span>
-                </button>
-              )}
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 pointer-events-none text-base">
+                lock
+              </span>
             </div>
           </div>
 
-          {/* Campo Marca */}
+          {/* 2. Campo Marca */}
           <div className="space-y-2">
             <label
               htmlFor="edit-marca-select"
@@ -255,7 +229,7 @@ export default function EditReciboModal({
             </div>
           </div>
 
-          {/* Campo Modelo */}
+          {/* 3. Campo Modelo */}
           <div className="space-y-2">
             <label
               htmlFor="edit-modelo-select"
@@ -284,6 +258,53 @@ export default function EditReciboModal({
             </div>
           </div>
 
+          {/* 4. Campo IMEI */}
+          <div className="space-y-2">
+            <label
+              htmlFor="edit-imei-input"
+              className="block text-xs font-semibold text-slate-300 ml-0.5 tracking-wider uppercase"
+            >
+              IMEI
+            </label>
+            <div className="relative">
+              <input
+                id="edit-imei-input"
+                ref={inputRef}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={imei}
+                onChange={(e) => {
+                  const soloNumeros = e.target.value.replace(/\D/g, '');
+                  setImei(soloNumeros);
+                  if (error) setError('');
+                }}
+                placeholder="Ingresar IMEI"
+                required
+                autoComplete="off"
+                data-lpignore="true"
+                disabled={isSubmitting}
+                style={{ fontSize: '16px' }}
+                className="w-full bg-slate-950 border border-slate-800 focus:border-secondary rounded-xl pl-4 pr-11 py-3 text-slate-100 placeholder:text-slate-500 focus:outline-none transition-all font-mono tracking-wider text-base h-12"
+              />
+              {imei && !isSubmitting && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImei('');
+                    inputRef.current?.focus();
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-300 hover:bg-slate-800/60 rounded-lg transition-colors cursor-pointer"
+                  title="Borrar IMEI"
+                >
+                  <span className="material-symbols-outlined text-lg leading-none block select-none">
+                    cancel
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Alerta de error si falla */}
           {error && (
             <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-xs font-medium flex items-center gap-2.5 animate-in fade-in duration-200">
@@ -292,24 +313,16 @@ export default function EditReciboModal({
             </div>
           )}
 
-          {/* Botones de acción */}
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs sm:text-sm border border-slate-700/60 transition-all cursor-pointer disabled:opacity-50"
-            >
-              Cancelar
-            </button>
+          {/* Botón de acción */}
+          <div className="pt-2">
             <button
               type="submit"
               disabled={isSubmitting || !imei.trim() || !selectedProductoId}
-              className="px-5 py-2.5 bg-secondary hover:bg-secondary-fixed text-slate-950 font-bold rounded-xl text-xs sm:text-sm shadow-lg shadow-secondary/10 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-secondary hover:bg-secondary-fixed text-slate-950 font-bold rounded-xl text-sm shadow-lg shadow-secondary/10 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                  <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
                   <span>Guardando...</span>
                 </span>
               ) : (

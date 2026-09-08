@@ -31,8 +31,8 @@ export const revalidate = 0;
 export default async function MisOperacionesPage() {
   const { id: currentUserId, role: userRole } = await getUserProfile();
 
-  // 1. Control de acceso: Todos los roles menos "Sin rol"
-  if (!currentUserId || userRole === "Sin rol") {
+  // 1. Control de acceso: Bodega y JCI solo tienen acceso a Inventario
+  if (!currentUserId || userRole === "Sin rol" || userRole === "Bodega" || userRole === "JCI") {
     return <AccessDenied role={userRole} sectionName="Mis Operaciones" />;
   }
 

@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getUserProfile, isAllowed } from "@/utils/auth-check";
 
+const ALLOWED_ADMIN_ROLES = ["Admin", "Supervisor", "Developer", "JCI"];
+
 /**
  * Registra un nuevo tipo de producto en el catálogo general (tabla 'productos').
  * Define atributos fijos como marca, modelo, color, almacenamiento, ram y precio base de venta.
@@ -16,7 +18,7 @@ import { getUserProfile, isAllowed } from "@/utils/auth-check";
  */
 export async function crearProducto(formData: FormData) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+  if (!isAllowed(role, ALLOWED_ADMIN_ROLES)) {
     throw new Error("No autorizado");
   }
 
@@ -59,7 +61,7 @@ export async function crearProducto(formData: FormData) {
  */
 export async function editarProducto(formData: FormData) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+  if (!isAllowed(role, ALLOWED_ADMIN_ROLES)) {
     return { error: "No tienes permisos para realizar esta acción" };
   }
 
@@ -103,7 +105,7 @@ export async function editarProducto(formData: FormData) {
  */
 export async function eliminarProducto(formData: FormData) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+  if (!isAllowed(role, ALLOWED_ADMIN_ROLES)) {
     return { error: "No tienes permisos para realizar esta acción" };
   }
 
@@ -148,7 +150,7 @@ export async function eliminarProducto(formData: FormData) {
  */
 export async function cargarStock(formData: FormData) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+  if (!isAllowed(role, ALLOWED_ADMIN_ROLES)) {
     throw new Error("No autorizado");
   }
 
@@ -185,7 +187,7 @@ export async function cargarStock(formData: FormData) {
  */
 export async function actualizarEstadoStock(imei: string, nuevoEstado: string) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+  if (!isAllowed(role, ALLOWED_ADMIN_ROLES)) {
     return { error: "No autorizado" };
   }
 
@@ -215,7 +217,7 @@ export async function actualizarEstadoStock(imei: string, nuevoEstado: string) {
  */
 export async function actualizarZonaStock(imei: string, nuevaZona: string | null) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+  if (!isAllowed(role, ALLOWED_ADMIN_ROLES)) {
     return { error: "No autorizado" };
   }
 
@@ -346,7 +348,7 @@ export async function registrarVenta(imei: string, vendedorId?: string) {
  */
 export async function registrarRecambio(imei: string, solicitadoPorId: string, motivo: string) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+  if (!isAllowed(role, ALLOWED_ADMIN_ROLES)) {
     return { error: "No autorizado" };
   }
 
@@ -418,7 +420,7 @@ export async function registrarRecambio(imei: string, solicitadoPorId: string, m
  */
 export async function eliminarStock(imei: string) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+  if (!isAllowed(role, ALLOWED_ADMIN_ROLES)) {
     return { error: "No tienes permisos para realizar esta acción" };
   }
 
@@ -483,7 +485,7 @@ export async function getDistinctBrands(): Promise<string[]> {
  */
 export async function actualizarImeiStock(imeiActual: string, nuevoImei: string) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+  if (!isAllowed(role, ALLOWED_ADMIN_ROLES)) {
     return { error: "No tienes permisos para realizar esta acción" };
   }
 

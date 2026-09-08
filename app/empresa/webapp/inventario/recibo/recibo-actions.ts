@@ -4,15 +4,15 @@ import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getUserProfile, isAllowed } from "@/utils/auth-check";
 
-const ALLOWED_ROLES = ["Admin", "Supervisor", "Developer"];
+const ALLOWED_RECIBO_ROLES = ["Admin", "Supervisor", "Developer", "Bodega", "JCI"];
+const ALLOWED_STOCK_TRANSFER_ROLES = ["Admin", "Supervisor", "Developer", "JCI"];
 
 /**
- * Registra un nuevo equipo en la tabla intermedia 'recibo_stock' (proceso de recepción y control).
- * Trabaja de forma completamente aislada sin tocar la tabla 'stock'.
+ * Registra un nuevo equipo en la tabla intermedia 'recibo_stock' (bandeja de recepción).
  */
 export async function registrarEquipoRecibo(formData: FormData) {
   const { role, id: userId, username } = await getUserProfile();
-  if (!isAllowed(role, ALLOWED_ROLES)) {
+  if (!isAllowed(role, ALLOWED_RECIBO_ROLES)) {
     return { error: "No tienes permisos para registrar equipos en recibo." };
   }
 
@@ -51,7 +51,7 @@ export async function registrarEquipoRecibo(formData: FormData) {
     return { error: `El IMEI ${imei} ya fue registrado previamente en esta lista de recibo.` };
   }
 
-  // 2. Insertar en recibo_stock
+  // 2. Insertar en recibo_stock (bandeja limpia sin columnas redundantes)
   const { data, error: insertError } = await supabase
     .from("recibo_stock")
     .insert([{
@@ -59,8 +59,6 @@ export async function registrarEquipoRecibo(formData: FormData) {
       producto_id,
       proveedor,
       tipo_equipo,
-      ubicacion_default: "Almacenamiento",
-      estado: "Pendiente",
       creado_por: userId,
       creado_por_username: username
     }])
@@ -89,7 +87,7 @@ export async function registrarEquipoRecibo(formData: FormData) {
  */
 export async function eliminarEquipoRecibo(id: string) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ALLOWED_ROLES)) {
+  if (!isAllowed(role, ALLOWED_RECIBO_ROLES)) {
     return { error: "No tienes permisos para realizar esta acción." };
   }
 
@@ -117,7 +115,7 @@ export async function actualizarEquipoRecibo(
   data: { imei: string; producto_id: string }
 ) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ALLOWED_ROLES)) {
+  if (!isAllowed(role, ALLOWED_RECIBO_ROLES)) {
     return { error: "No tienes permisos para editar equipos en recibo." };
   }
 
@@ -172,4 +170,86 @@ export async function actualizarEquipoRecibo(
 
   revalidatePath("/empresa/webapp/inventario/recibo");
   return { success: true, item: updated };
+}
+
+/**
+ * Transfiere un equipo desde la bandeja intermedia 'recibo_stock' a la tabla definitiva 'stock'.
+ * Mapea el tipo de equipo a su estado correspondiente:
+ *  - 'credito'   -> 'Disponible'
+ *  - 'concesion' -> 'Concesión'
+ * Al completarse la inserción en stock, elimina el equipo de recibo_stock (modelo bandeja de entrada).
+ * 
+ * @security Restringido a Admin, Supervisor, Developer y JCI. El rol Bodega queda bloqueado.
+ */
+export async function cargarAStockDesdeRecibo(reciboId: string, repartidorId: string) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ALLOWED_STOCK_TRANSFER_ROLES)) {
+    return { error: "No tienes permisos para transferir equipos a stock. El rol Bodega no puede realizar esta acción." };
+  }
+
+  if (!reciboId) {
+    return { error: "ID de equipo en recibo no válido." };
+  }
+  if (!repartidorId) {
+    return { error: "Debes seleccionar una ubicación / repartidor de destino." };
+  }
+
+  const supabase = await createClient();
+
+  // 1. Obtener los datos del equipo desde recibo_stock
+  const { data: reciboItem, error: fetchErr } = await supabase
+    .from("recibo_stock")
+    .select("id, imei, producto_id, tipo_equipo, fecha_ingreso")
+    .eq("id", reciboId)
+    .maybeSingle();
+
+  if (fetchErr || !reciboItem) {
+    return { error: "El equipo seleccionado no fue encontrado en la bandeja de recibo." };
+  }
+
+  // 2. Verificar que no exista ya en la tabla stock (evitar error de clave duplicada)
+  const { data: existingStock } = await supabase
+    .from("stock")
+    .select("imei")
+    .eq("imei", reciboItem.imei)
+    .maybeSingle();
+
+  if (existingStock) {
+    return { error: `El IMEI ${reciboItem.imei} ya existe en la tabla de stock físico.` };
+  }
+
+  // 3. Determinar estado según tipo_equipo:
+  // - 'concesion' -> 'Concesión'
+  // - 'credito'   -> 'Disponible'
+  const estadoStock = reciboItem.tipo_equipo === "concesion" ? "Concesión" : "Disponible";
+
+  // 4. Insertar en tabla stock
+  const { error: insertStockErr } = await supabase
+    .from("stock")
+    .insert([{
+      imei: reciboItem.imei,
+      producto_id: reciboItem.producto_id,
+      zona: repartidorId,
+      estado: estadoStock,
+      fecha_ingreso: reciboItem.fecha_ingreso
+    }]);
+
+  if (insertStockErr) {
+    console.error("Error al insertar en stock:", insertStockErr);
+    return { error: `Error al cargar en stock: ${insertStockErr.message}` };
+  }
+
+  // 5. Eliminar de recibo_stock (la bandeja queda limpia)
+  const { error: deleteReciboErr } = await supabase
+    .from("recibo_stock")
+    .delete()
+    .eq("id", reciboId);
+
+  if (deleteReciboErr) {
+    console.error("Error al eliminar de recibo_stock tras transferir:", deleteReciboErr);
+  }
+
+  revalidatePath("/empresa/webapp/inventario/recibo");
+  revalidatePath("/empresa/webapp/inventario/stock");
+  return { success: true };
 }

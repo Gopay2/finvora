@@ -47,6 +47,10 @@ const getBadgeStyles = (role: string) => {
       return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
     case "Repartidor":
       return "bg-amber-500/10 text-amber-400 border-amber-500/20";
+    case "Bodega":
+      return "bg-orange-500/10 text-orange-400 border-orange-500/20";
+    case "JCI":
+      return "bg-teal-500/10 text-teal-400 border-teal-500/20";
     case "Closer":
     case "Cambaceador":
     case "CambaCloser":
