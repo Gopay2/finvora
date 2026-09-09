@@ -18,6 +18,7 @@ export const WEEKDAY_NAMES = [
  */
 export const DRIVER_REST_DAYS: Record<string, number[]> = {
   felix: [3], // 3 = Miércoles
+  angel: [2], // 2 = Martes
 };
 
 /**
@@ -108,6 +109,9 @@ export function getDriverScheduleConfig(driverName: string | null | undefined): 
   }
   if (norm.includes("angel")) {
     return { startHour: 10, startMinute: 0, endHour: 17, endMinute: 30 };
+  }
+  if (norm.includes("felix")) {
+    return { startHour: 10, startMinute: 0, endHour: 16, endMinute: 0 };
   }
   // Estándar para los demás repartidores (09:00 a 19:00)
   return { startHour: 9, startMinute: 0, endHour: 19, endMinute: 0 };
