@@ -18,7 +18,8 @@ export async function registrarEquipoRecibo(formData: FormData) {
 
   const imei = (formData.get("imei") as string || "").trim();
   const producto_id = formData.get("producto_id") as string;
-  const proveedor = formData.get("proveedor") as string; // 'Tijuana', 'Guadalajara', 'Monterrey'
+  const area_proveedor = (formData.get("area_proveedor") as string || "").trim();
+  const proveedor = (formData.get("proveedor") as string || "").trim();
   const tipo_equipo = formData.get("tipo_equipo") as string; // 'credito', 'concesion'
 
   if (!imei) {
@@ -27,7 +28,7 @@ export async function registrarEquipoRecibo(formData: FormData) {
   if (!producto_id) {
     return { error: "Debes seleccionar un modelo del catálogo." };
   }
-  if (!proveedor) {
+  if (!area_proveedor && !proveedor) {
     return { error: "Debes seleccionar el área del proveedor." };
   }
   if (!tipo_equipo) {
@@ -51,19 +52,38 @@ export async function registrarEquipoRecibo(formData: FormData) {
     return { error: `El IMEI ${imei} ya fue registrado previamente en esta lista de recibo.` };
   }
 
-  // 2. Insertar en recibo_stock (bandeja limpia sin columnas redundantes)
-  const { data, error: insertError } = await supabase
+  // 2. Insertar en recibo_stock (guardando tanto área de proveedor como proveedor)
+  let insertResult = await supabase
     .from("recibo_stock")
     .insert([{
       imei,
       producto_id,
-      proveedor,
+      area_proveedor: area_proveedor || 'Tijuana',
+      proveedor: proveedor || 'Android Tj',
       tipo_equipo,
       creado_por: userId,
       creado_por_username: username
     }])
     .select()
     .single();
+
+  // Si la columna area_proveedor aún no existe en Supabase, reintentar con esquema previo
+  if (insertResult.error && (insertResult.error.message.includes("area_proveedor") || insertResult.error.code === "PGRST204" || insertResult.error.code === "42703")) {
+    insertResult = await supabase
+      .from("recibo_stock")
+      .insert([{
+        imei,
+        producto_id,
+        proveedor: area_proveedor || proveedor || 'Tijuana',
+        tipo_equipo,
+        creado_por: userId,
+        creado_por_username: username
+      }])
+      .select()
+      .single();
+  }
+
+  const { data, error: insertError } = insertResult;
 
   if (insertError) {
     console.error("Error al insertar en recibo_stock:", insertError);
@@ -80,6 +100,104 @@ export async function registrarEquipoRecibo(formData: FormData) {
 
   revalidatePath("/empresa/webapp/inventario/recibo");
   return { success: true, item: data };
+}
+
+export interface PreCargaItemInput {
+  imei: string;
+  producto_id: string;
+  area_proveedor?: string;
+  proveedor: string;
+  tipo_equipo: string;
+}
+
+/**
+ * Registra un lote completo de equipos de la pre-carga en 'recibo_stock' en una sola operación.
+ */
+export async function registrarLoteEquiposRecibo(items: PreCargaItemInput[]) {
+  const { role, id: userId, username } = await getUserProfile();
+  if (!isAllowed(role, ALLOWED_RECIBO_ROLES)) {
+    return { error: "No tienes permisos para registrar equipos en recibo." };
+  }
+
+  if (!items || items.length === 0) {
+    return { error: "No hay equipos en la pre-carga para registrar." };
+  }
+
+  // 1. Validar campos requeridos y chequear duplicados internos en el lote
+  const imeisSet = new Set<string>();
+  for (const item of items) {
+    const imei = (item.imei || "").trim();
+    if (!imei || !item.producto_id || (!item.proveedor && !item.area_proveedor) || !item.tipo_equipo) {
+      return { error: `Hay equipos en la pre-carga con datos incompletos (IMEI: ${imei || 'vacío'}).` };
+    }
+    if (imeisSet.has(imei)) {
+      return { error: `El IMEI ${imei} está duplicado dentro de la lista de pre-carga.` };
+    }
+    imeisSet.add(imei);
+  }
+
+  const supabase = await createClient();
+  const allImeis = Array.from(imeisSet);
+
+  // 2. Validar contra la base de datos si alguno ya existe en recibo_stock
+  const { data: existingRecibo, error: checkError } = await supabase
+    .from("recibo_stock")
+    .select("imei")
+    .in("imei", allImeis);
+
+  if (checkError && !checkError.message.includes("Could not find the table")) {
+    console.error("Error al validar lote de IMEIs en recibo_stock:", checkError);
+  }
+
+  if (existingRecibo && existingRecibo.length > 0) {
+    const conflictImeis = existingRecibo.map((r: { imei: string }) => r.imei).join(", ");
+    return { error: `Los siguientes IMEIs ya existen en recibo: ${conflictImeis}. Elimínalos de la pre-carga antes de confirmar.` };
+  }
+
+  // 3. Inserción en lote (Batch Insert)
+  const rowsToInsert = items.map((item) => ({
+    imei: item.imei.trim(),
+    producto_id: item.producto_id,
+    area_proveedor: item.area_proveedor || 'Tijuana',
+    proveedor: item.proveedor || 'Android Tj',
+    tipo_equipo: item.tipo_equipo,
+    creado_por: userId,
+    creado_por_username: username,
+  }));
+
+  let insertBatchResult = await supabase
+    .from("recibo_stock")
+    .insert(rowsToInsert)
+    .select();
+
+  // Fallback si la columna area_proveedor no existe aún en la BD
+  if (insertBatchResult.error && (insertBatchResult.error.message.includes("area_proveedor") || insertBatchResult.error.code === "PGRST204" || insertBatchResult.error.code === "42703")) {
+    const fallbackRows = items.map((item) => ({
+      imei: item.imei.trim(),
+      producto_id: item.producto_id,
+      proveedor: item.area_proveedor || item.proveedor || 'Tijuana',
+      tipo_equipo: item.tipo_equipo,
+      creado_por: userId,
+      creado_por_username: username,
+    }));
+    insertBatchResult = await supabase
+      .from("recibo_stock")
+      .insert(fallbackRows)
+      .select();
+  }
+
+  const { data, error: insertError } = insertBatchResult;
+
+  if (insertError) {
+    console.error("Error al insertar lote en recibo_stock:", insertError);
+    if (insertError.code === "23505") {
+      return { error: "Uno o más IMEIs del lote ya se encuentran registrados en el sistema." };
+    }
+    return { error: `Error al guardar en base de datos: ${insertError.message}` };
+  }
+
+  revalidatePath("/empresa/webapp/inventario/recibo");
+  return { success: true, items: data || [] };
 }
 
 /**
@@ -196,10 +314,10 @@ export async function cargarAStockDesdeRecibo(reciboId: string, repartidorId: st
 
   const supabase = await createClient();
 
-  // 1. Obtener los datos del equipo desde recibo_stock
+  // 1. Obtener los datos del equipo desde recibo_stock (incluyendo proveedor y tipo_equipo)
   const { data: reciboItem, error: fetchErr } = await supabase
     .from("recibo_stock")
-    .select("id, imei, producto_id, tipo_equipo, fecha_ingreso")
+    .select("id, imei, producto_id, area_proveedor, proveedor, tipo_equipo, fecha_ingreso, creado_por, creado_por_username")
     .eq("id", reciboId)
     .maybeSingle();
 
@@ -239,7 +357,30 @@ export async function cargarAStockDesdeRecibo(reciboId: string, repartidorId: st
     return { error: `Error al cargar en stock: ${insertStockErr.message}` };
   }
 
-  // 5. Eliminar de recibo_stock (la bandeja queda limpia)
+  // 5. Registrar en la tabla correspondiente de JCI (Crédito o Concesión)
+  const jciTargetTable = reciboItem.tipo_equipo === "concesion" 
+    ? "jci_equipos_concesion" 
+    : "jci_equipos_credito";
+
+  const { error: insertJciErr } = await supabase
+    .from(jciTargetTable)
+    .insert([{
+      imei: reciboItem.imei,
+      producto_id: reciboItem.producto_id,
+      area_proveedor: reciboItem.area_proveedor || 'Tijuana',
+      proveedor: reciboItem.proveedor || 'Android Tj',
+      fecha_ingreso: reciboItem.fecha_ingreso,
+      fecha_carga_stock: new Date().toISOString(),
+      creado_por: reciboItem.creado_por,
+      creado_por_username: reciboItem.creado_por_username,
+      repartidor_id: repartidorId,
+    }]);
+
+  if (insertJciErr) {
+    console.error(`Aviso: Error al registrar en ${jciTargetTable}:`, insertJciErr);
+  }
+
+  // 6. Eliminar de recibo_stock (la bandeja queda limpia)
   const { error: deleteReciboErr } = await supabase
     .from("recibo_stock")
     .delete()
@@ -251,5 +392,6 @@ export async function cargarAStockDesdeRecibo(reciboId: string, repartidorId: st
 
   revalidatePath("/empresa/webapp/inventario/recibo");
   revalidatePath("/empresa/webapp/inventario/stock");
+  revalidatePath("/empresa/webapp/inventario/jci");
   return { success: true };
 }

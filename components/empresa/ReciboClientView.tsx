@@ -1,7 +1,7 @@
 'use client';
 
 // React y Framework
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 // Librerías externas
 import * as XLSX from 'xlsx';
@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 // Server Actions
 import {
   registrarEquipoRecibo,
+  registrarLoteEquiposRecibo,
   eliminarEquipoRecibo,
   actualizarEquipoRecibo,
   cargarAStockDesdeRecibo,
@@ -21,6 +22,7 @@ import EditReciboModal from '@/components/empresa/EditReciboModal';
 import ConfirmModal from '@/components/empresa/ConfirmModal';
 import AlertModal from '@/components/empresa/AlertModal';
 import CargarStockReciboModal from '@/components/empresa/recibo/CargarStockReciboModal';
+import PreCargaReciboModal from '@/components/empresa/recibo/PreCargaReciboModal';
 
 // Subcomponentes del módulo Recibo
 import ProveedorSelector from '@/components/empresa/recibo/ProveedorSelector';
@@ -33,7 +35,7 @@ import { PROVEEDORES, formatFecha } from '@/utils/recibo';
 
 // Tipos
 import type { Product } from '@/types/stock';
-import type { ReciboItem, TipoEquipo } from '@/types/recibo';
+import type { ReciboItem, TipoEquipo, PreCargaItem } from '@/types/recibo';
 
 // Re-exportar ReciboItem por compatibilidad con otros módulos
 export type { ReciboItem };
@@ -66,7 +68,8 @@ export default function ReciboClientView({
   zonasReparto = [],
 }: ReciboClientViewProps) {
   // 1. Estados principales del formulario
-  const [selectedProveedor, setSelectedProveedor] = useState<string>('Tijuana');
+  const [selectedArea, setSelectedArea] = useState<string>('Tijuana');
+  const [selectedProveedor, setSelectedProveedor] = useState<string>('Android Tj');
   const [selectedTipoEquipo, setSelectedTipoEquipo] = useState<TipoEquipo>('credito');
   const [selectedMarca, setSelectedMarca] = useState<string>('');
   const [selectedProductoId, setSelectedProductoId] = useState<string>('');
@@ -83,14 +86,44 @@ export default function ReciboClientView({
   const [isCargarModalOpen, setIsCargarModalOpen] = useState<boolean>(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Estados de Pre-carga de equipos
+  const [precargaItems, setPrecargaItems] = useState<PreCargaItem[]>([]);
+  const [isPreCargaModalOpen, setIsPreCargaModalOpen] = useState<boolean>(false);
+  const [isConfirmingPreCarga, setIsConfirmingPreCarga] = useState<boolean>(false);
+
+  // Sincronización de pre-carga con localStorage para evitar pérdidas por recarga accidental
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('finvora_recibo_precarga');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setPrecargaItems(parsed);
+        }
+      }
+    } catch (err) {
+      console.error('Error al cargar pre-carga de localStorage:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('finvora_recibo_precarga', JSON.stringify(precargaItems));
+    } catch (err) {
+      console.error('Error al guardar pre-carga en localStorage:', err);
+    }
+  }, [precargaItems]);
+
   // 3. Lista reactiva de items de recibo
   const [items, setItems] = useState<ReciboItem[]>(itemsIniciales);
 
   // 4. Cálculos derivados (Sigla, catálogo filtrado y marcas disponibles)
   const activeSigla = useMemo(() => {
-    const proveedorEncontrado = PROVEEDORES.find((proveedor) => proveedor.label === selectedProveedor);
+    const proveedorEncontrado = PROVEEDORES.find(
+      (p) => p.area === selectedArea || p.label === selectedArea || p.proveedor === selectedProveedor
+    );
     return proveedorEncontrado?.sigla || 'TIJ';
-  }, [selectedProveedor]);
+  }, [selectedArea, selectedProveedor]);
 
   const productosPorProveedor = useMemo(() => {
     return productos.filter((producto) => {
@@ -117,8 +150,9 @@ export default function ReciboClientView({
   }, [productosPorProveedor, selectedMarca]);
 
   // 5. Handlers de selección
-  const handleProveedorChange = (proveedorLabel: string) => {
-    setSelectedProveedor(proveedorLabel);
+  const handleAreaProveedorChange = (area: string, proveedor: string) => {
+    setSelectedArea(area);
+    setSelectedProveedor(proveedor);
     setSelectedMarca('');
     setSelectedProductoId('');
   };
@@ -128,13 +162,13 @@ export default function ReciboClientView({
     setSelectedProductoId('');
   };
 
-  // 6. Registro de IMEI (utilizado tanto por scanner como por modal manual)
+  // 6. Registro de IMEI en la lista de Pre-carga (utilizado tanto por scanner como por modal manual)
   const handleRegisterImei = async (imeiToRegister: string): Promise<{ success: boolean; error?: string }> => {
     const cleanImei = imeiToRegister.trim();
     if (!cleanImei) {
       return { success: false, error: 'Debes ingresar un número de IMEI.' };
     }
-    if (!selectedProveedor) {
+    if (!selectedArea || !selectedProveedor) {
       return { success: false, error: 'Debes seleccionar el área del proveedor.' };
     }
     if (!selectedTipoEquipo) {
@@ -144,40 +178,131 @@ export default function ReciboClientView({
       return { success: false, error: 'Debes seleccionar Marca y Modelo en el formulario antes de registrar.' };
     }
 
-    const formData = new FormData();
-    formData.append('imei', cleanImei);
-    formData.append('producto_id', selectedProductoId);
-    formData.append('proveedor', selectedProveedor);
-    formData.append('tipo_equipo', selectedTipoEquipo);
-
-    const result = await registrarEquipoRecibo(formData);
-    if (result.error) {
-      return { success: false, error: result.error };
+    // 1. Validar que no esté duplicado en la lista de pre-carga actual
+    if (precargaItems.some((item) => item.imei === cleanImei)) {
+      return { success: false, error: `El IMEI ${cleanImei} ya se encuentra agregado en la lista de pre-carga.` };
     }
 
-    if (result.success && result.item) {
-      const productoSeleccionado = productos.find((producto) => producto.id === selectedProductoId);
-      const newItem: ReciboItem = {
-        ...result.item,
-        productos: productoSeleccionado
-          ? {
-              marca: productoSeleccionado.marca,
-              modelo: productoSeleccionado.modelo,
-              color: productoSeleccionado.color,
-              almacenamiento: productoSeleccionado.almacenamiento,
-              ram: productoSeleccionado.ram,
-            }
-          : null,
-      };
-      setItems((prev) => [newItem, ...prev]);
+    // 2. Validar que no exista ya en los items de la base de datos cargados en pantalla
+    if (items.some((item) => item.imei === cleanImei)) {
+      return { success: false, error: `El IMEI ${cleanImei} ya se encuentra registrado previamente en esta lista de recibo.` };
+    }
+
+    const productoSeleccionado = productos.find((producto) => producto.id === selectedProductoId);
+    const tempId = `precarga-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+    const newPreCargaItem: PreCargaItem = {
+      tempId,
+      imei: cleanImei,
+      producto_id: selectedProductoId,
+      area_proveedor: selectedArea,
+      proveedor: selectedProveedor,
+      tipo_equipo: selectedTipoEquipo,
+      fecha_ingreso: new Date().toISOString(),
+      productos: productoSeleccionado
+        ? {
+            marca: productoSeleccionado.marca,
+            modelo: productoSeleccionado.modelo,
+            color: productoSeleccionado.color,
+            almacenamiento: productoSeleccionado.almacenamiento,
+            ram: productoSeleccionado.ram,
+          }
+        : null,
+    };
+
+    setPrecargaItems((prev) => [newPreCargaItem, ...prev]);
+    setStatus({
+      type: 'success',
+      message: `Equipo con IMEI ${cleanImei} agregado a la pre-carga (${precargaItems.length + 1} en espera).`,
+    });
+
+    return { success: true };
+  };
+
+  // Handlers para administración de la Pre-carga
+  const handleDeleteFromPreCarga = (tempId: string) => {
+    setPrecargaItems((prev) => prev.filter((item) => item.tempId !== tempId));
+  };
+
+  const handleClearPreCarga = () => {
+    setPrecargaItems([]);
+  };
+
+  const handleConfirmarPreCarga = async () => {
+    if (precargaItems.length === 0) return;
+    setIsConfirmingPreCarga(true);
+
+    const lotePayload = precargaItems.map((item) => ({
+      imei: item.imei,
+      producto_id: item.producto_id,
+      area_proveedor: item.area_proveedor || selectedArea,
+      proveedor: item.proveedor || selectedProveedor,
+      tipo_equipo: item.tipo_equipo,
+    }));
+
+    const result = await registrarLoteEquiposRecibo(lotePayload);
+    if (result.error) {
+      setStatus({ type: 'error', message: result.error });
+      setIsConfirmingPreCarga(false);
+      return;
+    }
+
+    if (result.success && result.items) {
+      const nuevosItems: ReciboItem[] = result.items.map((savedRow: any) => {
+        const matchedProduct = productos.find((p) => p.id === savedRow.producto_id);
+        return {
+          ...savedRow,
+          productos: matchedProduct
+            ? {
+                marca: matchedProduct.marca,
+                modelo: matchedProduct.modelo,
+                color: matchedProduct.color,
+                almacenamiento: matchedProduct.almacenamiento,
+                ram: matchedProduct.ram,
+              }
+            : null,
+        };
+      });
+
+      setItems((prev) => [...nuevosItems, ...prev]);
+      setPrecargaItems([]);
+      setIsPreCargaModalOpen(false);
       setStatus({
         type: 'success',
-        message: `Equipo con IMEI ${result.item.imei} registrado con éxito en recibo.`,
+        message: `¡${nuevosItems.length} equipos guardados con éxito en la lista de recibo!`,
       });
-      return { success: true };
     }
 
-    return { success: false, error: 'No se pudo completar el registro del equipo.' };
+    setIsConfirmingPreCarga(false);
+  };
+
+  const handleExportExcelPreCarga = () => {
+    if (precargaItems.length === 0) {
+      alert('No hay equipos en la pre-carga para exportar.');
+      return;
+    }
+
+    const dataParaExcel = precargaItems.map((item) => {
+      const { fecha, hora } = formatFecha(item.fecha_ingreso);
+      return {
+        IMEI: item.imei,
+        Proveedor: item.proveedor,
+        Marca: item.productos?.marca || 'N/A',
+        Modelo: item.productos?.modelo || 'N/A',
+        Color: item.productos?.color || 'N/A',
+        Almacenamiento: item.productos?.almacenamiento || 'N/A',
+        RAM: item.productos?.ram || 'N/A',
+        'Tipo de Equipo': item.tipo_equipo === 'concesion' ? 'Concesión' : 'Crédito',
+        'Fecha Ingreso': `${fecha} ${hora}`,
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataParaExcel);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'PreCarga Recibo');
+
+    const hoy = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(workbook, `Finvora_PreCarga_Recibo_${selectedProveedor}_${hoy}.xlsx`);
   };
 
   const handleScanSuccess = async (scannedImei: string): Promise<{ success: boolean; error?: string }> => {
@@ -292,6 +417,7 @@ export default function ReciboClientView({
       const { fecha, hora } = formatFecha(item.fecha_ingreso);
       return {
         IMEI: item.imei,
+        'Área Proveedor': item.area_proveedor || item.proveedor,
         Proveedor: item.proveedor,
         Marca: item.productos?.marca || 'N/A',
         Modelo: item.productos?.modelo || 'N/A',
@@ -309,7 +435,7 @@ export default function ReciboClientView({
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Equipos Recibo');
 
     const hoy = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(workbook, `Finvora_Recibo_Equipos_${selectedProveedor}_${hoy}.xlsx`);
+    XLSX.writeFile(workbook, `Finvora_Recibo_Equipos_${selectedArea}_${hoy}.xlsx`);
   };
 
   return (
@@ -370,6 +496,18 @@ export default function ReciboClientView({
         onConfirm={handleConfirmCargarStock}
       />
 
+      {/* Modal de Pre-carga de Equipos */}
+      <PreCargaReciboModal
+        isOpen={isPreCargaModalOpen}
+        onClose={() => setIsPreCargaModalOpen(false)}
+        items={precargaItems}
+        onDeleteItem={handleDeleteFromPreCarga}
+        onClearAll={handleClearPreCarga}
+        onConfirm={handleConfirmarPreCarga}
+        isConfirming={isConfirmingPreCarga}
+        onExportExcel={handleExportExcelPreCarga}
+      />
+
       <div className="space-y-8">
         {/* Notificaciones de error o éxito */}
         {status && (
@@ -389,8 +527,9 @@ export default function ReciboClientView({
 
         {/* Sección 1: Selección de Plaza / Proveedor */}
         <ProveedorSelector
+          selectedArea={selectedArea}
           selectedProveedor={selectedProveedor}
-          onSelectProveedor={handleProveedorChange}
+          onSelectAreaProveedor={handleAreaProveedorChange}
         />
 
         {/* Sección 2: Selección de Tipo de Equipo */}
@@ -411,6 +550,56 @@ export default function ReciboClientView({
           onOpenScanner={() => setIsScannerOpen(true)}
           onOpenManualModal={() => setIsManualModalOpen(true)}
         />
+      </div>
+
+      {/* Botón de acceso previo a la Pre-carga */}
+      <div className="pt-2">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 sm:p-5 rounded-3xl bg-[#060b18] border border-[#16233a] hover:border-slate-700/80 transition-all shadow-xl shadow-black/20">
+          <div className="flex items-center gap-3.5 w-full sm:w-auto">
+            <div className="w-12 h-12 rounded-2xl bg-[#0c1424] border border-[#1c2a44] flex items-center justify-center shrink-0 text-sky-400 shadow-inner">
+              <span className="material-symbols-outlined text-2xl">pending_actions</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-base font-bold text-white tracking-wide">
+                  Bandeja de Pre-carga
+                </h4>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#0c1424] text-sky-400 border border-[#1c2a44]">
+                  {precargaItems.length}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+            <button
+              type="button"
+              onClick={() => setIsPreCargaModalOpen(true)}
+              className="w-full sm:w-auto flex items-center justify-center px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-semibold text-sm transition-all cursor-pointer shadow-md"
+            >
+              Pre-Carga
+            </button>
+
+            {precargaItems.length > 0 && (
+              <button
+                type="button"
+                onClick={handleConfirmarPreCarga}
+                disabled={isConfirmingPreCarga}
+                className="w-full sm:w-auto flex items-center justify-center px-5 py-2.5 rounded-xl bg-secondary text-slate-950 hover:bg-secondary/90 font-bold text-sm transition-all cursor-pointer shadow-lg shadow-secondary/20 disabled:opacity-50"
+                title="Guardar todos directamente en la tabla"
+              >
+                {isConfirmingPreCarga ? (
+                  <span className="flex items-center gap-2">
+                    <span className="animate-spin h-4 w-4 border-2 border-slate-950 border-t-transparent rounded-full" />
+                    <span>Registrando...</span>
+                  </span>
+                ) : (
+                  <span>Registrar</span>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Sección 5: Grilla de Equipos Registrados y Acciones */}

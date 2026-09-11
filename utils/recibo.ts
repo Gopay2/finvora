@@ -1,13 +1,22 @@
 import type { ProveedorOpcion } from '@/types/recibo';
 
 /**
- * Lista de proveedores habilitados con su etiqueta y sigla.
+ * Lista de áreas de proveedores y proveedores habilitados con su sigla.
  */
 export const PROVEEDORES: ProveedorOpcion[] = [
-  { label: 'Tijuana', sigla: 'TIJ' },
-  { label: 'Guadalajara', sigla: 'GDL' },
-  { label: 'Monterrey', sigla: 'MTY' },
+  { area: 'Tijuana', proveedor: 'Android Tj', sigla: 'TIJ', label: 'Tijuana' },
+  { area: 'Guadalajara', proveedor: 'WindCell', sigla: 'GDL', label: 'Guadalajara' },
+  { area: 'Monterrey', proveedor: 'Sbmx', sigla: 'MTY', label: 'Monterrey' },
 ];
+
+/**
+ * Mapa de relación entre Área de Proveedor y Proveedores (admite múltiples a futuro).
+ */
+export const AREAS_PROVEEDORES = {
+  Tijuana: ['Android Tj'],
+  Guadalajara: ['WindCell'],
+  Monterrey: ['Sbmx'],
+} as const;
 
 /**
  * Obtiene el código de color hexadecimal aproximado según el nombre del color del equipo.

@@ -219,13 +219,16 @@ export default function CargarStockReciboModal({
                 </div>
               </div>
 
-              {/* Proveedor */}
+              {/* Proveedor y Área */}
               <div className="bg-slate-900/60 border border-slate-800/60 rounded-xl p-2.5 sm:p-3">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
                   Proveedor
                 </span>
                 <span className="text-slate-200 font-semibold truncate text-xs sm:text-sm block">
                   {item.proveedor}
+                  {item.area_proveedor && item.area_proveedor !== item.proveedor && (
+                    <span className="text-slate-400 font-normal ml-1">({item.area_proveedor})</span>
+                  )}
                 </span>
               </div>
 

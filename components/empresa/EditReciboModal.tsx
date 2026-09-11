@@ -36,10 +36,15 @@ export default function EditReciboModal({
 
   // Sigla del proveedor del item para filtrar productos coincidentes
   const providerSigla = useMemo(() => {
-    if (!item?.proveedor) return '';
-    const p = PROVEEDORES.find((prov) => prov.label === item.proveedor);
+    if (!item?.proveedor && !item?.area_proveedor) return '';
+    const p = PROVEEDORES.find(
+      (prov) =>
+        prov.proveedor === item.proveedor ||
+        prov.area === item.area_proveedor ||
+        prov.label === item.proveedor
+    );
     return p?.sigla || '';
-  }, [item?.proveedor]);
+  }, [item?.proveedor, item?.area_proveedor]);
 
   // Catálogo de productos disponibles para el proveedor del item (o todos si no coincide sigla)
   const productosDisponibles = useMemo(() => {
