@@ -63,6 +63,7 @@ export default async function ReciboPage() {
         id,
         imei,
         producto_id,
+        area_proveedor,
         proveedor,
         tipo_equipo,
         fecha_ingreso,
@@ -79,6 +80,31 @@ export default async function ReciboPage() {
 
     if (!reciboError && reciboData) {
       itemsIniciales = reciboData as unknown as ReciboItem[];
+    } else if (reciboError && (reciboError.message.includes("area_proveedor") || reciboError.code === "PGRST204" || reciboError.code === "42703")) {
+      // Fallback de compatibilidad si la columna area_proveedor aún no se ha ejecutado en Supabase
+      const { data: fallbackData } = await supabase
+        .from("recibo_stock")
+        .select(`
+          id,
+          imei,
+          producto_id,
+          proveedor,
+          tipo_equipo,
+          fecha_ingreso,
+          creado_por_username,
+          productos (
+            marca,
+            modelo,
+            color,
+            almacenamiento,
+            ram
+          )
+        `)
+        .order("fecha_ingreso", { ascending: false });
+
+      if (fallbackData) {
+        itemsIniciales = fallbackData as unknown as ReciboItem[];
+      }
     }
   } catch (fetchErr) {
     console.error("Error al obtener equipos de recibo_stock:", fetchErr);
