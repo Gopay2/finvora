@@ -34,8 +34,8 @@ const styles = {
   switchContainer: "flex items-center justify-between p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl",
   switchLabel: "text-xs font-semibold text-slate-300",
   switchDesc: "text-[11px] text-slate-500",
-  switchTrack: "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none self-center disabled:opacity-50",
-  switchThumb: "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-slate-950 shadow-lg ring-0 transition duration-200 ease-in-out",
+  switchTrack: "relative inline-flex items-center h-6 w-11 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none self-center disabled:opacity-50",
+  switchThumb: "pointer-events-none block h-5 w-5 transform rounded-full bg-slate-950 shadow-lg ring-0 transition duration-200 ease-in-out",
   chipsBox: "flex flex-wrap gap-2 min-h-[5rem] h-auto p-3.5 bg-slate-950/50 border border-slate-800/70 rounded-2xl items-start content-start overflow-y-auto custom-scrollbar",
   input: "w-full sm:w-28 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-base sm:text-sm text-slate-100 focus:outline-none transition-all",
 };

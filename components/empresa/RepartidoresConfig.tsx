@@ -244,11 +244,11 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
                             {/* Toggle Switch */}
                             <button
                               onClick={() => handleToggleActivo(r.id, r.activo)}
-                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${r.activo ? 'bg-secondary' : 'bg-slate-800'
+                              className={`relative inline-flex items-center h-5 w-9 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none ${r.activo ? 'bg-secondary' : 'bg-slate-800'
                                 }`}
                             >
                               <span
-                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-slate-950 shadow ring-0 transition duration-200 ease-in-out ${r.activo ? 'translate-x-4' : 'translate-x-0'
+                                className={`pointer-events-none block h-4 w-4 transform rounded-full bg-slate-950 shadow ring-0 transition duration-200 ease-in-out ${r.activo ? 'translate-x-4' : 'translate-x-0'
                                   }`}
                               />
                             </button>

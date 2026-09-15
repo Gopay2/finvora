@@ -35,14 +35,14 @@ export default function CatalogoVisibilityToggle({ id, initialVisible }: Catalog
         type="button"
         onClick={handleToggle}
         disabled={isPending}
-        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+        className={`relative inline-flex items-center h-6 w-11 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none ${
           visible ? "bg-secondary" : "bg-slate-800"
         } ${isPending ? "opacity-50 cursor-not-allowed" : ""}`}
         title={visible ? "Visible en la web (Hacer clic para ocultar)" : "Oculto en la web (Hacer clic para mostrar)"}
       >
         <span
           aria-hidden="true"
-          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-slate-950 shadow-lg ring-0 transition duration-200 ease-in-out ${
+          className={`pointer-events-none block h-5 w-5 transform rounded-full bg-slate-950 shadow-lg ring-0 transition duration-200 ease-in-out ${
             visible ? "translate-x-5" : "translate-x-0"
           }`}
         />

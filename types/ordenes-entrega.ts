@@ -41,8 +41,27 @@ export interface ConfigEngancheItem {
   zona?: string | null;
   vendedor_id?: string | null;
   vendedor_nombre?: string | null;
+  producto_id?: string | null;
+  proveedor?: string | null;
+  montos_fijos?: number[] | null;
+  producto_info?: {
+    marca: string;
+    modelo: string;
+    almacenamiento?: string | null;
+    ram?: string | null;
+    color?: string | null;
+  } | null;
   porcentajes: number[];
   permitir_enganche_libre?: boolean;
+}
+
+export interface CatalogProductOption {
+  id: string;
+  marca: string;
+  modelo: string;
+  almacenamiento?: string | null;
+  ram?: string | null;
+  color?: string | null;
 }
 
 export interface VendedorDisponible {

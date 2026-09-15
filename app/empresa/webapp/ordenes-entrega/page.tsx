@@ -49,9 +49,19 @@ export default async function OrdenesEntregaPage() {
     .select("producto_id, costo, costo_payjoy");
 
   // 4. Obtenemos las configuraciones de enganche
-  const { data: configEnganches } = await supabase
+  let configEnganchesDataList: any[] = [];
+  const { data: configEnganches, error: configEnganchesError } = await supabase
     .from("configuracion_enganche")
-    .select("id, cliente_historial, zona, vendedor_id, porcentajes, permitir_enganche_libre");
+    .select("id, cliente_historial, zona, vendedor_id, producto_id, proveedor, montos_fijos, porcentajes, permitir_enganche_libre");
+
+  if (configEnganchesError && configEnganchesError.code === "42703") {
+    const { data: fallbackEnganches } = await supabase
+      .from("configuracion_enganche")
+      .select("id, cliente_historial, zona, vendedor_id, porcentajes, permitir_enganche_libre");
+    configEnganchesDataList = fallbackEnganches || [];
+  } else {
+    configEnganchesDataList = configEnganches || [];
+  }
 
   // 5. Obtenemos las zonas de reparto con sus repartidores asociados
   const { data: zonasRepartoRaw } = await supabase
@@ -135,7 +145,7 @@ export default async function OrdenesEntregaPage() {
         zonasReparto={zonasReparto}
         stockItems={stockItems || []}
         costos={costos || []}
-        configEnganches={configEnganches || []}
+        configEnganches={configEnganchesDataList}
         repartosExistentes={repartosExistentes}
         currentUserId={userProfile.id}
       />
