@@ -278,67 +278,108 @@ export function CotizacionesCreditoClient({
   }, [selectedProductId, selectedPlaza, costos]);
 
   /**
-   * Resolución de porcentajes de enganche mediante jerarquía de 3 niveles:
-   * 1. Regla específica del vendedor conectado (Prioridad máxima).
-   * 2. Regla específica de la zona/plaza seleccionada (o de su plaza principal si no tiene regla propia).
-   * 3. Configuración general por defecto (Fallback base).
+   * Resolución de enganche mediante jerarquía comercial para Cotizaciones de Crédito:
+   * 1. Regla específica del equipo / producto seleccionado (Prioridad Máxima en cotizador - Montos Fijos en pesos o Porcentajes).
+   * 2. Regla específica del vendedor conectado (Prioridad 2 - Porcentajes).
+   * 3. Regla específica de la zona/plaza seleccionada o heredada de su plaza cabecera (Prioridad 3 - Porcentajes).
+   * 4. Configuración general por defecto (Prioridad 4 Fallback base - Porcentajes).
    */
-  const enganchePorcentajes = useMemo(() => {
-    if (!clienteHistorial) return [];
-
-    // Nivel 1 (Máxima Prioridad): Regla por Vendedor
-    if (currentUserId) {
-      const vendedorConfig = configEnganches.find(
-        (configItem) =>
-          configItem.vendedor_id === currentUserId &&
-          configItem.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
-      );
-      if (vendedorConfig && vendedorConfig.porcentajes && vendedorConfig.porcentajes.length > 0) {
-        return vendedorConfig.porcentajes;
-      }
+  const engancheResolucion = useMemo<{
+    tipo: 'fijo' | 'porcentaje';
+    montosFijos: number[];
+    porcentajes: number[];
+  }>(() => {
+    if (!clienteHistorial) {
+      return { tipo: 'porcentaje', montosFijos: [], porcentajes: [] };
     }
 
-    // Nivel 2: Regla por Plaza/Zona seleccionada
-    if (selectedPlaza) {
-      const normPlaza = selectedPlaza.toLowerCase().trim();
-      const plazaPrincipal = getPlazaCostoPrincipal(selectedPlaza).toLowerCase().trim();
+    const normHistorial = clienteHistorial.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-      // 2.1 Regla exacta de la zona (ej: "Mexicali", "Ensenada", "Rosarito", "Córdoba", "Tijuana")
-      const zoneConfig = configEnganches.find(
+    const isMatchHistorial = (historialStr?: string | null) => {
+      if (!historialStr) return false;
+      const clean = historialStr.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return clean === normHistorial;
+    };
+
+    // Nivel 1 (Máxima Prioridad en Cotizaciones): Regla por Equipo / Producto (Montos Fijos)
+    if (selectedProductId) {
+      const productConfig = configEnganches.find(
         (configItem) =>
           !configItem.vendedor_id &&
-          configItem.zona &&
-          configItem.zona.toLowerCase().trim() === normPlaza &&
-          configItem.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+          Boolean(configItem.producto_id) &&
+          String(configItem.producto_id).toLowerCase().trim() === String(selectedProductId).toLowerCase().trim() &&
+          isMatchHistorial(configItem.cliente_historial)
       );
-      if (zoneConfig && zoneConfig.porcentajes && zoneConfig.porcentajes.length > 0) {
-        return zoneConfig.porcentajes;
-      }
-
-      // 2.2 Si no tiene regla individual, hereda de la plaza principal si tiene regla (ej: "Tijuana")
-      if (plazaPrincipal !== normPlaza) {
-        const parentZoneConfig = configEnganches.find(
-          (configItem) =>
-            !configItem.vendedor_id &&
-            configItem.zona &&
-            configItem.zona.toLowerCase().trim() === plazaPrincipal &&
-            configItem.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
-        );
-        if (parentZoneConfig && parentZoneConfig.porcentajes && parentZoneConfig.porcentajes.length > 0) {
-          return parentZoneConfig.porcentajes;
+      if (productConfig) {
+        if (productConfig.montos_fijos && productConfig.montos_fijos.length > 0) {
+          return { tipo: 'fijo', montosFijos: productConfig.montos_fijos, porcentajes: [] };
+        }
+        if (productConfig.porcentajes && productConfig.porcentajes.length > 0) {
+          return { tipo: 'porcentaje', montosFijos: [], porcentajes: productConfig.porcentajes };
         }
       }
     }
 
-    // Nivel 3 (Fallback Base): Configuración General
+    // Nivel 2: Regla por Vendedor
+    if (currentUserId) {
+      const vendedorConfig = configEnganches.find(
+        (configItem) =>
+          configItem.vendedor_id === currentUserId &&
+          isMatchHistorial(configItem.cliente_historial)
+      );
+      if (vendedorConfig && vendedorConfig.porcentajes && vendedorConfig.porcentajes.length > 0) {
+        return { tipo: 'porcentaje', montosFijos: [], porcentajes: vendedorConfig.porcentajes };
+      }
+    }
+
+    // Nivel 3: Regla por Plaza/Zona seleccionada
+    if (selectedPlaza) {
+      const normPlaza = selectedPlaza.toLowerCase().trim();
+      const plazaPrincipal = getPlazaCostoPrincipal(selectedPlaza).toLowerCase().trim();
+
+      // 3.1 Regla exacta de la zona
+      const zoneConfig = configEnganches.find(
+        (configItem) =>
+          !configItem.vendedor_id &&
+          !configItem.producto_id &&
+          configItem.zona &&
+          configItem.zona.toLowerCase().trim() === normPlaza &&
+          isMatchHistorial(configItem.cliente_historial)
+      );
+      if (zoneConfig && zoneConfig.porcentajes && zoneConfig.porcentajes.length > 0) {
+        return { tipo: 'porcentaje', montosFijos: [], porcentajes: zoneConfig.porcentajes };
+      }
+
+      // 3.2 Herencia de la plaza principal
+      if (plazaPrincipal !== normPlaza) {
+        const parentZoneConfig = configEnganches.find(
+          (configItem) =>
+            !configItem.vendedor_id &&
+            !configItem.producto_id &&
+            configItem.zona &&
+            configItem.zona.toLowerCase().trim() === plazaPrincipal &&
+            isMatchHistorial(configItem.cliente_historial)
+        );
+        if (parentZoneConfig && parentZoneConfig.porcentajes && parentZoneConfig.porcentajes.length > 0) {
+          return { tipo: 'porcentaje', montosFijos: [], porcentajes: parentZoneConfig.porcentajes };
+        }
+      }
+    }
+
+    // Nivel 4 (Fallback Base): Configuración General
     const generalConfig = configEnganches.find(
       (configItem) =>
         !configItem.vendedor_id &&
         !configItem.zona &&
-        configItem.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+        !configItem.producto_id &&
+        isMatchHistorial(configItem.cliente_historial)
     );
-    return generalConfig ? generalConfig.porcentajes : [];
-  }, [clienteHistorial, selectedPlaza, configEnganches, currentUserId]);
+    return {
+      tipo: 'porcentaje',
+      montosFijos: [],
+      porcentajes: generalConfig ? generalConfig.porcentajes : [],
+    };
+  }, [clienteHistorial, selectedProductId, selectedPlaza, configEnganches, currentUserId]);
 
   /**
    * Cálculo reactivo de los Términos de Pago (Meses, Semanas, Monto Semanal y Total a Pagar)
@@ -558,14 +599,16 @@ export function CotizacionesCreditoClient({
             {/* 1. Tabla de Opciones de Enganche */}
             <div className={styles.tableWrapper}>
               <div className={styles.tableHeaderBox}>
-                <h4 className={styles.tableTitle}>
-                  Opciones de Enganche
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className={styles.tableTitle}>
+                    Opciones de Enganche
+                  </h4>
+                </div>
               </div>
 
-              {enganchePorcentajes.length === 0 ? (
+              {(engancheResolucion.tipo === 'fijo' ? engancheResolucion.montosFijos.length : engancheResolucion.porcentajes.length) === 0 ? (
                 <div className="p-6 text-center text-slate-400 text-sm">
-                  No hay porcentajes configurados para este tipo de cliente.
+                  No hay opciones de enganche configuradas para este tipo de cliente.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -573,7 +616,7 @@ export function CotizacionesCreditoClient({
                     <thead className="bg-slate-950 border-b border-slate-800/80">
                       <tr>
                         <th className="px-1.5 sm:px-4 py-3 sm:py-4 text-center font-semibold text-slate-400 uppercase text-[11px] sm:text-xs tracking-tight sm:tracking-wider">
-                          Porcentaje
+                          {engancheResolucion.tipo === 'fijo' ? "Monto Fijo" : "Porcentaje"}
                         </th>
                         <th className="px-1.5 sm:px-4 py-3 sm:py-4 text-center font-semibold text-slate-400 uppercase text-[11px] sm:text-xs tracking-tight sm:tracking-wider">
                           Monto a Cobrar
@@ -581,43 +624,82 @@ export function CotizacionesCreditoClient({
                       </tr>
                     </thead>
                     <tbody>
-                      {enganchePorcentajes.map((porcentaje, idx) => {
-                        const engancheCalculado = (matchedCosto! * (porcentaje / 100));
-                        const formattedValue = formatCurrency(engancheCalculado);
-                        const isCopied = copiedKey === `enganche-${idx}`;
+                      {engancheResolucion.tipo === 'fijo' ? (
+                        engancheResolucion.montosFijos.map((montoFijo, idx) => {
+                          const formattedValue = formatCurrency(montoFijo);
+                          const isCopied = copiedKey === `enganche-fijo-${idx}`;
 
-                        return (
-                          <tr key={`${porcentaje}-${idx}`} className={styles.tableTr}>
-                            <td className="px-1.5 sm:px-4 py-2.5 sm:py-4 font-bold text-secondary text-xs sm:text-base text-center whitespace-nowrap">
-                              {porcentaje}%
-                            </td>
-                            <td className="px-1.5 sm:px-4 py-2.5 sm:py-4 text-center">
-                              <div 
-                                onClick={() => handleCopyText(formattedValue, `enganche-${idx}`)}
-                                className="relative inline-block group cursor-pointer select-none"
-                                style={{ WebkitTapHighlightColor: "transparent" }}
-                                title="Copiar enganche"
-                              >
-                                <span className="text-white font-mono font-bold text-xs sm:text-base hover:text-secondary transition-colors whitespace-nowrap">
-                                  {formattedValue}
-                                </span>
-                                {/* Tooltip personalizado */}
-                                <div className={`absolute left-1/2 -translate-x-1/2 -top-10 transition-all duration-150 bg-slate-950/95 border border-slate-800 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap shadow-2xl pointer-events-none z-10 text-slate-300 backdrop-blur-md ${
-                                  isCopied 
-                                    ? "scale-100 opacity-100" 
-                                    : "scale-0 group-hover:scale-100 opacity-0 group-hover:opacity-100"
-                                }`}>
-                                  {isCopied ? (
-                                    <span className="text-emerald-400 font-bold">¡Copiado!</span>
-                                  ) : (
-                                    <span>Haz clic para copiar</span>
-                                  )}
+                          return (
+                            <tr key={`fijo-${montoFijo}-${idx}`} className={styles.tableTr}>
+                              <td className="px-1.5 sm:px-4 py-2.5 sm:py-4 font-bold text-secondary text-xs sm:text-base text-center whitespace-nowrap">
+                                Opción {idx + 1}
+                              </td>
+                              <td className="px-1.5 sm:px-4 py-2.5 sm:py-4 text-center">
+                                <div 
+                                  onClick={() => handleCopyText(formattedValue, `enganche-fijo-${idx}`)}
+                                  className="relative inline-block group cursor-pointer select-none"
+                                  style={{ WebkitTapHighlightColor: "transparent" }}
+                                  title="Copiar enganche"
+                                >
+                                  <span className="text-white font-mono font-bold text-xs sm:text-base hover:text-secondary transition-colors whitespace-nowrap">
+                                    {formattedValue}
+                                  </span>
+                                  {/* Tooltip personalizado */}
+                                  <div className={`absolute left-1/2 -translate-x-1/2 -top-10 transition-all duration-150 bg-slate-950/95 border border-slate-800 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap shadow-2xl pointer-events-none z-10 text-slate-300 backdrop-blur-md ${
+                                    isCopied 
+                                      ? "scale-100 opacity-100" 
+                                      : "scale-0 group-hover:scale-100 opacity-0 group-hover:opacity-100"
+                                  }`}>
+                                    {isCopied ? (
+                                      <span className="text-emerald-400 font-bold">¡Copiado!</span>
+                                    ) : (
+                                      <span>Haz clic para copiar</span>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        engancheResolucion.porcentajes.map((porcentaje, idx) => {
+                          const engancheCalculado = (matchedCosto! * (porcentaje / 100));
+                          const formattedValue = formatCurrency(engancheCalculado);
+                          const isCopied = copiedKey === `enganche-${idx}`;
+
+                          return (
+                            <tr key={`${porcentaje}-${idx}`} className={styles.tableTr}>
+                              <td className="px-1.5 sm:px-4 py-2.5 sm:py-4 font-bold text-secondary text-xs sm:text-base text-center whitespace-nowrap">
+                                {porcentaje}%
+                              </td>
+                              <td className="px-1.5 sm:px-4 py-2.5 sm:py-4 text-center">
+                                <div 
+                                  onClick={() => handleCopyText(formattedValue, `enganche-${idx}`)}
+                                  className="relative inline-block group cursor-pointer select-none"
+                                  style={{ WebkitTapHighlightColor: "transparent" }}
+                                  title="Copiar enganche"
+                                >
+                                  <span className="text-white font-mono font-bold text-xs sm:text-base hover:text-secondary transition-colors whitespace-nowrap">
+                                    {formattedValue}
+                                  </span>
+                                  {/* Tooltip personalizado */}
+                                  <div className={`absolute left-1/2 -translate-x-1/2 -top-10 transition-all duration-150 bg-slate-950/95 border border-slate-800 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap shadow-2xl pointer-events-none z-10 text-slate-300 backdrop-blur-md ${
+                                    isCopied 
+                                      ? "scale-100 opacity-100" 
+                                      : "scale-0 group-hover:scale-100 opacity-0 group-hover:opacity-100"
+                                  }`}>
+                                    {isCopied ? (
+                                      <span className="text-emerald-400 font-bold">¡Copiado!</span>
+                                    ) : (
+                                      <span>Haz clic para copiar</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>

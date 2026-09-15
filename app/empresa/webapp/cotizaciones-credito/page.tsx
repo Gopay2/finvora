@@ -37,14 +37,8 @@ export interface CostoProveedorItem {
   costo_payjoy: number | string;
 }
 
-export interface ConfigEngancheItem {
-  id?: string;
-  cliente_historial: string;
-  zona?: string | null;
-  vendedor_id?: string | null;
-  porcentajes: number[];
-  permitir_enganche_libre?: boolean;
-}
+import type { ConfigEngancheItem } from "@/types/ordenes-entrega";
+export type { ConfigEngancheItem };
 
 export default async function CotizacionesCreditoPage() {
   const userProfile = await getUserProfile();
@@ -85,6 +79,9 @@ export default async function CotizacionesCreditoPage() {
     cliente_historial: string;
     zona?: string | null;
     vendedor_id?: string | null;
+    producto_id?: string | null;
+    proveedor?: string | null;
+    montos_fijos?: number[] | null;
     porcentajes: number[] | null;
     permitir_enganche_libre?: boolean | null;
   }
@@ -111,16 +108,29 @@ export default async function CotizacionesCreditoPage() {
     costo_payjoy: Number(c.costo_payjoy) || 0,
   }));
 
-  // 3. Obtenemos las configuraciones de enganche (Si / No, Generales, por Zona y por Vendedor)
-  const { data: configEnganchesData } = await supabase
+  // 3. Obtenemos las configuraciones de enganche (Si / No, Generales, por Zona, por Equipo y por Vendedor)
+  let rawConfigsEnganche: RawConfigEnganche[] = [];
+  const { data: configEnganchesData, error: configEnganchesError } = await supabase
     .from("configuracion_enganche")
-    .select("id, cliente_historial, zona, vendedor_id, porcentajes, permitir_enganche_libre");
+    .select("id, cliente_historial, zona, vendedor_id, producto_id, proveedor, montos_fijos, porcentajes, permitir_enganche_libre");
 
-  const configEnganches: ConfigEngancheItem[] = ((configEnganchesData as unknown as RawConfigEnganche[]) || []).map((c: RawConfigEnganche) => ({
+  if (configEnganchesError && configEnganchesError.code === "42703") {
+    const { data: fallbackConfigs } = await supabase
+      .from("configuracion_enganche")
+      .select("id, cliente_historial, zona, vendedor_id, porcentajes, permitir_enganche_libre");
+    rawConfigsEnganche = (fallbackConfigs as unknown as RawConfigEnganche[]) || [];
+  } else {
+    rawConfigsEnganche = (configEnganchesData as unknown as RawConfigEnganche[]) || [];
+  }
+
+  const configEnganches: ConfigEngancheItem[] = rawConfigsEnganche.map((c: RawConfigEnganche) => ({
     id: c.id,
     cliente_historial: c.cliente_historial,
     zona: c.zona || null,
     vendedor_id: c.vendedor_id || null,
+    producto_id: c.producto_id || null,
+    proveedor: c.proveedor || null,
+    montos_fijos: c.montos_fijos || [],
     porcentajes: c.porcentajes || [],
     permitir_enganche_libre: Boolean(c.permitir_enganche_libre),
   }));

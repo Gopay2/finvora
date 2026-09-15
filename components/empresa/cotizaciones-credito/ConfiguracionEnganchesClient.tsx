@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useTransition, useEffect, useRef } from "react";
+import React, { useState, useTransition, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { ConfiguracionGeneralSection } from "./ConfiguracionGeneralSection";
 import { ConfiguracionZonasSection } from "./ConfiguracionZonasSection";
 import { ConfiguracionVendedoresSection } from "./ConfiguracionVendedoresSection";
+import { ConfiguracionProductosSection, type CatalogProductOption } from "./ConfiguracionProductosSection";
 import { ALL_PERCENTAGES } from "./PorcentajesPopoverSelector";
 import ConfirmModal from "@/components/empresa/ConfirmModal";
 
@@ -24,6 +25,8 @@ interface ConfiguracionEnganchesClientProps {
   initialConfigs: ConfigEngancheItem[];
   zonasDisponibles?: string[];
   vendedoresDisponibles?: VendedorDisponible[];
+  productosCatalogo?: CatalogProductOption[];
+  costosProveedores?: { producto_id: string; proveedor: string }[];
 }
 
 // ─── Funciones auxiliares de validación pura ─────────────────────────────────
@@ -63,6 +66,8 @@ export function ConfiguracionEnganchesClient({
   initialConfigs,
   zonasDisponibles = [],
   vendedoresDisponibles = [],
+  productosCatalogo = [],
+  costosProveedores = [],
 }: ConfiguracionEnganchesClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -79,7 +84,7 @@ export function ConfiguracionEnganchesClient({
   // Estado para el modal de confirmación de eliminación
   const [deleteModal, setDeleteModal] = useState<{
     id: string;
-    type: 'zona' | 'vendedor';
+    type: 'zona' | 'vendedor' | 'producto';
     name: string;
     clientType: string;
   } | null>(null);
@@ -89,30 +94,34 @@ export function ConfiguracionEnganchesClient({
   const zoneDropdownRef = useRef<HTMLDivElement | null>(null);
   const vendedorFormRef = useRef<HTMLDivElement | null>(null);
   const vendedorDropdownRef = useRef<HTMLDivElement | null>(null);
+  const productFormRef = useRef<HTMLDivElement | null>(null);
 
-  // 1. Separar configuraciones por nivel: General, Zona y Vendedor
+  // 1. Separar configuraciones por nivel: General, Zona, Producto y Vendedor
   const initialGeneralSi = initialConfigs.find(
-    (config) => !config.vendedor_id && !config.zona && config.cliente_historial.toLowerCase() === "si"
+    (config) => !config.vendedor_id && !config.zona && !config.producto_id && config.cliente_historial.toLowerCase() === "si"
   ) || {
     cliente_historial: "Si",
     zona: null,
     vendedor_id: null,
+    producto_id: null,
     porcentajes: [3, 5, 10, 15, 20, 25],
     permitir_enganche_libre: false,
   };
 
   const initialGeneralNo = initialConfigs.find(
-    (config) => !config.vendedor_id && !config.zona && config.cliente_historial.toLowerCase() === "no"
+    (config) => !config.vendedor_id && !config.zona && !config.producto_id && config.cliente_historial.toLowerCase() === "no"
   ) || {
     cliente_historial: "No",
     zona: null,
     vendedor_id: null,
+    producto_id: null,
     porcentajes: [5],
     permitir_enganche_libre: false,
   };
 
-  const initialZoneConfigs = initialConfigs.filter((config) => !config.vendedor_id && Boolean(config.zona));
+  const initialZoneConfigs = initialConfigs.filter((config) => !config.vendedor_id && !config.producto_id && Boolean(config.zona));
   const initialVendedorConfigs = initialConfigs.filter((config) => Boolean(config.vendedor_id));
+  const initialProductConfigs = initialConfigs.filter((config) => Boolean(config.producto_id));
 
   // Estados locales para General
   const [siGeneralPorcentajes, setSiGeneralPorcentajes] = useState<number[]>(initialGeneralSi.porcentajes || []);
@@ -141,26 +150,84 @@ export function ConfiguracionEnganchesClient({
   const [newVendedorEngancheLibre, setNewVendedorEngancheLibre] = useState<boolean>(false);
   const [isVendedorPercentDropdownOpen, setIsVendedorPercentDropdownOpen] = useState<boolean>(false);
 
+  // Estados locales para Equipos / Productos (Prioridad 2)
+  const [productConfigs, setProductConfigs] = useState<ConfigEngancheItem[]>(initialProductConfigs);
+  const [editingProductConfigId, setEditingProductConfigId] = useState<string | null>(null);
+  const [selectedProveedor, setSelectedProveedor] = useState<string>("Tijuana");
+  const [selectedProductMarca, setSelectedProductMarca] = useState<string>("");
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [selectedProductCliente, setSelectedProductCliente] = useState<'Si' | 'No'>("Si");
+  const [montosFijosList, setMontosFijosList] = useState<number[]>([]);
+  const [isProductMontoDropdownOpen, setIsProductMontoDropdownOpen] = useState<boolean>(false);
+  const productMontoDropdownRef = useRef<HTMLDivElement>(null);
+
+  const PROVEEDORES_LIST = ["Tijuana", "Monterrey", "Guadalajara"];
+
+  // Filtrado de productos por el proveedor seleccionado
+  const productosFiltradosPorProveedor = useMemo(() => {
+    if (!selectedProveedor) return productosCatalogo;
+    const targetSigla = selectedProveedor === "Guadalajara" ? "GDL" : selectedProveedor === "Monterrey" ? "MTY" : "TIJ";
+    return productosCatalogo.filter((p) => {
+      const matchSigla = `${p.modelo} ${p.marca}`.toUpperCase().includes(targetSigla);
+      const matchCosto = costosProveedores.some(
+        (c) => c.producto_id === p.id && c.proveedor.toLowerCase().trim() === selectedProveedor.toLowerCase().trim()
+      );
+      return matchSigla || matchCosto;
+    });
+  }, [productosCatalogo, costosProveedores, selectedProveedor]);
+
+  // Marcas únicas disponibles para el proveedor seleccionado
+  const marcasDisponiblesProducto = useMemo(() => {
+    const set = new Set<string>();
+    productosFiltradosPorProveedor.forEach((p: CatalogProductOption) => {
+      if (p.marca && p.marca.trim()) set.add(p.marca.trim().toUpperCase());
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [productosFiltradosPorProveedor]);
+
+  // Modelos disponibles para la marca y proveedor seleccionados
+  const productosDisponiblesMarca = useMemo(() => {
+    if (!selectedProductMarca) return [];
+    return productosFiltradosPorProveedor.filter(
+      (p: CatalogProductOption) => p.marca?.toUpperCase().trim() === selectedProductMarca.toUpperCase().trim()
+    );
+  }, [productosFiltradosPorProveedor, selectedProductMarca]);
+
+  // Cambiar proveedor resetea marca y producto
+  const handleProveedorChange = (proveedor: string) => {
+    setSelectedProveedor(proveedor);
+    setSelectedProductMarca("");
+    setSelectedProductId("");
+  };
+
+  // Cambiar marca resetea producto
+  const handleProductMarcaChange = (marca: string) => {
+    setSelectedProductMarca(marca);
+    setSelectedProductId("");
+  };
+
   // Sincronizar estados locales cuando initialConfigs cambia
   useEffect(() => {
     const generalSi = initialConfigs.find(
-      (c) => !c.vendedor_id && !c.zona && c.cliente_historial.toLowerCase() === "si"
+      (c) => !c.vendedor_id && !c.zona && !c.producto_id && c.cliente_historial.toLowerCase() === "si"
     );
     if (generalSi) {
       setSiGeneralPorcentajes(generalSi.porcentajes || []);
       setSiGeneralEngancheLibre(Boolean(generalSi.permitir_enganche_libre));
     }
     const generalNo = initialConfigs.find(
-      (c) => !c.vendedor_id && !c.zona && c.cliente_historial.toLowerCase() === "no"
+      (c) => !c.vendedor_id && !c.zona && !c.producto_id && c.cliente_historial.toLowerCase() === "no"
     );
     if (generalNo) {
       setNoGeneralPorcentajes(generalNo.porcentajes || []);
       setNoGeneralEngancheLibre(Boolean(generalNo.permitir_enganche_libre));
     }
-    const zoneItems = initialConfigs.filter((c) => !c.vendedor_id && Boolean(c.zona));
+    const zoneItems = initialConfigs.filter((c) => !c.vendedor_id && !c.producto_id && Boolean(c.zona));
     const vendedorItems = initialConfigs.filter((c) => Boolean(c.vendedor_id));
+    const productItems = initialConfigs.filter((c) => Boolean(c.producto_id));
     setZoneConfigs(zoneItems);
     setVendedorConfigs(vendedorItems);
+    setProductConfigs(productItems);
   }, [initialConfigs]);
 
   // Cerrar popovers al hacer clic afuera
@@ -171,6 +238,9 @@ export function ConfiguracionEnganchesClient({
       }
       if (vendedorDropdownRef.current && !vendedorDropdownRef.current.contains(event.target as Node)) {
         setIsVendedorPercentDropdownOpen(false);
+      }
+      if (productMontoDropdownRef.current && !productMontoDropdownRef.current.contains(event.target as Node)) {
+        setIsProductMontoDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -200,7 +270,11 @@ export function ConfiguracionEnganchesClient({
     engancheLibreActualizado: boolean
   ) => {
     const targetItem = initialConfigs.find(
-      (config) => !config.vendedor_id && !config.zona && config.cliente_historial.toLowerCase() === clienteHistorial.toLowerCase()
+      (config) =>
+        !config.vendedor_id &&
+        !config.zona &&
+        !config.producto_id &&
+        config.cliente_historial.toLowerCase() === clienteHistorial.toLowerCase()
     );
 
     const payload: ConfigEngancheUpdatePayload[] = [
@@ -209,6 +283,7 @@ export function ConfiguracionEnganchesClient({
         cliente_historial: clienteHistorial,
         zona: null,
         vendedor_id: null,
+        producto_id: null,
         porcentajes: porcentajesActualizados,
         permitir_enganche_libre: engancheLibreActualizado,
       },
@@ -583,6 +658,150 @@ export function ConfiguracionEnganchesClient({
     });
   };
 
+  // ─── 4. ACCIONES POR EQUIPOS / PRODUCTOS (Prioridad 2) ─────────────────────
+  const handleToggleProductMonto = (monto: number) => {
+    setMontosFijosList((prev) => {
+      if (prev.includes(monto)) {
+        return prev.filter((m) => m !== monto).sort((a, b) => a - b);
+      } else {
+        return [...prev, monto].sort((a, b) => a - b);
+      }
+    });
+  };
+
+  const handleAddCustomProductMonto = (monto: number) => {
+    setMontosFijosList((prev) => {
+      if (prev.includes(monto)) return prev;
+      return [...prev, monto].sort((a, b) => a - b);
+    });
+  };
+
+  const handleRemoveProductMonto = (monto: number) => {
+    setMontosFijosList((prev) => prev.filter((m) => m !== monto));
+  };
+
+  const handleClearProductMontos = () => {
+    setMontosFijosList([]);
+  };
+
+  const handleSaveProductConfig = () => {
+    if (!selectedProductId) {
+      showToast("error", "Por favor selecciona un modelo de celular.");
+      return;
+    }
+    if (montosFijosList.length === 0) {
+      showToast("error", "Debes agregar al menos un monto de enganche fijo.");
+      return;
+    }
+
+    if (!editingProductConfigId) {
+      const alreadyExists = productConfigs.some(
+        (c) =>
+          c.producto_id === selectedProductId &&
+          c.cliente_historial.toLowerCase() === selectedProductCliente.toLowerCase()
+      );
+      if (alreadyExists) {
+        showToast(
+          "error",
+          `Ya existe una regla para este equipo (${selectedProductCliente === "Si" ? "Con Historial" : "Sin Historial"}). Edítala desde la tabla.`
+        );
+        return;
+      }
+    }
+
+    const payload: ConfigEngancheUpdatePayload[] = [
+      {
+        id: editingProductConfigId || undefined,
+        producto_id: selectedProductId,
+        proveedor: selectedProveedor,
+        cliente_historial: selectedProductCliente,
+        montos_fijos: montosFijosList,
+        porcentajes: [],
+        permitir_enganche_libre: false,
+      },
+    ];
+
+    startTransition(async () => {
+      const response = await guardarConfiguracionesEnganche(payload);
+      if (response.success) {
+        const saved = response.savedConfigs?.[0];
+        const prodInfo = productosCatalogo.find((p) => p.id === selectedProductId);
+        const itemToSave: ConfigEngancheItem = saved || {
+          id: editingProductConfigId || `temp-${Date.now()}`,
+          producto_id: selectedProductId,
+          proveedor: selectedProveedor,
+          cliente_historial: selectedProductCliente,
+          montos_fijos: montosFijosList,
+          porcentajes: [],
+          permitir_enganche_libre: false,
+          producto_info: prodInfo
+            ? {
+                marca: prodInfo.marca,
+                modelo: prodInfo.modelo,
+                almacenamiento: prodInfo.almacenamiento,
+                ram: prodInfo.ram,
+                color: prodInfo.color,
+              }
+            : null,
+        };
+
+        if (editingProductConfigId) {
+          setProductConfigs((prev) =>
+            prev.map((item) => (item.id === editingProductConfigId ? itemToSave : item))
+          );
+          showToast("success", "Regla de equipo actualizada correctamente.");
+        } else {
+          setProductConfigs((prev) => [itemToSave, ...prev]);
+          showToast("success", "Regla de equipo agregada correctamente.");
+        }
+        handleCancelEditProduct();
+        router.refresh();
+      } else {
+        showToast("error", response.error || "Error al guardar la regla del equipo.");
+      }
+    });
+  };
+
+  const handleEditProductConfig = (config: ConfigEngancheItem) => {
+    setEditingProductConfigId(config.id || null);
+    setSelectedProductId(config.producto_id || "");
+    setSelectedProductCliente(config.cliente_historial.toLowerCase() === "no" ? "No" : "Si");
+    setMontosFijosList(config.montos_fijos || []);
+    setIsProductMontoDropdownOpen(false);
+
+    if (config.proveedor) {
+      setSelectedProveedor(config.proveedor);
+    }
+    const prod = productosCatalogo.find((p) => p.id === config.producto_id) || config.producto_info;
+    if (prod) {
+      setSelectedProductMarca(prod.marca.toUpperCase());
+    }
+
+    if (productFormRef.current) {
+      productFormRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
+
+  const handleCancelEditProduct = () => {
+    setEditingProductConfigId(null);
+    setSelectedProductId("");
+    setSelectedProductMarca("");
+    setMontosFijosList([]);
+    setIsProductMontoDropdownOpen(false);
+  };
+
+  const handleDeleteProductConfig = (id?: string, nombre?: string | null) => {
+    if (!id) return;
+    const item = productConfigs.find((c) => c.id === id);
+    const clientType = item?.cliente_historial.toLowerCase() === "si" ? "Con Historial" : "Sin Historial";
+    setDeleteModal({
+      id,
+      type: "producto",
+      name: nombre || "este equipo",
+      clientType,
+    });
+  };
+
   const handleConfirmDelete = () => {
     if (!deleteModal) return;
     const { id, type, name, clientType } = deleteModal;
@@ -592,12 +811,17 @@ export function ConfiguracionEnganchesClient({
       if (response.success) {
         showToast(
           "success",
-          `Excepción de ${type === "zona" ? "zona" : "vendedor"} para ${name} (${clientType}) eliminada.`
+          `Regla de ${type === "zona" ? "zona" : type === "producto" ? "equipo" : "vendedor"} para ${name} (${clientType}) eliminada.`
         );
         if (type === "zona") {
           setZoneConfigs((prev) => prev.filter((item) => item.id !== id));
           if (editingZoneConfigId === id) {
             handleCancelEditZone();
+          }
+        } else if (type === "producto") {
+          setProductConfigs((prev) => prev.filter((item) => item.id !== id));
+          if (editingProductConfigId === id) {
+            handleCancelEditProduct();
           }
         } else {
           setVendedorConfigs((prev) => prev.filter((item) => item.id !== id));
@@ -607,7 +831,7 @@ export function ConfiguracionEnganchesClient({
         }
         router.refresh();
       } else {
-        showToast("error", response.error || "Error al eliminar la excepción.");
+        showToast("error", response.error || "Error al eliminar la regla.");
       }
     });
   };
@@ -640,7 +864,7 @@ export function ConfiguracionEnganchesClient({
             Configuración de Enganches
           </h1>
           <p className="text-slate-500 text-sm">
-            Gestiona los porcentajes de enganche permitidos a nivel general, por zona y por vendedor para clientes con y sin historial crediticio.
+            Gestiona los porcentajes y montos fijos de enganche permitidos a nivel general, por zona, por equipo y por vendedor.
           </p>
         </div>
 
@@ -713,7 +937,38 @@ export function ConfiguracionEnganchesClient({
         }}
       />
 
-      {/* SECCIÓN 3: CONFIGURACIÓN POR VENDEDOR */}
+      {/* SECCIÓN 3: CONFIGURACIÓN POR EQUIPO */}
+      <ConfiguracionProductosSection
+        productConfigs={productConfigs}
+        editingProductConfigId={editingProductConfigId}
+        proveedoresDisponibles={PROVEEDORES_LIST}
+        selectedProveedor={selectedProveedor}
+        selectedMarca={selectedProductMarca}
+        selectedProductId={selectedProductId}
+        selectedCliente={selectedProductCliente}
+        montosFijosList={montosFijosList}
+        marcasDisponibles={marcasDisponiblesProducto}
+        productosDisponibles={productosDisponiblesMarca}
+        productFormRef={productFormRef}
+        productMontoDropdownRef={productMontoDropdownRef}
+        isProductMontoDropdownOpen={isProductMontoDropdownOpen}
+        isPending={isPending}
+        onChangeProveedor={handleProveedorChange}
+        onChangeMarca={handleProductMarcaChange}
+        onChangeProduct={setSelectedProductId}
+        onChangeCliente={setSelectedProductCliente}
+        onToggleProductMonto={handleToggleProductMonto}
+        onAddCustomProductMonto={handleAddCustomProductMonto}
+        onRemoveProductMonto={handleRemoveProductMonto}
+        onClearProductMontos={handleClearProductMontos}
+        onToggleProductMontoDropdown={() => setIsProductMontoDropdownOpen((prev) => !prev)}
+        onSaveProductConfig={handleSaveProductConfig}
+        onCancelEditProduct={handleCancelEditProduct}
+        onEditProductConfig={handleEditProductConfig}
+        onDeleteProductConfig={handleDeleteProductConfig}
+      />
+
+      {/* SECCIÓN 4: CONFIGURACIÓN POR VENDEDOR */}
       <ConfiguracionVendedoresSection
         vendedoresDisponibles={vendedoresDisponibles}
         vendedorConfigs={vendedorConfigs}
@@ -758,9 +1013,19 @@ export function ConfiguracionEnganchesClient({
         isOpen={Boolean(deleteModal)}
         onClose={() => setDeleteModal(null)}
         onConfirm={handleConfirmDelete}
-        title={deleteModal?.type === "zona" ? "¿Eliminar excepción de zona?" : "¿Eliminar excepción de vendedor?"}
-        message={`¿Estás seguro de que deseas eliminar la excepción para "${deleteModal?.name}" (${deleteModal?.clientType})? Volverá a regirse por la configuración ${
-          deleteModal?.type === "vendedor" ? "de su zona o general" : "general"
+        title={
+          deleteModal?.type === "zona"
+            ? "¿Eliminar excepción de zona?"
+            : deleteModal?.type === "producto"
+            ? "¿Eliminar regla de equipo?"
+            : "¿Eliminar excepción de vendedor?"
+        }
+        message={`¿Estás seguro de que deseas eliminar la regla para "${deleteModal?.name}" (${deleteModal?.clientType})? Volverá a regirse por la configuración ${
+          deleteModal?.type === "vendedor"
+            ? "de su equipo, zona o general"
+            : deleteModal?.type === "producto"
+            ? "de su zona o general"
+            : "general"
         }.`}
       />
     </div>

@@ -157,87 +157,134 @@ export default function OrdenesEntregaForm({
     const baseCostoPayjoy = Number(costoRecord.costo_payjoy) || 0;
     return baseCostoPayjoy;
   }, [selectedImei, stockItems, costos]);
+  /**
+   * Resolución de opciones de enganche en 4 niveles comerciales:
+   * 1. Nivel 1 (Máxima Prioridad): Regla por Vendedor (porcentajes).
+   * 2. Nivel 2 (Prioridad 2): Regla por Equipo/Producto (montos fijos directos en pesos).
+   * 3. Nivel 3: Regla por Zona/Plaza (porcentajes).
+   * 4. Nivel 4 (Fallback): Configuración General del sistema (porcentajes).
+   */
+  const engancheOpciones = useMemo<{
+    tipo: 'fijo' | 'porcentaje';
+    montosFijos: number[];
+    porcentajes: number[];
+  }>(() => {
+    if (!clienteHistorial) return { tipo: 'porcentaje', montosFijos: [], porcentajes: [] };
+    const normHistorial = clienteHistorial.toLowerCase().trim();
 
-  // Hook jerárquico de Porcentajes: Nivel 1 (Vendedor) -> Nivel 2 (Zona) -> Nivel 3 (General)
-  const enganchePorcentajes = useMemo(() => {
-    if (!clienteHistorial) return [];
-    
     // Nivel 1 (Máxima Prioridad): Regla por Vendedor
     if (currentUserId) {
       const vendedorConfig = configEnganches.find(
         (config) =>
           config.vendedor_id === currentUserId &&
-          config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+          config.cliente_historial.toLowerCase().trim() === normHistorial
       );
       if (vendedorConfig && vendedorConfig.porcentajes && vendedorConfig.porcentajes.length > 0) {
-        return vendedorConfig.porcentajes;
+        return { tipo: 'porcentaje', montosFijos: [], porcentajes: vendedorConfig.porcentajes };
       }
     }
 
-    // Nivel 2: Regla por Zona
+    // Nivel 2 (Prioridad 2 Comercial): Regla por Equipo / Producto (Montos Fijos)
+    const stockItem = selectedImei ? stockItems.find((s) => s.imei === selectedImei) : null;
+    const targetProdId = stockItem?.producto_id;
+    if (targetProdId) {
+      const productConfig = configEnganches.find(
+        (config) =>
+          !config.vendedor_id &&
+          config.producto_id === targetProdId &&
+          config.cliente_historial.toLowerCase().trim() === normHistorial
+      );
+      if (productConfig && productConfig.montos_fijos && productConfig.montos_fijos.length > 0) {
+        return { tipo: 'fijo', montosFijos: productConfig.montos_fijos, porcentajes: [] };
+      }
+    }
+
+    // Nivel 3: Regla por Zona
     if (selectedZona) {
       const normZona = selectedZona.toLowerCase().trim();
       const plazaPrincipal = getPlazaCostoPrincipal(selectedZona).toLowerCase().trim();
 
-      // Regla individual de la zona
       const zoneConfig = configEnganches.find(
         (config) =>
           !config.vendedor_id &&
+          !config.producto_id &&
           config.zona &&
           config.zona.toLowerCase().trim() === normZona &&
-          config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+          config.cliente_historial.toLowerCase().trim() === normHistorial
       );
       if (zoneConfig && zoneConfig.porcentajes && zoneConfig.porcentajes.length > 0) {
-        return zoneConfig.porcentajes;
+        return { tipo: 'porcentaje', montosFijos: [], porcentajes: zoneConfig.porcentajes };
       }
 
-      // Regla de plaza cabecera si no tiene individual
       if (plazaPrincipal !== normZona) {
         const parentZoneConfig = configEnganches.find(
           (config) =>
             !config.vendedor_id &&
+            !config.producto_id &&
             config.zona &&
             config.zona.toLowerCase().trim() === plazaPrincipal &&
-            config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+            config.cliente_historial.toLowerCase().trim() === normHistorial
         );
         if (parentZoneConfig && parentZoneConfig.porcentajes && parentZoneConfig.porcentajes.length > 0) {
-          return parentZoneConfig.porcentajes;
+          return { tipo: 'porcentaje', montosFijos: [], porcentajes: parentZoneConfig.porcentajes };
         }
       }
     }
 
-    // Nivel 3 (Fallback Base): Configuración General
+    // Nivel 4 (Fallback Base): Configuración General
     const generalConfig = configEnganches.find(
       (config) =>
         !config.vendedor_id &&
         !config.zona &&
-        config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+        !config.producto_id &&
+        config.cliente_historial.toLowerCase().trim() === normHistorial
     );
-    return generalConfig ? generalConfig.porcentajes : [];
-  }, [clienteHistorial, selectedZona, configEnganches, currentUserId]);
+    return {
+      tipo: 'porcentaje',
+      montosFijos: [],
+      porcentajes: generalConfig ? generalConfig.porcentajes : [],
+    };
+  }, [clienteHistorial, selectedImei, stockItems, selectedZona, configEnganches, currentUserId]);
 
   /**
-   * Determina si el enganche libre está habilitado siguiendo la jerarquía de 3 niveles:
+   * Determina si el enganche libre está habilitado siguiendo la jerarquía de 4 niveles:
    * 1. Nivel 1 (Máxima Prioridad): Regla asignada al Vendedor logueado.
-   * 2. Nivel 2: Regla de la Zona seleccionada (o su plaza principal).
-   * 3. Nivel 3 (Fallback): Configuración General del sistema.
+   * 2. Nivel 2: Regla del Equipo / Producto.
+   * 3. Nivel 3: Regla de la Zona seleccionada (o su plaza principal).
+   * 4. Nivel 4 (Fallback): Configuración General del sistema.
    */
   const isEngancheLibre = useMemo(() => {
     if (!clienteHistorial) return false;
+    const normHistorial = clienteHistorial.toLowerCase().trim();
 
     // Nivel 1 (Máxima Prioridad): Regla por Vendedor
     if (currentUserId) {
       const vendedorConfig = configEnganches.find(
         (config) =>
           config.vendedor_id === currentUserId &&
-          config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+          config.cliente_historial.toLowerCase().trim() === normHistorial
       );
       if (vendedorConfig !== undefined && typeof vendedorConfig.permitir_enganche_libre === "boolean") {
         return vendedorConfig.permitir_enganche_libre;
       }
     }
 
-    // Nivel 2: Regla por Zona
+    // Nivel 2: Regla por Equipo
+    const stockItem = selectedImei ? stockItems.find((s) => s.imei === selectedImei) : null;
+    const targetProdId = stockItem?.producto_id;
+    if (targetProdId) {
+      const productConfig = configEnganches.find(
+        (config) =>
+          !config.vendedor_id &&
+          config.producto_id === targetProdId &&
+          config.cliente_historial.toLowerCase().trim() === normHistorial
+      );
+      if (productConfig && productConfig.montos_fijos && productConfig.montos_fijos.length > 0) {
+        return Boolean(productConfig.permitir_enganche_libre);
+      }
+    }
+
+    // Nivel 3: Regla por Zona
     if (selectedZona) {
       const normZona = selectedZona.toLowerCase().trim();
       const plazaPrincipal = getPlazaCostoPrincipal(selectedZona).toLowerCase().trim();
@@ -245,9 +292,10 @@ export default function OrdenesEntregaForm({
       const zoneConfig = configEnganches.find(
         (config) =>
           !config.vendedor_id &&
+          !config.producto_id &&
           config.zona &&
           config.zona.toLowerCase().trim() === normZona &&
-          config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+          config.cliente_historial.toLowerCase().trim() === normHistorial
       );
       if (zoneConfig !== undefined && typeof zoneConfig.permitir_enganche_libre === "boolean") {
         return zoneConfig.permitir_enganche_libre;
@@ -257,9 +305,10 @@ export default function OrdenesEntregaForm({
         const parentZoneConfig = configEnganches.find(
           (config) =>
             !config.vendedor_id &&
+            !config.producto_id &&
             config.zona &&
             config.zona.toLowerCase().trim() === plazaPrincipal &&
-            config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+            config.cliente_historial.toLowerCase().trim() === normHistorial
         );
         if (parentZoneConfig !== undefined && typeof parentZoneConfig.permitir_enganche_libre === "boolean") {
           return parentZoneConfig.permitir_enganche_libre;
@@ -267,15 +316,16 @@ export default function OrdenesEntregaForm({
       }
     }
 
-    // Nivel 3 (Fallback Base): Configuración General
+    // Nivel 4 (Fallback Base): Configuración General
     const generalConfig = configEnganches.find(
       (config) =>
         !config.vendedor_id &&
         !config.zona &&
-        config.cliente_historial.toLowerCase().trim() === clienteHistorial.toLowerCase().trim()
+        !config.producto_id &&
+        config.cliente_historial.toLowerCase().trim() === normHistorial
     );
     return Boolean(generalConfig?.permitir_enganche_libre);
-  }, [clienteHistorial, selectedZona, configEnganches, currentUserId]);
+  }, [clienteHistorial, selectedImei, stockItems, selectedZona, configEnganches, currentUserId]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -579,7 +629,8 @@ export default function OrdenesEntregaForm({
         selectedProductCost={selectedProductCost}
         engancheValue={engancheValue}
         setEngancheValue={setEngancheValue}
-        enganchePorcentajes={enganchePorcentajes}
+        enganchePorcentajes={engancheOpciones.porcentajes}
+        engancheMontosFijos={engancheOpciones.montosFijos}
         isEngancheLibre={isEngancheLibre}
       />
 

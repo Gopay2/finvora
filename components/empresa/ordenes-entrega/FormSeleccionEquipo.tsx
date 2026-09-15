@@ -35,6 +35,7 @@ interface FormSeleccionEquipoProps {
   engancheValue: string;
   setEngancheValue: (val: string) => void;
   enganchePorcentajes: number[];
+  engancheMontosFijos?: number[];
   isEngancheLibre?: boolean;
 }
 
@@ -64,6 +65,7 @@ export function FormSeleccionEquipo({
   engancheValue,
   setEngancheValue,
   enganchePorcentajes,
+  engancheMontosFijos = [],
   isEngancheLibre = false,
 }: FormSeleccionEquipoProps) {
   const styles = {
@@ -280,7 +282,9 @@ export function FormSeleccionEquipo({
 
       {selectedProductCost > 0 && !isEngancheLibre ? (
         <div className={styles.inputGroup}>
-          <label className={styles.label}>Enganche</label>
+          <label className={styles.label}>
+            Enganche
+          </label>
           <select
             name="enganche"
             value={engancheValue}
@@ -294,14 +298,25 @@ export function FormSeleccionEquipo({
             <option value="" className="bg-slate-950 text-slate-500 italic">
               {!clienteHistorial ? "Primero elija historial" : "Seleccione..."}
             </option>
-            {enganchePorcentajes.map((porcentajeValue) => {
-              const valorCalculado = (selectedProductCost * (porcentajeValue / 100)).toFixed(2);
-              return (
-                <option key={porcentajeValue} value={valorCalculado} className="bg-slate-950 text-white">
-                  ${valorCalculado} ({porcentajeValue}%)
-                </option>
-              );
-            })}
+            {engancheMontosFijos && engancheMontosFijos.length > 0 ? (
+              engancheMontosFijos.map((monto) => {
+                const valorCalculado = Number(monto).toFixed(2);
+                return (
+                  <option key={monto} value={valorCalculado} className="bg-slate-950 text-white">
+                    ${valorCalculado}
+                  </option>
+                );
+              })
+            ) : (
+              enganchePorcentajes.map((porcentajeValue) => {
+                const valorCalculado = (selectedProductCost * (porcentajeValue / 100)).toFixed(2);
+                return (
+                  <option key={porcentajeValue} value={valorCalculado} className="bg-slate-950 text-white">
+                    ${valorCalculado} ({porcentajeValue}%)
+                  </option>
+                );
+              })
+            )}
           </select>
         </div>
       ) : (
