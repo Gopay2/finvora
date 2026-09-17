@@ -11,6 +11,8 @@ interface FormCamposFinancierosComprobanteProps {
   setSelectedPlazo: (val: string) => void;
   selectedFileName: string;
   handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  selectedFotoClienteName: string;
+  handleFotoClienteChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export function FormCamposFinancierosComprobante({
@@ -19,7 +21,9 @@ export function FormCamposFinancierosComprobante({
   selectedPlazo,
   setSelectedPlazo,
   selectedFileName,
-  handleFileChange
+  handleFileChange,
+  selectedFotoClienteName,
+  handleFotoClienteChange
 }: FormCamposFinancierosComprobanteProps) {
   return (
     <>
@@ -206,29 +210,59 @@ export function FormCamposFinancierosComprobante({
         />
       </div>
 
-      {/* DOCUMENTO / FOTO */}
-      <div className="space-y-2 md:col-span-3">
-        <label className={styles.label}>Comprobante (Imagen o PDF)</label>
-        <div className={styles.fileUploadBox}>
-          <input
-            type="file"
-            name="comprobante"
-            accept="image/*,.pdf"
-            onChange={handleFileChange}
-            required
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-            suppressHydrationWarning
-          />
-          <div className="flex items-center gap-2 text-center max-w-full px-2">
-            <span className="material-symbols-outlined text-slate-500 group-hover:text-secondary text-xl transition-colors shrink-0">
-              cloud_upload
-            </span>
-            <p
-              className="text-xs text-slate-300 font-medium truncate max-w-[200px] sm:max-w-[300px] md:max-w-md"
-              title={selectedFileName || "Subir comprobante"}
-            >
-              {selectedFileName ? selectedFileName : "Subir comprobante"}
-            </p>
+      {/* DOCUMENTOS / FOTOS: Comprobante y Foto cliente en 50% 50% en PC */}
+      <div className="space-y-4 md:space-y-0 md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* COMPROBANTE */}
+        <div className="space-y-2">
+          <label className={styles.label}>Comprobante (Imagen o PDF)</label>
+          <div className={styles.fileUploadBox}>
+            <input
+              type="file"
+              name="comprobante"
+              accept="image/*,.pdf"
+              onChange={handleFileChange}
+              required
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              suppressHydrationWarning
+            />
+            <div className="flex items-center gap-2 text-center max-w-full px-2">
+              <span className="material-symbols-outlined text-slate-500 group-hover:text-secondary text-xl transition-colors shrink-0">
+                cloud_upload
+              </span>
+              <p
+                className="text-xs text-slate-300 font-medium truncate max-w-[200px] sm:max-w-[300px] md:max-w-md"
+                title={selectedFileName || "Subir comprobante"}
+              >
+                {selectedFileName ? selectedFileName : "Subir comprobante"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* FOTO CLIENTE */}
+        <div className="space-y-2">
+          <label className={styles.label}>Foto cliente (Imagen o PDF)</label>
+          <div className={styles.fileUploadBox}>
+            <input
+              type="file"
+              name="foto_cliente"
+              accept="image/*,.pdf"
+              onChange={handleFotoClienteChange}
+              required
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              suppressHydrationWarning
+            />
+            <div className="flex items-center gap-2 text-center max-w-full px-2">
+              <span className="material-symbols-outlined text-slate-500 group-hover:text-secondary text-xl transition-colors shrink-0">
+                cloud_upload
+              </span>
+              <p
+                className="text-xs text-slate-300 font-medium truncate max-w-[200px] sm:max-w-[300px] md:max-w-md"
+                title={selectedFotoClienteName || "Subir foto de cliente"}
+              >
+                {selectedFotoClienteName ? selectedFotoClienteName : "Subir foto de cliente"}
+              </p>
+            </div>
           </div>
         </div>
       </div>

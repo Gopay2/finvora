@@ -31,6 +31,7 @@ export default function ComprobantesForm({
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState("");
+  const [selectedFotoClienteName, setSelectedFotoClienteName] = useState("");
   const [operationStatus, setOperationStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Estados para selección de equipo y ubicaciones
@@ -166,6 +167,32 @@ export default function ComprobantesForm({
     }
   };
 
+  const handleFotoClienteChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const maxSizeBytes = 5 * 1024 * 1024;
+      if (file.size > maxSizeBytes) {
+        setOperationStatus({ type: 'error', message: "La foto del cliente excede el tamaño máximo permitido de 5MB." });
+        event.target.value = "";
+        setSelectedFotoClienteName("");
+        return;
+      }
+
+      const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+      if (!allowedMimeTypes.includes(file.type)) {
+        setOperationStatus({ type: 'error', message: "Formato no permitido para foto del cliente. Solo se aceptan imágenes (JPG, PNG, WEBP) o PDF." });
+        event.target.value = "";
+        setSelectedFotoClienteName("");
+        return;
+      }
+
+      setOperationStatus(null);
+      setSelectedFotoClienteName(file.name);
+    } else {
+      setSelectedFotoClienteName("");
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
@@ -213,6 +240,12 @@ export default function ComprobantesForm({
       return;
     }
 
+    if (!selectedFotoClienteName) {
+      setOperationStatus({ type: 'error', message: 'Por favor, sube la foto del cliente (es obligatoria).' });
+      setIsSubmitting(false);
+      return;
+    }
+
     const formData = new FormData(event.currentTarget);
     const submitResponse = await submitComprobante(formData);
 
@@ -220,6 +253,7 @@ export default function ComprobantesForm({
       setOperationStatus({ type: 'success', message: '¡Comprobante registrado y cargado exitosamente!' });
       formRef.current?.reset();
       setSelectedFileName("");
+      setSelectedFotoClienteName("");
       setVendedorSearch("");
       setSelectedVendedor(null);
       setSelectedRepartidorId("");
@@ -291,6 +325,8 @@ export default function ComprobantesForm({
           setSelectedPlazo={setSelectedPlazo}
           selectedFileName={selectedFileName}
           handleFileChange={handleFileChange}
+          selectedFotoClienteName={selectedFotoClienteName}
+          handleFotoClienteChange={handleFotoClienteChange}
         />
       </div>
 

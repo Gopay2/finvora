@@ -108,28 +108,43 @@ export default function ComprobantesHistorial({
     for (let index = 0; index < filteredList.length; index++) {
       const comprobante = filteredList[index];
       const comprobanteUrl = comprobante.comprobante_url;
+      const fotoClienteUrl = comprobante.foto_cliente_url;
       setDownloadProgress(`Descargando ${index + 1} de ${filteredList.length}...`);
 
-      try {
-        const response = await fetch(comprobanteUrl);
-        const blob = await response.blob();
+      const vendorName = comprobante.vendedor?.username || 'vendedor';
+      const formattedDate = new Intl.DateTimeFormat('es-MX', {
+        timeZone: 'America/Tijuana',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).format(new Date(comprobante.created_at)).replace(/[/:\s,]/g, '_');
 
-        const fileExtension = comprobanteUrl.split('.').pop()?.split('?')[0] || 'bin';
-        const vendorName = comprobante.vendedor?.username || 'vendedor';
-        const formattedDate = new Intl.DateTimeFormat('es-MX', {
-          timeZone: 'America/Tijuana',
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false
-        }).format(new Date(comprobante.created_at)).replace(/[/:\s,]/g, '_');
+      if (comprobanteUrl) {
+        try {
+          const response = await fetch(comprobanteUrl);
+          const blob = await response.blob();
+          const fileExtension = comprobanteUrl.split('.').pop()?.split('?')[0] || 'bin';
+          const fileName = `Comprobante_${vendorName}_${formattedDate}.${fileExtension}`;
+          zip.file(fileName, blob);
+        } catch (error) {
+          console.error("Error al agregar archivo al ZIP:", comprobanteUrl, error);
+        }
+      }
 
-        const fileName = `Comprobante_${vendorName}_${formattedDate}.${fileExtension}`;
-        zip.file(fileName, blob);
-      } catch (error) {
-        console.error("Error al agregar archivo al ZIP:", comprobanteUrl, error);
+      if (fotoClienteUrl) {
+        try {
+          const responseFoto = await fetch(fotoClienteUrl);
+          const blobFoto = await responseFoto.blob();
+          const fileExtensionFoto = fotoClienteUrl.split('.').pop()?.split('?')[0] || 'jpg';
+          const fileNameFoto = `FotoCliente_${vendorName}_${formattedDate}.${fileExtensionFoto}`;
+          zip.file(fileNameFoto, blobFoto);
+        } catch (error) {
+          console.error("Error al agregar foto de cliente al ZIP:", fotoClienteUrl, error);
+        }
       }
     }
 
@@ -261,15 +276,28 @@ export default function ComprobantesHistorial({
                     )}
                   </td>
                   <td className={styles.td}>
-                    <a
-                      href={comprobante.comprobante_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={styles.linkBtn}
-                      title="Ver archivo"
-                    >
-                      <span className="material-symbols-outlined text-lg">open_in_new</span>
-                    </a>
+                    <div className="flex items-center justify-center gap-2">
+                      <a
+                        href={comprobante.comprobante_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.linkBtn}
+                        title="Ver comprobante"
+                      >
+                        <span className="material-symbols-outlined text-lg">open_in_new</span>
+                      </a>
+                      {comprobante.foto_cliente_url && (
+                        <a
+                          href={comprobante.foto_cliente_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.linkBtn}
+                          title="Ver foto cliente"
+                        >
+                          <span className="material-symbols-outlined text-lg">open_in_new</span>
+                        </a>
+                      )}
+                    </div>
                   </td>
                   <td className={styles.td}>
                     <div className="flex items-center justify-center">
