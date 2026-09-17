@@ -106,7 +106,8 @@ export default function DownloadExcelButton({ data, type, repartidores, label, c
         "Precio Total": item.precio_total ?? "",
         "Tag": item.tag || "",
         "Cargado Por": item.creador?.username || "Desconocido",
-        "URL Comprobante": item.comprobante_url
+        "URL Comprobante": item.comprobante_url,
+        "URL Foto Cliente": item.foto_cliente_url || ""
       }));
     }
     else if (type === 'ordenes_entrega') {

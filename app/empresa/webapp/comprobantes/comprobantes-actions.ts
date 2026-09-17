@@ -26,6 +26,7 @@ export interface ComprobanteRecord {
   imei: string | null;
   fecha_proximo_pago?: string | null;
   comprobante_url: string;
+  foto_cliente_url?: string | null;
   created_at: string;
   costo_equipo?: number;
   vendedor: {
@@ -72,6 +73,7 @@ interface ComprobanteRawResponse {
   imei: string | null;
   fecha_proximo_pago?: string | null;
   comprobante_url: string;
+  foto_cliente_url?: string | null;
   created_at: string;
   vendedor: PerfilSubQuery | PerfilSubQuery[] | null;
   repartidor: RepartidorSubQuery | RepartidorSubQuery[] | null;
@@ -83,19 +85,24 @@ interface ComprobanteRawResponse {
  * Accesible por: Admin, Supervisor, Developer, Repartidor.
  */
 /**
- * Sube un archivo de comprobante al storage de Supabase.
+ * Sube un archivo (comprobante o foto del cliente) al storage de Supabase en el bucket 'comprobantes'.
  */
-async function uploadComprobanteFile(
+async function uploadFileToStorage(
   file: File,
-  supabase: any
+  supabase: any,
+  subfolder: string = 'comprobantes',
+  allowedMimeTypes: string[] = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+  fileTypeName: string = 'archivo'
 ): Promise<{ success: boolean; publicUrl?: string; error?: string }> {
   try {
     // 1. Validar tipo MIME (lista blanca estricta)
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
     if (!allowedMimeTypes.includes(file.type)) {
+      const allowedMsg = allowedMimeTypes.includes('application/pdf')
+        ? "Solo se aceptan imágenes (JPG, PNG, WEBP) o archivos PDF."
+        : "Solo se aceptan imágenes (JPG, PNG, WEBP).";
       return {
         success: false,
-        error: "Formato no permitido. Solo se aceptan imágenes (JPG, PNG, WEBP) o archivos PDF."
+        error: `Formato no permitido para ${fileTypeName}. ${allowedMsg}`
       };
     }
 
@@ -104,7 +111,7 @@ async function uploadComprobanteFile(
     if (file.size > maxSizeBytes) {
       return {
         success: false,
-        error: "El archivo excede el tamaño máximo permitido de 5MB."
+        error: `El ${fileTypeName} excede el tamaño máximo permitido de 5MB.`
       };
     }
 
@@ -112,7 +119,7 @@ async function uploadComprobanteFile(
     const rawExt = file.name.split('.').pop()?.toLowerCase() || 'png';
     const safeExt = ['jpg', 'jpeg', 'png', 'webp', 'pdf'].includes(rawExt) ? rawExt : 'png';
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${safeExt}`;
-    const filePath = `comprobantes/${fileName}`;
+    const filePath = `${subfolder}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('comprobantes')
@@ -123,8 +130,8 @@ async function uploadComprobanteFile(
       });
 
     if (uploadError) {
-      console.error("Error al subir archivo a storage:", uploadError);
-      return { success: false, error: "Error al subir el comprobante a almacenamiento." };
+      console.error(`Error al subir ${fileTypeName} a storage:`, uploadError);
+      return { success: false, error: `Error al subir el ${fileTypeName} a almacenamiento.` };
     }
 
     const { data: { publicUrl } } = supabase.storage
@@ -133,9 +140,19 @@ async function uploadComprobanteFile(
 
     return { success: true, publicUrl };
   } catch (error) {
-    console.error("Excepción en la carga del archivo:", error);
-    return { success: false, error: "Ocurrió un error inesperado al subir el comprobante." };
+    console.error(`Excepción en la carga de ${fileTypeName}:`, error);
+    return { success: false, error: `Ocurrió un error inesperado al subir el ${fileTypeName}.` };
   }
+}
+
+/**
+ * Función compatible para subir comprobantes.
+ */
+async function uploadComprobanteFile(
+  file: File,
+  supabase: any
+): Promise<{ success: boolean; publicUrl?: string; error?: string }> {
+  return uploadFileToStorage(file, supabase, 'comprobantes', ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'], 'comprobante');
 }
 
 interface DiscordNotificationParams {
@@ -155,6 +172,7 @@ interface DiscordNotificationParams {
   fechaProximoPago?: string | null;
   comentarios: string | null;
   comprobanteUrl: string;
+  fotoClienteUrl: string;
   userRole: string;
   currentUsername: string;
   supabase: any;
@@ -213,7 +231,8 @@ async function sendDiscordNotification(params: DiscordNotificationParams) {
     }
 
     fields.push(
-      { name: "📄 Archivo Comprobante", value: `[Visualizar](${params.comprobanteUrl})`, inline: false }
+      { name: "📄 Archivo Comprobante", value: `[Visualizar](${params.comprobanteUrl})`, inline: false },
+      { name: "📸 Foto Cliente", value: `[Visualizar](${params.fotoClienteUrl})`, inline: false }
     );
 
     const embed = {
@@ -271,6 +290,7 @@ export async function submitComprobante(formData: FormData) {
   const imei = formData.get("imei") as string;
   const fechaProximoPagoRaw = formData.get("fecha_proximo_pago") as string | null;
   const file = formData.get("comprobante") as File | null;
+  const fotoClienteFile = formData.get("foto_cliente") as File | null;
 
   if (
     !nombreCliente || !nombreCliente.trim() ||
@@ -285,9 +305,10 @@ export async function submitComprobante(formData: FormData) {
     !precioTotalRaw || !precioTotalRaw.trim() ||
     !tagRaw || !tagRaw.trim() ||
     !fechaProximoPagoRaw || !fechaProximoPagoRaw.trim() ||
-    !file || file.size === 0
+    !file || file.size === 0 ||
+    !fotoClienteFile || fotoClienteFile.size === 0
   ) {
-    return { success: false, error: "Todos los campos son obligatorios y el comprobante." };
+    return { success: false, error: "Todos los campos son obligatorios, incluyendo el comprobante y la foto del cliente." };
   }
 
   const precioCompra = parseFloat(precioCompraRaw.replace(',', '.'));
@@ -325,6 +346,32 @@ export async function submitComprobante(formData: FormData) {
 
   const comprobanteUrl = uploadResult.publicUrl;
 
+  // 1.1 Subir la foto del cliente a Supabase Storage
+  const uploadFotoResult = await uploadFileToStorage(
+    fotoClienteFile,
+    supabase,
+    'foto-cliente',
+    ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+    'foto del cliente'
+  );
+
+  if (!uploadFotoResult.success || !uploadFotoResult.publicUrl) {
+    // Revertir: Limpiar comprobante previamente subido
+    try {
+      const searchString = "/storage/v1/object/public/comprobantes/";
+      const index = comprobanteUrl.indexOf(searchString);
+      if (index !== -1) {
+        const filePath = comprobanteUrl.substring(index + searchString.length);
+        await supabase.storage.from('comprobantes').remove([filePath]);
+      }
+    } catch (cleanupError) {
+      console.error("Error al limpiar comprobante tras fallo en foto del cliente:", cleanupError);
+    }
+    return { success: false, error: uploadFotoResult.error || "Error al subir la foto del cliente." };
+  }
+
+  const fotoClienteUrl = uploadFotoResult.publicUrl;
+
   // 2. Registrar en la base de datos comprobantes
   const { data: newComprobante, error } = await supabase
     .from('comprobantes')
@@ -346,6 +393,7 @@ export async function submitComprobante(formData: FormData) {
       imei: imei || null,
       fecha_proximo_pago: fechaProximoPago,
       comprobante_url: comprobanteUrl,
+      foto_cliente_url: fotoClienteUrl,
       creado_por: currentUserId
     }])
     .select('id')
@@ -353,16 +401,26 @@ export async function submitComprobante(formData: FormData) {
 
   if (error) {
     console.error("Error al registrar comprobante en DB:", error);
-    // Limpieza: intentar borrar el archivo de storage si falló la base de datos
+    // Limpieza: intentar borrar ambos archivos de storage si falló la base de datos
     try {
       const searchString = "/storage/v1/object/public/comprobantes/";
-      const index = comprobanteUrl.indexOf(searchString);
-      if (index !== -1) {
-        const filePath = comprobanteUrl.substring(index + searchString.length);
-        await supabase.storage.from('comprobantes').remove([filePath]);
+      const filesToRemove: string[] = [];
+
+      const indexComp = comprobanteUrl.indexOf(searchString);
+      if (indexComp !== -1) {
+        filesToRemove.push(comprobanteUrl.substring(indexComp + searchString.length));
+      }
+
+      const indexFoto = fotoClienteUrl.indexOf(searchString);
+      if (indexFoto !== -1) {
+        filesToRemove.push(fotoClienteUrl.substring(indexFoto + searchString.length));
+      }
+
+      if (filesToRemove.length > 0) {
+        await supabase.storage.from('comprobantes').remove(filesToRemove);
       }
     } catch (cleanupError) {
-      console.error("Error al limpiar archivo de storage tras fallo en DB:", cleanupError);
+      console.error("Error al limpiar archivos de storage tras fallo en DB:", cleanupError);
     }
     return { success: false, error: "Ocurrió un error al guardar el registro en la base de datos." };
   }
@@ -425,6 +483,7 @@ export async function submitComprobante(formData: FormData) {
     fechaProximoPago,
     comentarios,
     comprobanteUrl,
+    fotoClienteUrl,
     userRole,
     currentUsername: currentUsername || "",
     supabase
@@ -471,6 +530,7 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
       imei,
       fecha_proximo_pago,
       comprobante_url,
+      foto_cliente_url,
       created_at,
       vendedor:perfiles!vendedor_id (id, username, role),
       repartidor:repartidores!repartidor_id (id, nombre),
@@ -500,6 +560,7 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
     imei: comprobanteRaw.imei || null,
     fecha_proximo_pago: comprobanteRaw.fecha_proximo_pago || null,
     comprobante_url: comprobanteRaw.comprobante_url,
+    foto_cliente_url: comprobanteRaw.foto_cliente_url || null,
     created_at: comprobanteRaw.created_at,
     vendedor: Array.isArray(comprobanteRaw.vendedor) ? comprobanteRaw.vendedor[0] : (comprobanteRaw.vendedor as PerfilSubQuery | null),
     repartidor: Array.isArray(comprobanteRaw.repartidor) ? comprobanteRaw.repartidor[0] : (comprobanteRaw.repartidor as RepartidorSubQuery | null),
@@ -522,10 +583,10 @@ export async function eliminarComprobante(id: string): Promise<{ success: boolea
 
   const supabase = await createClient();
 
-  // 1. Obtener la URL del comprobante para poder borrar el archivo de storage
+  // 1. Obtener las URLs de los archivos para poder borrarlos de storage
   const { data: comprobanteItem, error: fetchError } = await supabase
     .from('comprobantes')
-    .select('comprobante_url')
+    .select('comprobante_url, foto_cliente_url')
     .eq('id', id)
     .single();
 
@@ -535,6 +596,7 @@ export async function eliminarComprobante(id: string): Promise<{ success: boolea
   }
 
   const comprobanteUrl = comprobanteItem.comprobante_url;
+  const fotoClienteUrl = comprobanteItem.foto_cliente_url;
 
   // 2. Eliminar el registro de la base de datos
   const { data: deletedRows, error: deleteError } = await supabase
@@ -556,16 +618,30 @@ export async function eliminarComprobante(id: string): Promise<{ success: boolea
     };
   }
 
-  // 3. Eliminar el archivo de Supabase Storage
+  // 3. Eliminar los archivos de Supabase Storage
   try {
     const searchString = "/storage/v1/object/public/comprobantes/";
-    const index = comprobanteUrl.indexOf(searchString);
-    if (index !== -1) {
-      const filePath = comprobanteUrl.substring(index + searchString.length);
-      await supabase.storage.from('comprobantes').remove([filePath]);
+    const filesToDelete: string[] = [];
+
+    if (comprobanteUrl) {
+      const index = comprobanteUrl.indexOf(searchString);
+      if (index !== -1) {
+        filesToDelete.push(comprobanteUrl.substring(index + searchString.length));
+      }
+    }
+
+    if (fotoClienteUrl) {
+      const indexFoto = fotoClienteUrl.indexOf(searchString);
+      if (indexFoto !== -1) {
+        filesToDelete.push(fotoClienteUrl.substring(indexFoto + searchString.length));
+      }
+    }
+
+    if (filesToDelete.length > 0) {
+      await supabase.storage.from('comprobantes').remove(filesToDelete);
     }
   } catch (cleanupError) {
-    console.error("Error al limpiar archivo de storage tras eliminación:", cleanupError);
+    console.error("Error al limpiar archivos de storage tras eliminación:", cleanupError);
   }
 
   revalidatePath('/empresa/webapp/comprobantes');
