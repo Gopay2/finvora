@@ -30,26 +30,28 @@ interface ConfiguracionEnganchesClientProps {
 }
 
 // ─── Funciones auxiliares de validación pura ─────────────────────────────────
-function validatePercentageAddition(rawInput: string, existingList: number[]): { isValid: boolean; parsedValue?: number; errorMessage?: string } {
-  const parsedValue = Math.round(Number(rawInput));
-  if (isNaN(parsedValue) || parsedValue < 0 || parsedValue > 100) {
-    return { isValid: false, errorMessage: "Ingresa un porcentaje válido entre 0 y 100." };
+function validateMontoAddition(rawInput: string, existingList: number[]): { isValid: boolean; parsedValue?: number; errorMessage?: string } {
+  const parsedValue = Number(rawInput);
+  if (isNaN(parsedValue) || parsedValue <= 0) {
+    return { isValid: false, errorMessage: "Ingresa un monto válido mayor a 0." };
   }
-  if (existingList.includes(parsedValue)) {
-    return { isValid: false, errorMessage: `El ${parsedValue}% ya está en la lista.` };
+  const cleanMonto = Number(parsedValue.toFixed(2));
+  if (existingList.includes(cleanMonto)) {
+    return { isValid: false, errorMessage: `El monto $${cleanMonto} ya está en la lista.` };
   }
-  return { isValid: true, parsedValue };
+  return { isValid: true, parsedValue: cleanMonto };
 }
 
-function validatePercentageRemoval(rawInput: string, existingList: number[]): { isValid: boolean; parsedValue?: number; errorMessage?: string } {
-  const parsedValue = Math.round(Number(rawInput));
+function validateMontoRemoval(rawInput: string, existingList: number[]): { isValid: boolean; parsedValue?: number; errorMessage?: string } {
+  const parsedValue = Number(rawInput);
   if (isNaN(parsedValue)) {
-    return { isValid: false, errorMessage: "Ingresa el porcentaje que deseas eliminar." };
+    return { isValid: false, errorMessage: "Ingresa el monto que deseas eliminar." };
   }
-  if (!existingList.includes(parsedValue)) {
-    return { isValid: false, errorMessage: `El ${parsedValue}% no está en la lista.` };
+  const cleanMonto = Number(parsedValue.toFixed(2));
+  if (!existingList.includes(cleanMonto)) {
+    return { isValid: false, errorMessage: `El monto $${cleanMonto} no está en la lista.` };
   }
-  return { isValid: true, parsedValue };
+  return { isValid: true, parsedValue: cleanMonto };
 }
 
 function validateRulePayload(targetId: string, entityName: string, percentages: number[]): { isValid: boolean; errorMessage?: string } {
@@ -104,7 +106,8 @@ export function ConfiguracionEnganchesClient({
     zona: null,
     vendedor_id: null,
     producto_id: null,
-    porcentajes: [3, 5, 10, 15, 20, 25],
+    montos_fijos: [200, 300, 400],
+    porcentajes: [],
     permitir_enganche_libre: false,
   };
 
@@ -115,7 +118,8 @@ export function ConfiguracionEnganchesClient({
     zona: null,
     vendedor_id: null,
     producto_id: null,
-    porcentajes: [5],
+    montos_fijos: [200, 300, 400],
+    porcentajes: [],
     permitir_enganche_libre: false,
   };
 
@@ -123,14 +127,14 @@ export function ConfiguracionEnganchesClient({
   const initialVendedorConfigs = initialConfigs.filter((config) => Boolean(config.vendedor_id));
   const initialProductConfigs = initialConfigs.filter((config) => Boolean(config.producto_id));
 
-  // Estados locales para General
-  const [siGeneralPorcentajes, setSiGeneralPorcentajes] = useState<number[]>(initialGeneralSi.porcentajes || []);
+  // Estados locales para General (Montos Fijos en $)
+  const [siGeneralMontosFijos, setSiGeneralMontosFijos] = useState<number[]>(initialGeneralSi.montos_fijos || []);
   const [siGeneralEngancheLibre, setSiGeneralEngancheLibre] = useState<boolean>(Boolean(initialGeneralSi.permitir_enganche_libre));
-  const [newSiGeneralPercent, setNewSiGeneralPercent] = useState<string>("");
+  const [newSiGeneralMonto, setNewSiGeneralMonto] = useState<string>("");
 
-  const [noGeneralPorcentajes, setNoGeneralPorcentajes] = useState<number[]>(initialGeneralNo.porcentajes || []);
+  const [noGeneralMontosFijos, setNoGeneralMontosFijos] = useState<number[]>(initialGeneralNo.montos_fijos || []);
   const [noGeneralEngancheLibre, setNoGeneralEngancheLibre] = useState<boolean>(Boolean(initialGeneralNo.permitir_enganche_libre));
-  const [newNoGeneralPercent, setNewNoGeneralPercent] = useState<string>("");
+  const [newNoGeneralMonto, setNewNoGeneralMonto] = useState<string>("");
 
   // Estados locales para Zonas
   const [zoneConfigs, setZoneConfigs] = useState<ConfigEngancheItem[]>(initialZoneConfigs);
@@ -212,14 +216,14 @@ export function ConfiguracionEnganchesClient({
       (c) => !c.vendedor_id && !c.zona && !c.producto_id && c.cliente_historial.toLowerCase() === "si"
     );
     if (generalSi) {
-      setSiGeneralPorcentajes(generalSi.porcentajes || []);
+      setSiGeneralMontosFijos(generalSi.montos_fijos || []);
       setSiGeneralEngancheLibre(Boolean(generalSi.permitir_enganche_libre));
     }
     const generalNo = initialConfigs.find(
       (c) => !c.vendedor_id && !c.zona && !c.producto_id && c.cliente_historial.toLowerCase() === "no"
     );
     if (generalNo) {
-      setNoGeneralPorcentajes(generalNo.porcentajes || []);
+      setNoGeneralMontosFijos(generalNo.montos_fijos || []);
       setNoGeneralEngancheLibre(Boolean(generalNo.permitir_enganche_libre));
     }
     const zoneItems = initialConfigs.filter((c) => !c.vendedor_id && !c.producto_id && Boolean(c.zona));
@@ -263,10 +267,10 @@ export function ConfiguracionEnganchesClient({
     }, 3200);
   };
 
-  // ─── 1. ACCIONES GENERALES ──────────────────────────────────────────────────
+  // ─── 1. ACCIONES GENERALES (Montos Fijos en $) ──────────────────────────────
   const autoSaveGeneral = (
     clienteHistorial: 'Si' | 'No',
-    porcentajesActualizados: number[],
+    montosFijosActualizados: number[],
     engancheLibreActualizado: boolean
   ) => {
     const targetItem = initialConfigs.find(
@@ -284,7 +288,8 @@ export function ConfiguracionEnganchesClient({
         zona: null,
         vendedor_id: null,
         producto_id: null,
-        porcentajes: porcentajesActualizados,
+        montos_fijos: montosFijosActualizados,
+        porcentajes: targetItem?.porcentajes || [],
         permitir_enganche_libre: engancheLibreActualizado,
       },
     ];
@@ -301,50 +306,50 @@ export function ConfiguracionEnganchesClient({
   };
 
   const handleAddSiGeneral = () => {
-    const { isValid, parsedValue, errorMessage } = validatePercentageAddition(newSiGeneralPercent, siGeneralPorcentajes);
+    const { isValid, parsedValue, errorMessage } = validateMontoAddition(newSiGeneralMonto, siGeneralMontosFijos);
     if (!isValid || parsedValue === undefined) {
-      showToast("error", errorMessage || "Porcentaje inválido.");
+      showToast("error", errorMessage || "Monto inválido.");
       return;
     }
-    const updated = Array.from(new Set([...siGeneralPorcentajes, parsedValue])).sort((a, b) => a - b);
-    setSiGeneralPorcentajes(updated);
-    setNewSiGeneralPercent("");
+    const updated = Array.from(new Set([...siGeneralMontosFijos, parsedValue])).sort((a, b) => a - b);
+    setSiGeneralMontosFijos(updated);
+    setNewSiGeneralMonto("");
     autoSaveGeneral("Si", updated, siGeneralEngancheLibre);
   };
 
   const handleRemoveSiGeneral = () => {
-    const { isValid, parsedValue, errorMessage } = validatePercentageRemoval(newSiGeneralPercent, siGeneralPorcentajes);
+    const { isValid, parsedValue, errorMessage } = validateMontoRemoval(newSiGeneralMonto, siGeneralMontosFijos);
     if (!isValid || parsedValue === undefined) {
-      showToast("error", errorMessage || "Porcentaje inválido.");
+      showToast("error", errorMessage || "Monto inválido.");
       return;
     }
-    const updated = siGeneralPorcentajes.filter((porcentaje) => porcentaje !== parsedValue);
-    setSiGeneralPorcentajes(updated);
-    setNewSiGeneralPercent("");
+    const updated = siGeneralMontosFijos.filter((monto) => monto !== parsedValue);
+    setSiGeneralMontosFijos(updated);
+    setNewSiGeneralMonto("");
     autoSaveGeneral("Si", updated, siGeneralEngancheLibre);
   };
 
   const handleAddNoGeneral = () => {
-    const { isValid, parsedValue, errorMessage } = validatePercentageAddition(newNoGeneralPercent, noGeneralPorcentajes);
+    const { isValid, parsedValue, errorMessage } = validateMontoAddition(newNoGeneralMonto, noGeneralMontosFijos);
     if (!isValid || parsedValue === undefined) {
-      showToast("error", errorMessage || "Porcentaje inválido.");
+      showToast("error", errorMessage || "Monto inválido.");
       return;
     }
-    const updated = Array.from(new Set([...noGeneralPorcentajes, parsedValue])).sort((a, b) => a - b);
-    setNoGeneralPorcentajes(updated);
-    setNewNoGeneralPercent("");
+    const updated = Array.from(new Set([...noGeneralMontosFijos, parsedValue])).sort((a, b) => a - b);
+    setNoGeneralMontosFijos(updated);
+    setNewNoGeneralMonto("");
     autoSaveGeneral("No", updated, noGeneralEngancheLibre);
   };
 
   const handleRemoveNoGeneral = () => {
-    const { isValid, parsedValue, errorMessage } = validatePercentageRemoval(newNoGeneralPercent, noGeneralPorcentajes);
+    const { isValid, parsedValue, errorMessage } = validateMontoRemoval(newNoGeneralMonto, noGeneralMontosFijos);
     if (!isValid || parsedValue === undefined) {
-      showToast("error", errorMessage || "Porcentaje inválido.");
+      showToast("error", errorMessage || "Monto inválido.");
       return;
     }
-    const updated = noGeneralPorcentajes.filter((porcentaje) => porcentaje !== parsedValue);
-    setNoGeneralPorcentajes(updated);
-    setNewNoGeneralPercent("");
+    const updated = noGeneralMontosFijos.filter((monto) => monto !== parsedValue);
+    setNoGeneralMontosFijos(updated);
+    setNewNoGeneralMonto("");
     autoSaveGeneral("No", updated, noGeneralEngancheLibre);
   };
 
@@ -879,27 +884,27 @@ export function ConfiguracionEnganchesClient({
 
       {/* SECCIÓN 1: CONFIGURACIÓN GENERAL */}
       <ConfiguracionGeneralSection
-        siPorcentajes={siGeneralPorcentajes}
+        siMontosFijos={siGeneralMontosFijos}
         siEngancheLibre={siGeneralEngancheLibre}
-        newSiPercent={newSiGeneralPercent}
-        onChangeNewSiPercent={setNewSiGeneralPercent}
-        onAddSiPercent={handleAddSiGeneral}
-        onRemoveSiPercent={handleRemoveSiGeneral}
+        newSiMonto={newSiGeneralMonto}
+        onChangeNewSiMonto={setNewSiGeneralMonto}
+        onAddSiMonto={handleAddSiGeneral}
+        onRemoveSiMonto={handleRemoveSiGeneral}
         onToggleSiEngancheLibre={() => {
           const nextVal = !siGeneralEngancheLibre;
           setSiGeneralEngancheLibre(nextVal);
-          autoSaveGeneral("Si", siGeneralPorcentajes, nextVal);
+          autoSaveGeneral("Si", siGeneralMontosFijos, nextVal);
         }}
-        noPorcentajes={noGeneralPorcentajes}
+        noMontosFijos={noGeneralMontosFijos}
         noEngancheLibre={noGeneralEngancheLibre}
-        newNoPercent={newNoGeneralPercent}
-        onChangeNewNoPercent={setNewNoGeneralPercent}
-        onAddNoPercent={handleAddNoGeneral}
-        onRemoveNoPercent={handleRemoveNoGeneral}
+        newNoMonto={newNoGeneralMonto}
+        onChangeNewNoMonto={setNewNoGeneralMonto}
+        onAddNoMonto={handleAddNoGeneral}
+        onRemoveNoMonto={handleRemoveNoGeneral}
         onToggleNoEngancheLibre={() => {
           const nextVal = !noGeneralEngancheLibre;
           setNoGeneralEngancheLibre(nextVal);
-          autoSaveGeneral("No", noGeneralPorcentajes, nextVal);
+          autoSaveGeneral("No", noGeneralMontosFijos, nextVal);
         }}
         isPending={isPending}
       />

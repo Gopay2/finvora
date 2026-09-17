@@ -231,7 +231,7 @@ export default function OrdenesEntregaForm({
       }
     }
 
-    // Nivel 4 (Fallback Base): Configuración General
+    // Nivel 4 (Fallback Base): Configuración General (Montos Fijos con fallback retrocompatible a porcentajes)
     const generalConfig = configEnganches.find(
       (config) =>
         !config.vendedor_id &&
@@ -239,9 +239,18 @@ export default function OrdenesEntregaForm({
         !config.producto_id &&
         config.cliente_historial.toLowerCase().trim() === normHistorial
     );
+
+    if (generalConfig?.montos_fijos && generalConfig.montos_fijos.length > 0) {
+      return {
+        tipo: 'fijo',
+        montosFijos: generalConfig.montos_fijos,
+        porcentajes: [],
+      };
+    }
+
     return {
-      tipo: 'porcentaje',
-      montosFijos: [],
+      tipo: (generalConfig?.porcentajes && generalConfig.porcentajes.length > 0) ? 'porcentaje' : 'fijo',
+      montosFijos: generalConfig?.montos_fijos || [],
       porcentajes: generalConfig ? generalConfig.porcentajes : [],
     };
   }, [clienteHistorial, selectedImei, stockItems, selectedZona, configEnganches, currentUserId]);

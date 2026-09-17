@@ -3,20 +3,20 @@
 import React from "react";
 
 interface ConfiguracionGeneralSectionProps {
-  siPorcentajes: number[];
+  siMontosFijos: number[];
   siEngancheLibre: boolean;
-  newSiPercent: string;
-  onChangeNewSiPercent: (value: string) => void;
-  onAddSiPercent: () => void;
-  onRemoveSiPercent: () => void;
+  newSiMonto: string;
+  onChangeNewSiMonto: (value: string) => void;
+  onAddSiMonto: () => void;
+  onRemoveSiMonto: () => void;
   onToggleSiEngancheLibre: () => void;
 
-  noPorcentajes: number[];
+  noMontosFijos: number[];
   noEngancheLibre: boolean;
-  newNoPercent: string;
-  onChangeNewNoPercent: (value: string) => void;
-  onAddNoPercent: () => void;
-  onRemoveNoPercent: () => void;
+  newNoMonto: string;
+  onChangeNewNoMonto: (value: string) => void;
+  onAddNoMonto: () => void;
+  onRemoveNoMonto: () => void;
   onToggleNoEngancheLibre: () => void;
 
   isPending: boolean;
@@ -37,27 +37,27 @@ const styles = {
   switchTrack: "relative inline-flex items-center h-6 w-11 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none self-center disabled:opacity-50",
   switchThumb: "pointer-events-none block h-5 w-5 transform rounded-full bg-slate-950 shadow-lg ring-0 transition duration-200 ease-in-out",
   chipsBox: "flex flex-wrap gap-2 min-h-[5rem] h-auto p-3.5 bg-slate-950/50 border border-slate-800/70 rounded-2xl items-start content-start overflow-y-auto custom-scrollbar",
-  input: "w-full sm:w-28 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-base sm:text-sm text-slate-100 focus:outline-none transition-all",
+  input: "w-full sm:w-32 bg-slate-950 border border-slate-800 rounded-xl pl-7 pr-3 py-2.5 text-base sm:text-sm text-slate-100 focus:outline-none transition-all",
 };
 
 /**
- * Sección 1: Configuración General de Enganches (Con Historial y Sin Historial)
+ * Sección 1: Configuración General de Enganches (Montos Fijos en $ para Con Historial y Sin Historial)
  */
 export function ConfiguracionGeneralSection({
-  siPorcentajes,
+  siMontosFijos,
   siEngancheLibre,
-  newSiPercent,
-  onChangeNewSiPercent,
-  onAddSiPercent,
-  onRemoveSiPercent,
+  newSiMonto,
+  onChangeNewSiMonto,
+  onAddSiMonto,
+  onRemoveSiMonto,
   onToggleSiEngancheLibre,
 
-  noPorcentajes,
+  noMontosFijos,
   noEngancheLibre,
-  newNoPercent,
-  onChangeNewNoPercent,
-  onAddNoPercent,
-  onRemoveNoPercent,
+  newNoMonto,
+  onChangeNewNoMonto,
+  onAddNoMonto,
+  onRemoveNoMonto,
   onToggleNoEngancheLibre,
 
   isPending,
@@ -69,7 +69,7 @@ export function ConfiguracionGeneralSection({
           Configuración General
         </h2>
         <p className={styles.sectionDesc}>
-          Valores por defecto para todo el sistema cuando no existan excepciones por zona o vendedor.
+          Montos fijos de enganche por defecto para todos los equipos cuando no existan excepciones específicas por equipo, zona o vendedor.
         </p>
       </div>
 
@@ -114,32 +114,37 @@ export function ConfiguracionGeneralSection({
               </button>
             </div>
 
-            {/* Gestión de Porcentajes */}
+            {/* Gestión de Montos Fijos */}
             <div className="space-y-3">
-              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                Porcentajes Disponibles
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Montos Fijos Disponibles
+                </label>
+                <span className="text-[11px] text-slate-500">
+                  {siMontosFijos.length} {siMontosFijos.length === 1 ? "opción" : "opciones"}
+                </span>
+              </div>
 
               {/* Chips */}
               <div className={styles.chipsBox}>
-                {siPorcentajes.length === 0 ? (
-                  <span className="text-xs text-slate-500 italic">No hay porcentajes configurados.</span>
+                {siMontosFijos.length === 0 ? (
+                  <span className="text-xs text-slate-500 italic">No hay montos configurados.</span>
                 ) : (
-                  siPorcentajes.map((porcentaje) => {
-                    const isSelected = newSiPercent.trim() === String(porcentaje);
+                  siMontosFijos.map((monto) => {
+                    const isSelected = newSiMonto.trim() === String(monto);
                     return (
                       <button
-                        key={porcentaje}
+                        key={monto}
                         type="button"
-                        onClick={() => onChangeNewSiPercent(isSelected ? "" : String(porcentaje))}
-                        className={`inline-flex items-center justify-center w-12 h-9 rounded-xl font-bold text-sm leading-none transition-all duration-200 cursor-pointer select-none shrink-0 border ${
+                        onClick={() => onChangeNewSiMonto(isSelected ? "" : String(monto))}
+                        className={`inline-flex items-center justify-center min-w-[3.75rem] px-3 h-9 rounded-xl font-bold text-sm leading-none transition-all duration-200 cursor-pointer select-none shrink-0 border ${
                           isSelected
                             ? "bg-secondary text-slate-950 font-black border-secondary shadow-[0_0_15px_rgba(45,212,191,0.6)] ring-2 ring-secondary/60 scale-105"
                             : "bg-slate-900 border-secondary/30 text-secondary hover:border-secondary/80 hover:bg-slate-800 hover:shadow-[0_0_10px_rgba(45,212,191,0.25)]"
                         }`}
-                        title={isSelected ? `Deseleccionar ${porcentaje}%` : `Seleccionar ${porcentaje}% para eliminar`}
+                        title={isSelected ? `Deseleccionar $${monto}` : `Seleccionar $${monto} para eliminar`}
                       >
-                        {porcentaje}%
+                        ${monto}
                       </button>
                     );
                   })
@@ -148,38 +153,40 @@ export function ConfiguracionGeneralSection({
 
               {/* Input + Botones */}
               <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  min="0"
-                  max="100"
-                  value={newSiPercent}
-                  onChange={(event) => onChangeNewSiPercent(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      onAddSiPercent();
-                    }
-                  }}
-                  placeholder="Ej: 30"
-                  className={`${styles.input} focus:border-secondary`}
-                  style={{ colorScheme: "dark" }}
-                  suppressHydrationWarning
-                />
+                <div className="relative w-full sm:w-auto">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">$</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    min="1"
+                    value={newSiMonto}
+                    onChange={(event) => onChangeNewSiMonto(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        onAddSiMonto();
+                      }
+                    }}
+                    placeholder="Ej: 300"
+                    className={`${styles.input} focus:border-secondary`}
+                    style={{ colorScheme: "dark" }}
+                    suppressHydrationWarning
+                  />
+                </div>
                 <div className="flex gap-2 w-full">
                   <button
                     type="button"
-                    onClick={onAddSiPercent}
-                    disabled={!newSiPercent || isPending}
+                    onClick={onAddSiMonto}
+                    disabled={!newSiMonto || isPending}
                     className="flex-1 px-4 py-2.5 bg-secondary/20 hover:bg-secondary/30 text-secondary border border-secondary/40 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-center"
                   >
                     Agregar
                   </button>
                   <button
                     type="button"
-                    onClick={onRemoveSiPercent}
-                    disabled={!newSiPercent || isPending}
+                    onClick={onRemoveSiMonto}
+                    disabled={!newSiMonto || isPending}
                     className="flex-1 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-center"
                   >
                     Eliminar
@@ -230,32 +237,37 @@ export function ConfiguracionGeneralSection({
               </button>
             </div>
 
-            {/* Gestión de Porcentajes */}
+            {/* Gestión de Montos Fijos */}
             <div className="space-y-3">
-              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                Porcentajes Disponibles
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Montos Fijos Disponibles
+                </label>
+                <span className="text-[11px] text-slate-500">
+                  {noMontosFijos.length} {noMontosFijos.length === 1 ? "opción" : "opciones"}
+                </span>
+              </div>
 
               {/* Chips */}
               <div className={styles.chipsBox}>
-                {noPorcentajes.length === 0 ? (
-                  <span className="text-xs text-slate-500 italic">No hay porcentajes configurados.</span>
+                {noMontosFijos.length === 0 ? (
+                  <span className="text-xs text-slate-500 italic">No hay montos configurados.</span>
                 ) : (
-                  noPorcentajes.map((porcentaje) => {
-                    const isSelected = newNoPercent.trim() === String(porcentaje);
+                  noMontosFijos.map((monto) => {
+                    const isSelected = newNoMonto.trim() === String(monto);
                     return (
                       <button
-                        key={porcentaje}
+                        key={monto}
                         type="button"
-                        onClick={() => onChangeNewNoPercent(isSelected ? "" : String(porcentaje))}
-                        className={`inline-flex items-center justify-center w-12 h-9 rounded-xl font-bold text-sm leading-none transition-all duration-200 cursor-pointer select-none shrink-0 border ${
+                        onClick={() => onChangeNewNoMonto(isSelected ? "" : String(monto))}
+                        className={`inline-flex items-center justify-center min-w-[3.75rem] px-3 h-9 rounded-xl font-bold text-sm leading-none transition-all duration-200 cursor-pointer select-none shrink-0 border ${
                           isSelected
                             ? "bg-amber-400 text-slate-950 font-black border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.6)] ring-2 ring-amber-400/60 scale-105"
                             : "bg-slate-900 border-amber-500/30 text-amber-300 hover:border-amber-500/80 hover:bg-slate-800 hover:shadow-[0_0_10px_rgba(251,191,36,0.25)]"
                         }`}
-                        title={isSelected ? `Deseleccionar ${porcentaje}%` : `Seleccionar ${porcentaje}% para eliminar`}
+                        title={isSelected ? `Deseleccionar $${monto}` : `Seleccionar $${monto} para eliminar`}
                       >
-                        {porcentaje}%
+                        ${monto}
                       </button>
                     );
                   })
@@ -264,38 +276,40 @@ export function ConfiguracionGeneralSection({
 
               {/* Input + Botones */}
               <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  min="0"
-                  max="100"
-                  value={newNoPercent}
-                  onChange={(event) => onChangeNewNoPercent(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      onAddNoPercent();
-                    }
-                  }}
-                  placeholder="Ej: 5"
-                  className={`${styles.input} focus:border-amber-400`}
-                  style={{ colorScheme: "dark" }}
-                  suppressHydrationWarning
-                />
+                <div className="relative w-full sm:w-auto">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">$</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    min="1"
+                    value={newNoMonto}
+                    onChange={(event) => onChangeNewNoMonto(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        onAddNoMonto();
+                      }
+                    }}
+                    placeholder="Ej: 300"
+                    className={`${styles.input} focus:border-amber-400`}
+                    style={{ colorScheme: "dark" }}
+                    suppressHydrationWarning
+                  />
+                </div>
                 <div className="flex gap-2 w-full">
                   <button
                     type="button"
-                    onClick={onAddNoPercent}
-                    disabled={!newNoPercent || isPending}
+                    onClick={onAddNoMonto}
+                    disabled={!newNoMonto || isPending}
                     className="flex-1 px-4 py-2.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-center"
                   >
                     Agregar
                   </button>
                   <button
                     type="button"
-                    onClick={onRemoveNoPercent}
-                    disabled={!newNoPercent || isPending}
+                    onClick={onRemoveNoMonto}
+                    disabled={!newNoMonto || isPending}
                     className="flex-1 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-center"
                   >
                     Eliminar

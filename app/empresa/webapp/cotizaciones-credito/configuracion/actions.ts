@@ -116,12 +116,12 @@ export async function guardarConfiguracionesEnganche(
         updated_at: new Date().toISOString(),
       };
 
-      if (targetProductoId || (config.montos_fijos !== undefined && config.montos_fijos !== null)) {
+      const isExplicitGeneral = config.producto_id === null && config.zona === null && config.vendedor_id === null;
+
+      if (targetProductoId || isExplicitGeneral || (config.montos_fijos !== undefined && config.montos_fijos !== null)) {
         updateFields.montos_fijos = cleanMontosFijos.length > 0 ? cleanMontosFijos : null;
         updateFields.proveedor = targetProveedor;
       }
-
-      const isExplicitGeneral = config.producto_id === null && config.zona === null && config.vendedor_id === null;
 
       if (config.id) {
         let updateQuery = supabase
@@ -179,6 +179,7 @@ export async function guardarConfiguracionesEnganche(
                 zona: null,
                 vendedor_id: null,
                 producto_id: null,
+                montos_fijos: cleanMontosFijos.length > 0 ? cleanMontosFijos : null,
                 porcentajes: cleanPorcentajes,
                 permitir_enganche_libre: Boolean(config.permitir_enganche_libre),
                 updated_at: new Date().toISOString(),
