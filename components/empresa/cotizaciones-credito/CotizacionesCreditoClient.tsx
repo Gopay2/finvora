@@ -366,7 +366,7 @@ export function CotizacionesCreditoClient({
       }
     }
 
-    // Nivel 4 (Fallback Base): Configuración General
+    // Nivel 4 (Fallback Base): Configuración General (Montos Fijos con fallback retrocompatible a porcentajes)
     const generalConfig = configEnganches.find(
       (configItem) =>
         !configItem.vendedor_id &&
@@ -374,9 +374,18 @@ export function CotizacionesCreditoClient({
         !configItem.producto_id &&
         isMatchHistorial(configItem.cliente_historial)
     );
+
+    if (generalConfig?.montos_fijos && generalConfig.montos_fijos.length > 0) {
+      return {
+        tipo: 'fijo',
+        montosFijos: generalConfig.montos_fijos,
+        porcentajes: [],
+      };
+    }
+
     return {
-      tipo: 'porcentaje',
-      montosFijos: [],
+      tipo: (generalConfig?.porcentajes && generalConfig.porcentajes.length > 0) ? 'porcentaje' : 'fijo',
+      montosFijos: generalConfig?.montos_fijos || [],
       porcentajes: generalConfig ? generalConfig.porcentajes : [],
     };
   }, [clienteHistorial, selectedProductId, selectedPlaza, configEnganches, currentUserId]);

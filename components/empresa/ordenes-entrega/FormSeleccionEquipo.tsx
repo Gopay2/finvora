@@ -280,7 +280,7 @@ export function FormSeleccionEquipo({
         </select>
       </div>
 
-      {selectedProductCost > 0 && !isEngancheLibre ? (
+      {(selectedProductCost > 0 || (engancheMontosFijos && engancheMontosFijos.length > 0)) && !isEngancheLibre ? (
         <div className={styles.inputGroup}>
           <label className={styles.label}>
             Enganche
