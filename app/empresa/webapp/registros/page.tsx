@@ -126,6 +126,7 @@ export default async function RegistrosPage() {
         fecha_entrega,
         hora_entrega,
         comentarios,
+        pago_adelantado,
         created_at,
         vendedor_nombre,
         vendedor:perfiles!vendedor_id (

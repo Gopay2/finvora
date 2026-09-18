@@ -27,6 +27,8 @@ export interface ComprobanteRecord {
   fecha_proximo_pago?: string | null;
   comprobante_url: string;
   foto_cliente_url?: string | null;
+  pago_adelantado?: string | null;
+  foto_pago_adelantado_url?: string | null;
   created_at: string;
   costo_equipo?: number;
   vendedor: {
@@ -74,6 +76,8 @@ interface ComprobanteRawResponse {
   fecha_proximo_pago?: string | null;
   comprobante_url: string;
   foto_cliente_url?: string | null;
+  pago_adelantado?: string | null;
+  foto_pago_adelantado_url?: string | null;
   created_at: string;
   vendedor: PerfilSubQuery | PerfilSubQuery[] | null;
   repartidor: RepartidorSubQuery | RepartidorSubQuery[] | null;
@@ -173,6 +177,8 @@ interface DiscordNotificationParams {
   comentarios: string | null;
   comprobanteUrl: string;
   fotoClienteUrl: string;
+  pagoAdelantado: string;
+  fotoPagoAdelantadoUrl?: string | null;
   userRole: string;
   currentUsername: string;
   supabase: any;
@@ -224,6 +230,7 @@ async function sendDiscordNotification(params: DiscordNotificationParams) {
       { name: "📱 Equipo", value: `**${cleanCelular}** ${params.colorCelular ? `(${params.colorCelular})` : ""}`, inline: false },
       { name: "🏷️ Tag", value: `**${params.tag ? params.tag.trim() : ""}**`, inline: false },
       { name: "🆔 IMEI", value: `\`${params.imei}\``, inline: false },
+      { name: "⚡ Pago Adelantado", value: `**${params.pagoAdelantado}**`, inline: false },
     ];
 
     if (params.comentarios && params.comentarios.trim()) {
@@ -231,9 +238,15 @@ async function sendDiscordNotification(params: DiscordNotificationParams) {
     }
 
     fields.push(
-      { name: "📄 Archivo Comprobante", value: `[Visualizar](${params.comprobanteUrl})`, inline: false },
-      { name: "📸 Foto Cliente", value: `[Visualizar](${params.fotoClienteUrl})`, inline: false }
+      { name: "📸 Foto Cliente", value: `[Visualizar](${params.fotoClienteUrl})`, inline: false },
+      { name: "📄 Archivo Comprobante", value: `[Visualizar](${params.comprobanteUrl})`, inline: false }
     );
+
+    if (params.fotoPagoAdelantadoUrl) {
+      fields.push(
+        { name: "📑 Archivo Pago Adelantado", value: `[Visualizar](${params.fotoPagoAdelantadoUrl})`, inline: false }
+      );
+    }
 
     const embed = {
       title: "NUEVA VENTA REGISTRADA 🧾",
@@ -289,8 +302,10 @@ export async function submitComprobante(formData: FormData) {
   const colorCelular = formData.get("color_celular") as string;
   const imei = formData.get("imei") as string;
   const fechaProximoPagoRaw = formData.get("fecha_proximo_pago") as string | null;
+  const pagoAdelantadoRaw = formData.get("pago_adelantado") as string | null;
   const file = formData.get("comprobante") as File | null;
   const fotoClienteFile = formData.get("foto_cliente") as File | null;
+  const fotoPagoAdelantadoFile = formData.get("foto_pago_adelantado") as File | null;
 
   if (
     !nombreCliente || !nombreCliente.trim() ||
@@ -309,6 +324,14 @@ export async function submitComprobante(formData: FormData) {
     !fotoClienteFile || fotoClienteFile.size === 0
   ) {
     return { success: false, error: "Todos los campos son obligatorios, incluyendo el comprobante y la foto del cliente." };
+  }
+
+  if (!pagoAdelantadoRaw || !['Si', 'No'].includes(pagoAdelantadoRaw)) {
+    return { success: false, error: "Por favor, selecciona si cuenta con Pago adelantado (Si o No)." };
+  }
+
+  if (pagoAdelantadoRaw === 'Si' && (!fotoPagoAdelantadoFile || fotoPagoAdelantadoFile.size === 0)) {
+    return { success: false, error: "El archivo de Pago Adelantado es obligatorio al seleccionar 'Si'." };
   }
 
   const precioCompra = parseFloat(precioCompraRaw.replace(',', '.'));
@@ -372,6 +395,41 @@ export async function submitComprobante(formData: FormData) {
 
   const fotoClienteUrl = uploadFotoResult.publicUrl;
 
+  // 1.2 Subir archivo de Pago Adelantado si corresponde
+  let fotoPagoAdelantadoUrl: string | null = null;
+  if (pagoAdelantadoRaw === 'Si' && fotoPagoAdelantadoFile && fotoPagoAdelantadoFile.size > 0) {
+    const uploadAdelantadoResult = await uploadFileToStorage(
+      fotoPagoAdelantadoFile,
+      supabase,
+      'pago-adelantado',
+      ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+      'pago adelantado'
+    );
+
+    if (!uploadAdelantadoResult.success || !uploadAdelantadoResult.publicUrl) {
+      // Revertir: Limpiar comprobante y foto del cliente
+      try {
+        const searchString = "/storage/v1/object/public/comprobantes/";
+        const filesToRemove: string[] = [];
+
+        const indexComp = comprobanteUrl.indexOf(searchString);
+        if (indexComp !== -1) filesToRemove.push(comprobanteUrl.substring(indexComp + searchString.length));
+
+        const indexFoto = fotoClienteUrl.indexOf(searchString);
+        if (indexFoto !== -1) filesToRemove.push(fotoClienteUrl.substring(indexFoto + searchString.length));
+
+        if (filesToRemove.length > 0) {
+          await supabase.storage.from('comprobantes').remove(filesToRemove);
+        }
+      } catch (cleanupError) {
+        console.error("Error al limpiar archivos tras fallo en pago adelantado:", cleanupError);
+      }
+      return { success: false, error: uploadAdelantadoResult.error || "Error al subir el archivo de pago adelantado." };
+    }
+
+    fotoPagoAdelantadoUrl = uploadAdelantadoResult.publicUrl;
+  }
+
   // 2. Registrar en la base de datos comprobantes
   const { data: newComprobante, error } = await supabase
     .from('comprobantes')
@@ -394,6 +452,8 @@ export async function submitComprobante(formData: FormData) {
       fecha_proximo_pago: fechaProximoPago,
       comprobante_url: comprobanteUrl,
       foto_cliente_url: fotoClienteUrl,
+      pago_adelantado: pagoAdelantadoRaw,
+      foto_pago_adelantado_url: fotoPagoAdelantadoUrl,
       creado_por: currentUserId
     }])
     .select('id')
@@ -401,7 +461,7 @@ export async function submitComprobante(formData: FormData) {
 
   if (error) {
     console.error("Error al registrar comprobante en DB:", error);
-    // Limpieza: intentar borrar ambos archivos de storage si falló la base de datos
+    // Limpieza: intentar borrar archivos de storage si falló la base de datos
     try {
       const searchString = "/storage/v1/object/public/comprobantes/";
       const filesToRemove: string[] = [];
@@ -414,6 +474,13 @@ export async function submitComprobante(formData: FormData) {
       const indexFoto = fotoClienteUrl.indexOf(searchString);
       if (indexFoto !== -1) {
         filesToRemove.push(fotoClienteUrl.substring(indexFoto + searchString.length));
+      }
+
+      if (fotoPagoAdelantadoUrl) {
+        const indexAdelantado = fotoPagoAdelantadoUrl.indexOf(searchString);
+        if (indexAdelantado !== -1) {
+          filesToRemove.push(fotoPagoAdelantadoUrl.substring(indexAdelantado + searchString.length));
+        }
       }
 
       if (filesToRemove.length > 0) {
@@ -481,6 +548,8 @@ export async function submitComprobante(formData: FormData) {
     colorCelular,
     imei,
     fechaProximoPago,
+    pagoAdelantado: pagoAdelantadoRaw,
+    fotoPagoAdelantadoUrl,
     comentarios,
     comprobanteUrl,
     fotoClienteUrl,
@@ -531,6 +600,8 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
       fecha_proximo_pago,
       comprobante_url,
       foto_cliente_url,
+      pago_adelantado,
+      foto_pago_adelantado_url,
       created_at,
       vendedor:perfiles!vendedor_id (id, username, role),
       repartidor:repartidores!repartidor_id (id, nombre),
@@ -561,6 +632,8 @@ export async function getComprobantes(): Promise<{ success: boolean; data?: Comp
     fecha_proximo_pago: comprobanteRaw.fecha_proximo_pago || null,
     comprobante_url: comprobanteRaw.comprobante_url,
     foto_cliente_url: comprobanteRaw.foto_cliente_url || null,
+    pago_adelantado: comprobanteRaw.pago_adelantado || "No",
+    foto_pago_adelantado_url: comprobanteRaw.foto_pago_adelantado_url || null,
     created_at: comprobanteRaw.created_at,
     vendedor: Array.isArray(comprobanteRaw.vendedor) ? comprobanteRaw.vendedor[0] : (comprobanteRaw.vendedor as PerfilSubQuery | null),
     repartidor: Array.isArray(comprobanteRaw.repartidor) ? comprobanteRaw.repartidor[0] : (comprobanteRaw.repartidor as RepartidorSubQuery | null),
@@ -586,7 +659,7 @@ export async function eliminarComprobante(id: string): Promise<{ success: boolea
   // 1. Obtener las URLs de los archivos para poder borrarlos de storage
   const { data: comprobanteItem, error: fetchError } = await supabase
     .from('comprobantes')
-    .select('comprobante_url, foto_cliente_url')
+    .select('comprobante_url, foto_cliente_url, foto_pago_adelantado_url')
     .eq('id', id)
     .single();
 
@@ -597,6 +670,7 @@ export async function eliminarComprobante(id: string): Promise<{ success: boolea
 
   const comprobanteUrl = comprobanteItem.comprobante_url;
   const fotoClienteUrl = comprobanteItem.foto_cliente_url;
+  const fotoPagoAdelantadoUrl = comprobanteItem.foto_pago_adelantado_url;
 
   // 2. Eliminar el registro de la base de datos
   const { data: deletedRows, error: deleteError } = await supabase
@@ -634,6 +708,13 @@ export async function eliminarComprobante(id: string): Promise<{ success: boolea
       const indexFoto = fotoClienteUrl.indexOf(searchString);
       if (indexFoto !== -1) {
         filesToDelete.push(fotoClienteUrl.substring(indexFoto + searchString.length));
+      }
+    }
+
+    if (fotoPagoAdelantadoUrl) {
+      const indexAdelantado = fotoPagoAdelantadoUrl.indexOf(searchString);
+      if (indexAdelantado !== -1) {
+        filesToDelete.push(fotoPagoAdelantadoUrl.substring(indexAdelantado + searchString.length));
       }
     }
 

@@ -147,6 +147,7 @@ export default function OrdenesEntregaForm({
   const [selectedFileName, setSelectedFileName] = useState("");
   const [clienteHistorial, setClienteHistorial] = useState("");
   const [engancheValue, setEngancheValue] = useState("");
+  const [pagoAdelantado, setPagoAdelantado] = useState<'Si' | 'No'>('No');
 
   const selectedProductCost = useMemo(() => {
     if (!selectedImei) return 0;
@@ -595,6 +596,7 @@ export default function OrdenesEntregaForm({
       setHoraEntrega("");
       setClienteHistorial("");
       setEngancheValue("");
+      setPagoAdelantado("No");
     } else {
       setStatus({ type: 'error', message: result.error || 'Error al procesar la orden.' });
     }
@@ -662,6 +664,8 @@ export default function OrdenesEntregaForm({
         selectedZoneDisplayName={selectedZoneDisplayName}
         selectedFileName={selectedFileName}
         handleFileChange={handleFileChange}
+        pagoAdelantado={pagoAdelantado}
+        setPagoAdelantado={setPagoAdelantado}
       />
 
       <button

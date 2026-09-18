@@ -49,6 +49,7 @@ export interface OrdenEntrega {
   fecha_entrega?: string;
   hora_entrega?: string;
   comentarios?: string;
+  pago_adelantado?: string;
   created_at: string;
   vendedor_nombre?: string;
   vendedor?: {

@@ -20,6 +20,8 @@ interface FormProgramacionEntregaProps {
   selectedZoneDisplayName: string;
   selectedFileName: string;
   handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  pagoAdelantado: string;
+  setPagoAdelantado: (value: 'Si' | 'No') => void;
 }
 
 /**
@@ -42,7 +44,9 @@ export function FormProgramacionEntrega({
   isRepartidorCT,
   selectedZoneDisplayName,
   selectedFileName,
-  handleFileChange
+  handleFileChange,
+  pagoAdelantado,
+  setPagoAdelantado
 }: FormProgramacionEntregaProps) {
   const styles = {
     inputGroup: "space-y-2",
@@ -178,7 +182,43 @@ export function FormProgramacionEntrega({
         )
       )}
 
-      <div className={styles.inputGroupFull}>
+      {/* SWITCH PAGO ADELANTADO (IZQUIERDA: 50% EN PC, 1 FILA EN CELULAR) */}
+      <div className={styles.inputGroup}>
+        <label htmlFor="switch-pago-adelantado-orden" className={styles.label}>
+          Pago Adelantado
+        </label>
+        <div className="w-full flex items-center justify-between px-4 py-3 bg-slate-950/50 border border-slate-800 rounded-xl transition-all h-[46px]">
+          <span className={`text-xs font-bold transition-colors ${pagoAdelantado === 'Si' ? 'text-secondary' : 'text-slate-400'}`}>
+            {pagoAdelantado === 'Si' ? 'Sí' : 'No'}
+          </span>
+          <button
+            id="switch-pago-adelantado-orden"
+            type="button"
+            role="switch"
+            aria-checked={pagoAdelantado === 'Si'}
+            onClick={() => setPagoAdelantado(pagoAdelantado === 'Si' ? 'No' : 'Si')}
+            className={`relative inline-flex items-center h-6 w-11 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none border border-slate-700/50 ${
+              pagoAdelantado === 'Si' ? "bg-secondary" : "bg-slate-800"
+            }`}
+            title={pagoAdelantado === 'Si' ? "Pago adelantado activado" : "Pago adelantado desactivado"}
+          >
+            <span
+              aria-hidden="true"
+              className={`pointer-events-none block h-5 w-5 transform rounded-full bg-slate-950 shadow-lg ring-0 transition duration-200 ease-in-out ${
+                pagoAdelantado === 'Si' ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+        <input
+          type="hidden"
+          name="pago_adelantado"
+          value={pagoAdelantado}
+        />
+      </div>
+
+      {/* VERIFICACIÓN CREDITICIA (DERECHA: 50% EN PC, 1 FILA EN CELULAR) */}
+      <div className={styles.inputGroup}>
         <label className={styles.label}>Verificación crediticia</label>
         <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-800 hover:border-secondary/40 rounded-xl p-3 bg-slate-950/20 transition-all group cursor-pointer h-[46px] select-none">
           <input
@@ -195,7 +235,7 @@ export function FormProgramacionEntrega({
               cloud_upload
             </span>
             <p
-              className="text-xs text-slate-300 font-medium truncate max-w-[150px] sm:max-w-[220px] md:max-w-[160px] lg:max-w-[240px]"
+              className="text-xs text-slate-300 font-medium truncate max-w-[200px] sm:max-w-[260px] md:max-w-[180px] lg:max-w-[260px]"
               title={selectedFileName || "Subir Imagen o PDF"}
             >
               {selectedFileName ? selectedFileName : "Subir Imagen o PDF"}
