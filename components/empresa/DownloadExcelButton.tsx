@@ -105,9 +105,11 @@ export default function DownloadExcelButton({ data, type, repartidores, label, c
         "Plazos": item.plazos ?? "",
         "Precio Total": item.precio_total ?? "",
         "Tag": item.tag || "",
+        "Pago Adelantado": item.pago_adelantado || "No",
         "Cargado Por": item.creador?.username || "Desconocido",
         "URL Comprobante": item.comprobante_url,
-        "URL Foto Cliente": item.foto_cliente_url || ""
+        "URL Foto Cliente": item.foto_cliente_url || "",
+        "URL Pago Adelantado": item.foto_pago_adelantado_url || ""
       }));
     }
     else if (type === 'ordenes_entrega') {
@@ -128,6 +130,7 @@ export default function DownloadExcelButton({ data, type, repartidores, label, c
         "Celular": orden.celular || "",
         "Color": orden.color_celular || "",
         "Enganche": orden.enganche || 0,
+        "Pago Adelantado": orden.pago_adelantado || "No",
         "IMEI": orden.imei || "N/A",
         "Cuenta Activa": orden.cuenta_activa || "N/A",
         "Historial Cliente": orden.cliente_historial || "N/A",

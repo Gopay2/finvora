@@ -109,6 +109,7 @@ export default function ComprobantesHistorial({
       const comprobante = filteredList[index];
       const comprobanteUrl = comprobante.comprobante_url;
       const fotoClienteUrl = comprobante.foto_cliente_url;
+      const fotoPagoAdelantadoUrl = comprobante.foto_pago_adelantado_url;
       setDownloadProgress(`Descargando ${index + 1} de ${filteredList.length}...`);
 
       const vendorName = comprobante.vendedor?.username || 'vendedor';
@@ -144,6 +145,18 @@ export default function ComprobantesHistorial({
           zip.file(fileNameFoto, blobFoto);
         } catch (error) {
           console.error("Error al agregar foto de cliente al ZIP:", fotoClienteUrl, error);
+        }
+      }
+
+      if (fotoPagoAdelantadoUrl) {
+        try {
+          const responseFotoAdelantado = await fetch(fotoPagoAdelantadoUrl);
+          const blobFotoAdelantado = await responseFotoAdelantado.blob();
+          const fileExtensionFoto = fotoPagoAdelantadoUrl.split('.').pop()?.split('?')[0] || 'jpg';
+          const fileNameFoto = `PagoAdelantado_${vendorName}_${formattedDate}.${fileExtensionFoto}`;
+          zip.file(fileNameFoto, blobFotoAdelantado);
+        } catch (error) {
+          console.error("Error al agregar foto de pago adelantado al ZIP:", fotoPagoAdelantadoUrl, error);
         }
       }
     }
@@ -293,6 +306,17 @@ export default function ComprobantesHistorial({
                           rel="noopener noreferrer"
                           className={styles.linkBtn}
                           title="Ver foto cliente"
+                        >
+                          <span className="material-symbols-outlined text-lg">open_in_new</span>
+                        </a>
+                      )}
+                      {comprobante.foto_pago_adelantado_url && (
+                        <a
+                          href={comprobante.foto_pago_adelantado_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.linkBtn}
+                          title="Ver pago adelantado"
                         >
                           <span className="material-symbols-outlined text-lg">open_in_new</span>
                         </a>

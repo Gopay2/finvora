@@ -59,6 +59,7 @@ export async function submitOrdenEntrega(formData: FormData) {
     especificarLocal: formData.get("especificar_local") as string,
     fecha: formData.get("fecha_entrega") as string,
     hora: formData.get("hora_entrega") as string,
+    pago_adelantado: (formData.get("pago_adelantado") as string) === "Si" ? "Si" : "No",
     comentarios: formData.get("comentarios") as string,
   };
 
@@ -121,7 +122,8 @@ export async function submitOrdenEntrega(formData: FormData) {
       especificar_local: data.especificarLocal || null,
       fecha_entrega: data.fecha || null,
       hora_entrega: data.hora || null,
-      comentarios: data.comentarios || null
+      comentarios: data.comentarios || null,
+      pago_adelantado: data.pago_adelantado
     })
     .select("folio")
     .single();
@@ -315,6 +317,7 @@ export async function submitOrdenEntrega(formData: FormData) {
     { name: "📱 Equipo", value: `**${data.celular}** (${data.color})`, inline: false },
     { name: "🆔 IMEI", value: data.imei ? `\`${data.imei}\`` : "No especificado", inline: false },
     { name: "💰 Enganche", value: `**$${data.enganche}**`, inline: false },
+    { name: "⚡ Pago Adelantado", value: data.pago_adelantado === "Si" ? "**SÍ**" : "NO", inline: false },
     { name: "✅ Cuenta Activa", value: data.cuenta.toUpperCase(), inline: false },
     { name: "📜 ¿Cliente con historial?", value: data.cliente_historial ? data.cliente_historial.toUpperCase() : "NO ESPECIFICADO", inline: false },
     { name: "📅 Fecha de Entrega", value: data.fecha, inline: false },

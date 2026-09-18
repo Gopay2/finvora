@@ -41,6 +41,8 @@ export default function ComprobantesForm({
   const [selectedImei, setSelectedImei] = useState<string>("");
   const [fechaProximoPago, setFechaProximoPago] = useState<string>("");
   const [selectedPlazo, setSelectedPlazo] = useState<string>("");
+  const [pagoAdelantado, setPagoAdelantado] = useState<string>("No");
+  const [selectedFotoPagoAdelantadoName, setSelectedFotoPagoAdelantadoName] = useState("");
 
   // Estados para vendedor
   const [vendedorSearch, setVendedorSearch] = useState("");
@@ -193,6 +195,39 @@ export default function ComprobantesForm({
     }
   };
 
+  const handleFotoPagoAdelantadoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const maxSizeBytes = 5 * 1024 * 1024;
+      if (file.size > maxSizeBytes) {
+        setOperationStatus({ type: 'error', message: "El archivo de pago adelantado excede el tamaño máximo permitido de 5MB." });
+        event.target.value = "";
+        setSelectedFotoPagoAdelantadoName("");
+        return;
+      }
+
+      const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+      if (!allowedMimeTypes.includes(file.type)) {
+        setOperationStatus({ type: 'error', message: "Formato no permitido para pago adelantado. Solo se aceptan imágenes (JPG, PNG, WEBP) o PDF." });
+        event.target.value = "";
+        setSelectedFotoPagoAdelantadoName("");
+        return;
+      }
+
+      setOperationStatus(null);
+      setSelectedFotoPagoAdelantadoName(file.name);
+    } else {
+      setSelectedFotoPagoAdelantadoName("");
+    }
+  };
+
+  const handlePagoAdelantadoChange = (val: string) => {
+    setPagoAdelantado(val);
+    if (val !== 'Si') {
+      setSelectedFotoPagoAdelantadoName("");
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
@@ -246,6 +281,18 @@ export default function ComprobantesForm({
       return;
     }
 
+    if (!pagoAdelantado) {
+      setOperationStatus({ type: 'error', message: 'Por favor, selecciona si cuenta con Pago adelantado (Si o No).' });
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (pagoAdelantado === 'Si' && !selectedFotoPagoAdelantadoName) {
+      setOperationStatus({ type: 'error', message: 'Por favor, sube el comprobante de Pago Adelantado (es obligatorio al seleccionar Si).' });
+      setIsSubmitting(false);
+      return;
+    }
+
     const formData = new FormData(event.currentTarget);
     const submitResponse = await submitComprobante(formData);
 
@@ -262,6 +309,8 @@ export default function ComprobantesForm({
       setSelectedImei("");
       setFechaProximoPago("");
       setSelectedPlazo("");
+      setPagoAdelantado("No");
+      setSelectedFotoPagoAdelantadoName("");
 
       if (showTable) {
         const listResponse = await getComprobantes();
@@ -327,6 +376,10 @@ export default function ComprobantesForm({
           handleFileChange={handleFileChange}
           selectedFotoClienteName={selectedFotoClienteName}
           handleFotoClienteChange={handleFotoClienteChange}
+          pagoAdelantado={pagoAdelantado}
+          setPagoAdelantado={handlePagoAdelantadoChange}
+          selectedFotoPagoAdelantadoName={selectedFotoPagoAdelantadoName}
+          handleFotoPagoAdelantadoChange={handleFotoPagoAdelantadoChange}
         />
       </div>
 

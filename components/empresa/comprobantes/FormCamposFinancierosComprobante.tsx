@@ -13,6 +13,10 @@ interface FormCamposFinancierosComprobanteProps {
   handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   selectedFotoClienteName: string;
   handleFotoClienteChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  pagoAdelantado: string;
+  setPagoAdelantado: (val: string) => void;
+  selectedFotoPagoAdelantadoName: string;
+  handleFotoPagoAdelantadoChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export function FormCamposFinancierosComprobante({
@@ -23,7 +27,11 @@ export function FormCamposFinancierosComprobante({
   selectedFileName,
   handleFileChange,
   selectedFotoClienteName,
-  handleFotoClienteChange
+  handleFotoClienteChange,
+  pagoAdelantado,
+  setPagoAdelantado,
+  selectedFotoPagoAdelantadoName,
+  handleFotoPagoAdelantadoChange
 }: FormCamposFinancierosComprobanteProps) {
   return (
     <>
@@ -210,8 +218,43 @@ export function FormCamposFinancierosComprobante({
         />
       </div>
 
-      {/* DOCUMENTOS / FOTOS: Comprobante y Foto cliente en 50% 50% en PC */}
-      <div className="space-y-4 md:space-y-0 md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* SWITCH PAGO ADELANTADO (OCUPA LA MITAD EN MEDIDA RESPONSIVA) */}
+      <div className={styles.inputGroup}>
+        <label htmlFor="switch-pago-adelantado" className={styles.label}>
+          Pago Adelantado
+        </label>
+        <div className="w-1/2 min-w-[130px] flex items-center justify-between px-3.5 py-3 bg-slate-950/50 border border-slate-800 rounded-xl transition-all h-[46px]">
+          <span className={`text-xs font-bold transition-colors ${pagoAdelantado === 'Si' ? 'text-secondary' : 'text-slate-400'}`}>
+            {pagoAdelantado === 'Si' ? 'Sí' : 'No'}
+          </span>
+          <button
+            id="switch-pago-adelantado"
+            type="button"
+            role="switch"
+            aria-checked={pagoAdelantado === 'Si'}
+            onClick={() => setPagoAdelantado(pagoAdelantado === 'Si' ? 'No' : 'Si')}
+            className={`relative inline-flex items-center h-6 w-11 shrink-0 cursor-pointer rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none border border-slate-700/50 ${
+              pagoAdelantado === 'Si' ? "bg-secondary" : "bg-slate-800"
+            }`}
+            title={pagoAdelantado === 'Si' ? "Pago adelantado activado" : "Pago adelantado desactivado"}
+          >
+            <span
+              aria-hidden="true"
+              className={`pointer-events-none block h-5 w-5 transform rounded-full bg-slate-950 shadow-lg ring-0 transition duration-200 ease-in-out ${
+                pagoAdelantado === 'Si' ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+        <input
+          type="hidden"
+          name="pago_adelantado"
+          value={pagoAdelantado}
+        />
+      </div>
+
+      {/* DOCUMENTOS / FOTOS */}
+      <div className={`space-y-4 md:space-y-0 md:col-span-3 grid grid-cols-1 ${pagoAdelantado === 'Si' ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6`}>
         {/* COMPROBANTE */}
         <div className="space-y-2">
           <label className={styles.label}>Comprobante (Imagen o PDF)</label>
@@ -265,6 +308,35 @@ export function FormCamposFinancierosComprobante({
             </div>
           </div>
         </div>
+
+        {/* PAGO ADELANTADO (IMAGEN O PDF) - CONDICIONAL SI PAGO ADELANTADO ES SI */}
+        {pagoAdelantado === 'Si' && (
+          <div className="space-y-2 animate-in fade-in duration-200">
+            <label className={styles.label}>Pago Adelantado (Imagen o PDF)</label>
+            <div className={styles.fileUploadBox}>
+              <input
+                type="file"
+                name="foto_pago_adelantado"
+                accept="image/*,.pdf"
+                onChange={handleFotoPagoAdelantadoChange}
+                required
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                suppressHydrationWarning
+              />
+              <div className="flex items-center gap-2 text-center max-w-full px-2">
+                <span className="material-symbols-outlined text-slate-500 group-hover:text-secondary text-xl transition-colors shrink-0">
+                  cloud_upload
+                </span>
+                <p
+                  className="text-xs text-slate-300 font-medium truncate max-w-[200px] sm:max-w-[300px] md:max-w-md"
+                  title={selectedFotoPagoAdelantadoName || "Subir pago adelantado"}
+                >
+                  {selectedFotoPagoAdelantadoName ? selectedFotoPagoAdelantadoName : "Subir pago adelantado"}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* COMENTARIOS */}

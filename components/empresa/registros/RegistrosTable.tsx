@@ -237,6 +237,11 @@ export function RegistrosTable({
                             IMEI: {orden.imei}
                           </span>
                         )}
+                        {orden.pago_adelantado === "Si" && (
+                          <span className="mt-1 text-[9px] bg-secondary/15 text-secondary border border-secondary/30 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                            PAGO ADELANTADO
+                          </span>
+                        )}
                       </div>
                     </td>
 
