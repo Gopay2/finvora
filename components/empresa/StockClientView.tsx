@@ -30,6 +30,7 @@ interface StockItem {
   estado: string;
   fecha_ingreso: string;
   fecha_en_envio?: string | null;
+  estado_previo?: string | null;
   productos?: ProductoInfo;
 }
 
@@ -335,6 +336,7 @@ export default function StockClientView({
                             imei={unidad.imei}
                             estadoActual={unidad.estado}
                             fechaEnEnvio={unidad.fecha_en_envio}
+                            estadoPrevio={unidad.estado_previo}
                             fechaIngreso={unidad.fecha_ingreso}
                             disabled={!canEdit}
                             vendedores={vendedores}

@@ -9,6 +9,7 @@ interface StockStatusSelectorProps {
   imei: string;
   estadoActual: string;
   fechaEnEnvio?: string | null;
+  estadoPrevio?: string | null;
   fechaIngreso?: string | null;
   disabled?: boolean;
   vendedores?: Vendedor[];
@@ -46,12 +47,14 @@ export default function StockStatusSelector({
   imei,
   estadoActual,
   fechaEnEnvio = null,
+  estadoPrevio = null,
   fechaIngreso = null,
   disabled = false,
   vendedores = []
 }: StockStatusSelectorProps) {
   const [estado, setEstado] = useState(estadoActual);
   const [fechaEnEnvioState, setFechaEnEnvioState] = useState<string | null>(fechaEnEnvio);
+  const [estadoPrevioState, setEstadoPrevioState] = useState<string | null>(estadoPrevio);
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [envioCountdown, setEnvioCountdown] = useState<number | null>(null);
@@ -77,7 +80,10 @@ export default function StockStatusSelector({
     if (fechaEnEnvio) {
       setFechaEnEnvioState(fechaEnEnvio);
     }
-  }, [estadoActual, fechaEnEnvio]);
+    if (estadoPrevio) {
+      setEstadoPrevioState(estadoPrevio);
+    }
+  }, [estadoActual, fechaEnEnvio, estadoPrevio]);
 
   const colors: Record<string, string> = {
     Disponible: "bg-green-500/10 text-green-400 border-green-500/30",
@@ -122,11 +128,13 @@ export default function StockStatusSelector({
         return diffSecs > 0 ? diffSecs : 0;
       };
 
+      const estadoDestino = estadoPrevioState === "Concesión" ? "Concesión" : "Disponible";
+
       const segundosIniciales = calcularSegundosRestantes();
       setEnvioCountdown(segundosIniciales);
 
       if (segundosIniciales <= 0 && Date.now() >= fechaBaseMs) {
-        setEstado("Disponible");
+        setEstado(estadoDestino);
         return;
       }
 
@@ -135,7 +143,7 @@ export default function StockStatusSelector({
         setEnvioCountdown(segundos);
         if (segundos <= 0 && Date.now() >= fechaBaseMs) {
           clearInterval(interval);
-          setEstado("Disponible");
+          setEstado(estadoDestino);
         }
       }, 1000);
 
@@ -144,7 +152,7 @@ export default function StockStatusSelector({
       setEnvioCountdown(null);
       setIsProgramado(false);
     }
-  }, [estado, fechaEnEnvioState, mounted]);
+  }, [estado, fechaEnEnvioState, estadoPrevioState, mounted]);
 
   // Formato HH:MM:SS (ej: 08:45:12)
   const formatHHMMSS = (totalSeconds: number): string => {
@@ -217,10 +225,13 @@ export default function StockStatusSelector({
     setLoading(true);
     const result = await actualizarEstadoStock(imei, nuevoEstado);
     if (result.success) {
-      setEstado(nuevoEstado);
       if (nuevoEstado === "En envío") {
+        setEstadoPrevioState(estado);
         setFechaEnEnvioState(new Date().toISOString());
+      } else {
+        setEstadoPrevioState(null);
       }
+      setEstado(nuevoEstado);
     } else {
       setError("Error al actualizar estado");
       setTimeout(() => setError(null), 3000);

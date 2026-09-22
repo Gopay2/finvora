@@ -52,6 +52,7 @@ export default async function StockPage() {
       estado,
       fecha_ingreso,
       fecha_en_envio,
+      estado_previo,
       productos!inner (
         marca,
         modelo,
