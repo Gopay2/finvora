@@ -8,6 +8,8 @@ import { styles } from "./comprobantes-types";
 import type { OptionItem, Producto, StockItem, ModeloAgrupado } from "./comprobantes-types";
 import { FormSeleccionEquipoComprobante } from "./comprobantes/FormSeleccionEquipoComprobante";
 import { FormCamposFinancierosComprobante } from "./comprobantes/FormCamposFinancierosComprobante";
+import { optimizarImagenParaSubida } from "@/utils/image-compression";
+import { ComprobanteProgressModal } from "./comprobantes/ComprobanteProgressModal";
 
 interface ComprobantesFormProps {
   vendedores: OptionItem[];
@@ -33,6 +35,14 @@ export default function ComprobantesForm({
   const [selectedFileName, setSelectedFileName] = useState("");
   const [selectedFotoClienteName, setSelectedFotoClienteName] = useState("");
   const [operationStatus, setOperationStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Estados para modal de progreso y carga
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [modalTitle, setModalTitle] = useState("Procesando comprobante...");
+  const [modalDescription, setModalDescription] = useState("Iniciando registro...");
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [modalSuccess, setModalSuccess] = useState(false);
 
   // Estados para selección de equipo y ubicaciones
   const [selectedRepartidorId, setSelectedRepartidorId] = useState<string>("");
@@ -146,9 +156,15 @@ export default function ComprobantesForm({
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const maxSizeBytes = 5 * 1024 * 1024;
+      const isPdf = file.type === 'application/pdf';
+      const maxSizeBytes = isPdf ? 5 * 1024 * 1024 : 20 * 1024 * 1024;
       if (file.size > maxSizeBytes) {
-        setOperationStatus({ type: 'error', message: "El comprobante excede el tamaño máximo permitido de 5MB." });
+        setOperationStatus({
+          type: 'error',
+          message: isPdf
+            ? "El comprobante en PDF excede el tamaño máximo permitido de 5MB."
+            : "La imagen del comprobante excede el tamaño máximo permitido de 20MB."
+        });
         event.target.value = "";
         setSelectedFileName("");
         return;
@@ -172,9 +188,15 @@ export default function ComprobantesForm({
   const handleFotoClienteChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const maxSizeBytes = 5 * 1024 * 1024;
+      const isPdf = file.type === 'application/pdf';
+      const maxSizeBytes = isPdf ? 5 * 1024 * 1024 : 20 * 1024 * 1024;
       if (file.size > maxSizeBytes) {
-        setOperationStatus({ type: 'error', message: "La foto del cliente excede el tamaño máximo permitido de 5MB." });
+        setOperationStatus({
+          type: 'error',
+          message: isPdf
+            ? "La foto del cliente en PDF excede el tamaño máximo permitido de 5MB."
+            : "La foto del cliente excede el tamaño máximo permitido de 20MB."
+        });
         event.target.value = "";
         setSelectedFotoClienteName("");
         return;
@@ -198,9 +220,15 @@ export default function ComprobantesForm({
   const handleFotoPagoAdelantadoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const maxSizeBytes = 5 * 1024 * 1024;
+      const isPdf = file.type === 'application/pdf';
+      const maxSizeBytes = isPdf ? 5 * 1024 * 1024 : 20 * 1024 * 1024;
       if (file.size > maxSizeBytes) {
-        setOperationStatus({ type: 'error', message: "El archivo de pago adelantado excede el tamaño máximo permitido de 5MB." });
+        setOperationStatus({
+          type: 'error',
+          message: isPdf
+            ? "El archivo de pago adelantado en PDF excede el tamaño máximo permitido de 5MB."
+            : "El archivo de pago adelantado excede el tamaño máximo permitido de 20MB."
+        });
         event.target.value = "";
         setSelectedFotoPagoAdelantadoName("");
         return;
@@ -294,40 +322,113 @@ export default function ComprobantesForm({
     }
 
     const formData = new FormData(event.currentTarget);
-    const submitResponse = await submitComprobante(formData);
 
-    if (submitResponse.success) {
-      setOperationStatus({ type: 'success', message: '¡Comprobante registrado y cargado exitosamente!' });
-      formRef.current?.reset();
-      setSelectedFileName("");
-      setSelectedFotoClienteName("");
-      setVendedorSearch("");
-      setSelectedVendedor(null);
-      setSelectedRepartidorId("");
-      setSelectedModelKey("");
-      setSelectedColor("");
-      setSelectedImei("");
-      setFechaProximoPago("");
-      setSelectedPlazo("");
-      setPagoAdelantado("No");
-      setSelectedFotoPagoAdelantadoName("");
+    // Abrir modal de progreso e indicar inicio
+    setShowProgressModal(true);
+    setModalError(null);
+    setModalSuccess(false);
+    setUploadProgress(10);
+    setModalTitle("Optimizando imágenes...");
+    setModalDescription("Reduciendo tamaño de fotos para acelerar el envío...");
 
-      if (showTable) {
-        const listResponse = await getComprobantes();
-        if (listResponse.success && listResponse.data) {
-          onSubmitSuccess(listResponse.data);
+    try {
+      // 1. Optimizar archivos en el cliente antes de enviar por red
+      const originalComprobante = formData.get("comprobante") as File | null;
+      if (originalComprobante && originalComprobante.size > 0) {
+        setUploadProgress(18);
+        const optComp = await optimizarImagenParaSubida(originalComprobante);
+        formData.set("comprobante", optComp);
+      }
+
+      const originalFotoCliente = formData.get("foto_cliente") as File | null;
+      if (originalFotoCliente && originalFotoCliente.size > 0) {
+        setUploadProgress(26);
+        const optFoto = await optimizarImagenParaSubida(originalFotoCliente);
+        formData.set("foto_cliente", optFoto);
+      }
+
+      const originalFotoAdelantado = formData.get("foto_pago_adelantado") as File | null;
+      if (originalFotoAdelantado && originalFotoAdelantado.size > 0) {
+        setUploadProgress(34);
+        const optAdelantado = await optimizarImagenParaSubida(originalFotoAdelantado);
+        formData.set("foto_pago_adelantado", optAdelantado);
+      }
+
+      // 2. Subida y procesamiento en el servidor
+      setUploadProgress(45);
+      setModalTitle("Subiendo comprobante...");
+      setModalDescription("Enviando archivos optimizados a la Base de Datos...");
+
+      // Simular avance fluido durante el envío de red
+      const progressTimer = setInterval(() => {
+        setUploadProgress((prev) => (prev < 78 ? prev + 3 : prev));
+      }, 250);
+
+      let submitResponse;
+      try {
+        submitResponse = await submitComprobante(formData);
+      } finally {
+        clearInterval(progressTimer);
+      }
+
+      if (submitResponse.success) {
+        setUploadProgress(90);
+        setModalTitle("Registrando en sistema...");
+        setModalDescription("Guardando comprobante y actualizando inventario...");
+
+        formRef.current?.reset();
+        setSelectedFileName("");
+        setSelectedFotoClienteName("");
+        setVendedorSearch("");
+        setSelectedVendedor(null);
+        setSelectedRepartidorId("");
+        setSelectedModelKey("");
+        setSelectedColor("");
+        setSelectedImei("");
+        setFechaProximoPago("");
+        setSelectedPlazo("");
+        setPagoAdelantado("No");
+        setSelectedFotoPagoAdelantadoName("");
+
+        if (showTable) {
+          const listResponse = await getComprobantes();
+          if (listResponse.success && listResponse.data) {
+            onSubmitSuccess(listResponse.data);
+          } else {
+            onSubmitSuccess();
+          }
         } else {
           onSubmitSuccess();
         }
-      } else {
-        onSubmitSuccess();
-      }
 
-      router.refresh();
-    } else {
-      setOperationStatus({ type: 'error', message: submitResponse.error || 'Error al procesar el comprobante.' });
+        router.refresh();
+
+        setUploadProgress(100);
+        setModalSuccess(true);
+        setModalTitle("¡Comprobante Registrado!");
+        setModalDescription("El comprobante y los archivos se guardaron exitosamente.");
+        setOperationStatus({ type: 'success', message: '¡Comprobante registrado y cargado exitosamente!' });
+      } else {
+        const errorMsg = submitResponse.error || 'Error al procesar el comprobante.';
+        setModalError(errorMsg);
+        setModalTitle("Error al guardar");
+        setModalDescription("No se pudo completar el registro.");
+        setOperationStatus({ type: 'error', message: errorMsg });
+      }
+    } catch (err: unknown) {
+      console.error("Excepción al enviar comprobante:", err);
+      const errorObject = err instanceof Error ? err : null;
+      const errorMessage = errorObject?.message || "";
+      const networkErrorMsg = errorMessage.includes("fetch") || errorMessage.includes("Network")
+        ? "Error de conexión con el servidor. Por favor, verifica tu señal de internet y reintenta."
+        : (errorMessage || "Ocurrió un error inesperado al subir el comprobante.");
+      setModalError(networkErrorMsg);
+      setModalTitle("Error de conexión");
+      setModalDescription("Ocurrió un error durante la subida.");
+      setOperationStatus({ type: 'error', message: networkErrorMsg });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   return (
@@ -400,6 +501,17 @@ export default function ComprobantesForm({
           </>
         )}
       </button>
+
+      {/* Modal de Progreso con Porcentajes y Estados de Carga */}
+      <ComprobanteProgressModal
+        isOpen={showProgressModal}
+        progress={uploadProgress}
+        stepTitle={modalTitle}
+        stepDescription={modalDescription}
+        isSuccess={modalSuccess}
+        error={modalError}
+        onClose={() => setShowProgressModal(false)}
+      />
     </form>
   );
 }
