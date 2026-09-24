@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   
   // Permite acceso desde la red local para desarrollo en dispositivos físicos
-  allowedDevOrigins: ['192.168.1.5', 'localhost:3000'],
+  allowedDevOrigins: ['192.168.1.33', '192.168.1.5', 'localhost:3000'],
 
   experimental: {
     serverActions: {
@@ -32,7 +32,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ""}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' blob: data: https://*.supabase.co https://img.youtube.com https://i.ytimg.com; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.discord.com; frame-ancestors 'none';`
+            value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ""}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' blob: data: https://*.supabase.co https://img.youtube.com https://i.ytimg.com; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; connect-src 'self' ${process.env.NODE_ENV === 'development' ? "ws: wss: http: " : ""}https://*.supabase.co wss://*.supabase.co https://*.discord.com; frame-ancestors 'none';`
           },
           {
             key: 'X-DNS-Prefetch-Control',
