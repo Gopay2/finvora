@@ -29,6 +29,7 @@ export default async function InventarioPage() {
   const canAccessRecibo = isAllowed(userRole, ["Admin", "Supervisor", "Developer", "Bodega", "JCI"]);
   const canAccessStock = isAllowed(userRole, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser", "JCI"]);
   const canAccessJci = isAllowed(userRole, ["Admin", "Supervisor", "Developer", "JCI"]);
+  const canAccessPedidos = isAllowed(userRole, ["Admin", "Supervisor", "Developer", "JCI", "Closer"]);
 
   return (
     <div className={styles.container}>
@@ -144,6 +145,38 @@ export default async function InventarioPage() {
             </svg>
           </Link>
         )}
+
+        {/* 4. Pedidos */}
+        {/*
+        {canAccessPedidos && (
+          <Link href="/empresa/webapp/inventario/pedidos" className={styles.rowCard}>
+            <div className={styles.iconBox}>
+              <svg
+                className="w-8 h-8 sm:w-9 sm:h-9 text-[#a5c4ec] group-hover:text-sky-200 transition-colors"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.85"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
+              </svg>
+            </div>
+            <span 
+              className={styles.rowText} 
+              style={{ fontFamily: "var(--font-outfit), sans-serif", fontWeight: 300 }}
+            >
+              Pedidos
+            </span>
+            <svg className={styles.chevronIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        )}
+        */}
 
       </div>
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useTransition } from "react";
-import { crearRepartidor, toggleRepartidorActivo, eliminarRepartidor } from "@/app/empresa/webapp/repartos/repartos-actions";
+import { crearRepartidor, toggleRepartidorActivo } from "@/app/empresa/webapp/repartos/repartos-actions";
 
 interface Repartidor {
   id: string;
@@ -22,10 +22,6 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  // Estados para el Modal de Confirmación personalizado
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [deleteConfirmName, setDeleteConfirmName] = useState<string | null>(null);
 
   // Actualizar lista local cuando cambie la inicial
   React.useEffect(() => {
@@ -76,35 +72,6 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
       setRepartidores(prev =>
         prev.map(repartidor => repartidor.id === id ? { ...repartidor, activo: currentStatus } : repartidor)
       );
-      setError(err.message || "Error de red");
-    }
-  };
-
-  const requestEliminar = (id: string, nombreRep: string) => {
-    setDeleteConfirmId(id);
-    setDeleteConfirmName(nombreRep);
-  };
-
-  const executeEliminar = async () => {
-    if (!deleteConfirmId) return;
-
-    const idToDelete = deleteConfirmId;
-    // Cerrar modal
-    setDeleteConfirmId(null);
-    setDeleteConfirmName(null);
-    setError(null);
-
-    const oldList = [...repartidores];
-    setRepartidores(prev => prev.filter(repartidor => repartidor.id !== idToDelete));
-
-    try {
-      const res = await eliminarRepartidor(idToDelete);
-      if (!res.success) {
-        setRepartidores(oldList);
-        setError(res.error || "Error al eliminar repartidor");
-      }
-    } catch (err: any) {
-      setRepartidores(oldList);
       setError(err.message || "Error de red");
     }
   };
@@ -205,9 +172,6 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
                     <th className="px-6 py-4 text-slate-500 text-[10px] uppercase font-bold border-b border-slate-800 tracking-widest text-center">
                       Fecha Registro
                     </th>
-                    <th className="px-6 py-4 text-slate-500 text-[10px] uppercase font-bold border-b border-slate-800 tracking-widest text-center">
-                      Acciones
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -267,23 +231,11 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
                             year: 'numeric'
                           })}
                         </td>
-                        <td className="px-6 py-4 text-sm border-b border-slate-800/50 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => requestEliminar(r.id, r.nombre)}
-                              className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:border-red-500/30 transition-all flex items-center justify-center cursor-pointer animate-in duration-200"
-                              title="Eliminar Repartidor"
-                            >
-                              <span className="material-symbols-outlined text-base">delete</span>
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-slate-500 italic">
+                      <td colSpan={4} className="px-6 py-12 text-center text-slate-500 italic">
                         No hay repartidores registrados.
                       </td>
                     </tr>
@@ -294,54 +246,6 @@ export default function RepartidoresConfig({ initialRepartidores }: Props) {
           </div>
         </div>
       </div>
-
-      {/* Modal de Confirmación de Eliminación Premium */}
-      {deleteConfirmId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* Backdrop con Blur y oscurecimiento suave */}
-          <div
-            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity animate-in fade-in duration-300"
-            onClick={() => {
-              setDeleteConfirmId(null);
-              setDeleteConfirmName(null);
-            }}
-          />
-          {/* Modal Content */}
-          <div className="relative bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl max-w-md w-full shadow-2xl animate-in fade-in zoom-in-95 duration-200 text-center space-y-6">
-            <div className="mx-auto w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
-              <span className="material-symbols-outlined text-2xl">warning</span>
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-lg font-bold text-white">¿Eliminar Repartidor?</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                ¿Estás seguro de que deseas eliminar al repartidor <strong className="text-white">"{deleteConfirmName}"</strong>?<br />
-                Esta acción es irreversible y se desvinculará de todas sus zonas asociadas.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setDeleteConfirmId(null);
-                  setDeleteConfirmName(null);
-                }}
-                className="flex-1 py-3 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold rounded-xl transition-all text-xs cursor-pointer border border-slate-700"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={executeEliminar}
-                className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-all text-xs cursor-pointer shadow-[0_0_15px_rgba(239,68,68,0.2)]"
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

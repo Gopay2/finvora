@@ -14,6 +14,7 @@ import InlineImeiEditor from "@/components/empresa/InlineImeiEditor";
 interface RepartidorOption {
   id: string;
   nombre: string;
+  activo?: boolean;
 }
 
 interface ProductoInfo {
@@ -219,7 +220,11 @@ export default function StockClientView({
             </label>
             <div className="relative w-36 md:w-44 group">
               <div className={`${styles.select} flex items-center justify-center text-center truncate select-none group-focus-within:border-secondary/65`}>
-                <span className="truncate uppercase">{(repartidores.find(r => r.id === selectedUbicacion)?.nombre || "Todas").toUpperCase()}</span>
+                <span className="truncate uppercase">{(() => {
+                  const r = repartidores.find(rep => rep.id === selectedUbicacion);
+                  if (!r) return "Todas";
+                  return r.nombre + (r.activo === false ? " (INACTIVO)" : "");
+                })().toUpperCase()}</span>
               </div>
               <select
                 value={selectedUbicacion}
@@ -232,11 +237,13 @@ export default function StockClientView({
                 <option value="" className="bg-slate-950 text-slate-400 font-sans text-left text-xs" style={{ paddingLeft: "14px", fontSize: "12px" }}>
                   {'\u00A0\u00A0'}TODAS
                 </option>
-                {repartidores.map((repartidor) => (
-                  <option key={repartidor.id} value={repartidor.id} className="bg-slate-950 text-white font-sans text-left text-xs" style={{ paddingLeft: "14px", fontSize: "12px" }}>
-                    {'\u00A0\u00A0' + repartidor.nombre.toUpperCase()}
-                  </option>
-                ))}
+                {repartidores
+                  .filter((repartidor) => repartidor.activo !== false || unidades.some(u => u.zona === repartidor.id))
+                  .map((repartidor) => (
+                    <option key={repartidor.id} value={repartidor.id} className="bg-slate-950 text-white font-sans text-left text-xs" style={{ paddingLeft: "14px", fontSize: "12px" }}>
+                      {'\u00A0\u00A0' + repartidor.nombre.toUpperCase() + (repartidor.activo === false ? " (INACTIVO)" : "")}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>
