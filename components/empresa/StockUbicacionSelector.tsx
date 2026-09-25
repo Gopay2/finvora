@@ -6,6 +6,7 @@ import { actualizarZonaStock } from "@/app/empresa/webapp/stock/stock-actions";
 interface RepartidorOption {
   id: string;
   nombre: string;
+  activo?: boolean;
 }
 
 interface StockUbicacionSelectorProps {
@@ -43,7 +44,10 @@ export default function StockUbicacionSelector({
     setLoading(false);
   };
 
-  const nombreActual = repartidores.find(repartidor => repartidor.id === ubicacion)?.nombre || "Sin Asignar";
+  const actualObj = repartidores.find(repartidor => repartidor.id === ubicacion);
+  const nombreActual = actualObj 
+    ? `${actualObj.nombre}${actualObj.activo === false ? " (INACTIVO)" : ""}`
+    : "Sin Asignar";
 
   if (disabled) {
     return (
@@ -90,11 +94,13 @@ export default function StockUbicacionSelector({
         <option value="" className="bg-slate-950 text-slate-400 italic text-center text-xs" style={{ fontSize: '12px' }}>
           SIN ASIGNAR
         </option>
-        {repartidores.map(repartidor => (
-          <option key={repartidor.id} value={repartidor.id} className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>
-            {repartidor.nombre.toUpperCase()}
-          </option>
-        ))}
+        {repartidores
+          .filter(repartidor => repartidor.activo !== false || repartidor.id === ubicacion)
+          .map(repartidor => (
+            <option key={repartidor.id} value={repartidor.id} className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>
+              {repartidor.nombre.toUpperCase() + (repartidor.activo === false ? " (INACTIVO)" : "")}
+            </option>
+          ))}
       </select>
 
       {loading && (
