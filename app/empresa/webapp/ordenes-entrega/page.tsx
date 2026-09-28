@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { getUserProfile, isAllowed } from "@/utils/auth-check";
+import { getUserProfile, isAllowed, isCloserRole, CLOSER_ROLES } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
 import OrdenesEntregaForm from "@/components/empresa/OrdenesEntregaForm";
 import { createClient } from "@/utils/supabase/server";
@@ -20,7 +20,7 @@ export default async function OrdenesEntregaPage() {
   const userProfile = await getUserProfile();
   const userRole = userProfile.role;
 
-  if (!isAllowed(userRole, ["Admin", "Closer", "Cambaceador", "Supervisor", "Developer", "CambaCloser"])) {
+  if (!isAllowed(userRole, ["Admin", ...CLOSER_ROLES, "Cambaceador", "Supervisor", "Developer", "CambaCloser"])) {
     return <AccessDenied role={userRole} sectionName="Orden de Entrega" />;
   }
 
@@ -37,7 +37,7 @@ export default async function OrdenesEntregaPage() {
     .from("stock")
     .select("producto_id, estado, zona, imei");
 
-  if (userRole === "Closer" || userRole === "Cambaceador" || userRole === "CambaCloser") {
+  if (isCloserRole(userRole) || userRole === "Cambaceador" || userRole === "CambaCloser") {
     queryStock.neq("estado", "En envío");
   }
 

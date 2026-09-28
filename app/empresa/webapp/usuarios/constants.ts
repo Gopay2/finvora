@@ -1,6 +1,10 @@
+import { CLOSER_ROLES, type CloserRole } from "@/utils/auth-check";
+
+export { CLOSER_ROLES, type CloserRole };
+
 export const ROLES_DISPONIBLES = [
   "Admin",
-  "Closer",
+  ...CLOSER_ROLES,
   "Cambaceador",
   "CambaCloser",
   "Supervisor",

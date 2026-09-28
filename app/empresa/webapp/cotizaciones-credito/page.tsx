@@ -7,7 +7,7 @@ import AccessDenied from "@/components/empresa/AccessDenied";
 import { CotizacionesCreditoClient } from "@/components/empresa/cotizaciones-credito/CotizacionesCreditoClient";
 
 // 3. Utilidades y Supabase
-import { getUserProfile, isAllowed } from "@/utils/auth-check";
+import { getUserProfile, isAllowed, CLOSER_ROLES } from "@/utils/auth-check";
 import { createClient } from "@/utils/supabase/server";
 import { ZONAS_PREDETERMINADAS } from "@/config/cotizaciones";
 
@@ -44,7 +44,7 @@ export default async function CotizacionesCreditoPage() {
   const userProfile = await getUserProfile();
   const userRole = userProfile.role;
 
-  if (!isAllowed(userRole, ["Admin", "Closer", "Cambaceador", "Supervisor", "Developer", "CambaCloser"])) {
+  if (!isAllowed(userRole, ["Admin", ...CLOSER_ROLES, "Cambaceador", "Supervisor", "Developer", "CambaCloser"])) {
     return <AccessDenied role={userRole} sectionName="Cotizaciones de crédito" />;
   }
 

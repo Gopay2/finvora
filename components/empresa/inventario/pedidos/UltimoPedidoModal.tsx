@@ -3,27 +3,20 @@
 // ─── Imports ────────────────────────────────────────────────────────────────
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import type { PedidoItemInput } from '@/types/pedidos-stock';
+import * as XLSX from 'xlsx';
+import type { UltimoPedidoResumen } from '@/types/pedidos-stock';
 
 // ─── Tipos e Interfaces ─────────────────────────────────────────────────────
-interface ConfirmarPedidoModalProps {
+interface UltimoPedidoModalProps {
   /** Indica si el modal está abierto y visible */
   isOpen: boolean;
   /** Callback para cerrar el modal */
   onClose: () => void;
-  /** Lista de ítems solicitados en el pedido */
-  items: PedidoItemInput[];
-  /** Callback para modificar la cantidad (+ o -) de un producto */
-  onUpdateCantidad: (productoId: string, delta: number) => void;
-  /** Callback para remover un ítem del pedido */
-  onRemoveItem: (productoId: string) => void;
-  /** Callback para confirmar y enviar el pedido */
-  onConfirm: () => void;
-  /** Estado de carga durante el guardado */
-  isSubmitting: boolean;
+  /** Datos del último pedido registrado */
+  pedido: UltimoPedidoResumen | null;
 }
 
-// ─── Estilos de Tailwind Centralizados (Idénticos a PreCargaReciboModal) ────
+// ─── Estilos de Tailwind Centralizados (Consistente con ConfirmarPedidoModal) ────
 const styles = {
   backdrop: 'fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-hidden animate-in fade-in duration-200',
   modalCard: 'bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl shadow-slate-950/80 flex flex-col relative my-auto animate-in zoom-in-95 duration-200 max-h-[72vh] sm:max-h-[80vh]',
@@ -39,41 +32,28 @@ const styles = {
   // Cuerpo y Tabla
   bodyContainer: 'flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-6 min-h-0 overscroll-contain',
   tableWrapper: 'w-full border border-[#16233a] rounded-2xl overflow-x-auto custom-scrollbar bg-[#060b18]/40',
-  table: 'w-full text-left text-xs sm:text-sm border-collapse min-w-[560px] sm:min-w-[620px]',
+  table: 'w-full text-left text-xs sm:text-sm border-collapse min-w-[500px]',
   tableHeaderRow: 'border-b border-[#16233a] bg-[#060b18]/80 text-[#5b87bd] uppercase tracking-wider font-semibold text-xs whitespace-nowrap',
   tableHeaderCellLeft: 'py-3 px-3.5 sm:py-3.5 sm:px-5 text-left',
   tableHeaderCellCenter: 'py-3 px-3.5 sm:py-3.5 sm:px-5 text-center',
-  tableHeaderCellAction: 'py-3 px-3 sm:py-3.5 sm:px-4 text-center',
   tableBody: 'divide-y divide-[#121c2e] font-normal',
   tableEmptyCell: 'py-16 text-center text-slate-500 italic text-sm',
   tableRow: 'hover:bg-slate-800/30 transition-colors border-b border-[#121c2e] whitespace-nowrap',
   tableCell: 'py-3 px-3.5 sm:py-3.5 sm:px-5 text-slate-200 font-normal',
   tableCellCenter: 'py-3 px-3.5 sm:py-3.5 sm:px-5 text-slate-200 font-normal text-center',
-  tableCellAction: 'py-3 px-3 sm:py-3.5 sm:px-4 text-center',
-  deleteButton: 'p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer disabled:opacity-40 inline-flex items-center justify-center',
 
   // Pie de página
-  footer: 'p-4 sm:p-6 border-t border-slate-800 bg-slate-900/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 shrink-0',
-  footerCounter: 'w-full sm:w-auto text-left text-xs sm:text-sm text-slate-400',
-  footerActions: 'flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto justify-end',
-  confirmButton: (isDisabled: boolean) =>
-    `flex items-center justify-center px-5 sm:px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-lg ${
-      isDisabled
-        ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-50'
-        : 'bg-secondary text-slate-950 hover:bg-secondary/90 shadow-secondary/20 cursor-pointer'
-    }`,
+  footer: 'p-4 sm:p-6 border-t border-slate-800 bg-slate-900/60 flex items-center justify-between gap-3 sm:gap-4 shrink-0',
+  footerCounter: 'text-left text-xs sm:text-sm text-slate-400',
+  footerActions: 'flex items-center gap-2.5 sm:gap-3 justify-end',
 };
 
 // ─── Componente Principal ───────────────────────────────────────────────────
-export default function ConfirmarPedidoModal({
+export default function UltimoPedidoModal({
   isOpen,
   onClose,
-  items,
-  onUpdateCantidad,
-  onRemoveItem,
-  onConfirm,
-  isSubmitting,
-}: ConfirmarPedidoModalProps) {
+  pedido,
+}: UltimoPedidoModalProps) {
   const [mounted, setMounted] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
 
@@ -95,17 +75,42 @@ export default function ConfirmarPedidoModal({
   // Cerrar al presionar Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen && !isSubmitting) {
+      if (e.key === 'Escape' && isOpen) {
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isSubmitting, onClose]);
+  }, [isOpen, onClose]);
 
-  if (!isOpen || !mounted) return null;
+  if (!isOpen || !mounted || !pedido) return null;
 
-  const totalEquipos = items.reduce((acc, it) => acc + it.cantidad, 0);
+  const totalEquipos = pedido.items.reduce((acc, it) => acc + (it.cantidad || 0), 0);
+
+  // Descarga del pedido en formato Excel
+  const handleDescargarExcel = () => {
+    const dataParaExcel = pedido.items.map((item) => ({
+      'ID Pedido': pedido.pedidoId,
+      'Fecha Pedido': new Date(pedido.fechaPedido).toLocaleString('es-MX', {
+        timeZone: 'America/Tijuana',
+      }),
+      'Vendedor': pedido.vendedorNombre,
+      'Ciudad / Zona': pedido.zona,
+      'Marca': item.marca,
+      'Modelo': item.modelo,
+      'Almacenamiento': item.almacenamiento || '—',
+      'RAM': item.ram || '—',
+      'Color': item.color || '—',
+      'Cantidad': item.cantidad,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataParaExcel);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Ultimo Pedido');
+
+    const hoy = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(workbook, `Ultimo_Pedido_${hoy}.xlsx`);
+  };
 
   // Manejo bidireccional de trackpad
   const handleTableWheel = (wheelEvent: React.WheelEvent<HTMLDivElement>) => {
@@ -117,25 +122,40 @@ export default function ConfirmarPedidoModal({
     }
   };
 
+  const fechaFormateada = pedido.fechaPedido
+    ? new Date(pedido.fechaPedido).toLocaleString('es-MX', {
+        timeZone: 'America/Tijuana',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '';
+
   const modalContent = (
     <div className={styles.backdrop}>
       <div className={styles.modalCard}>
-        {/* Encabezado del Modal con paleta oficial de Finvora */}
+        {/* Encabezado del Modal */}
         <div className={styles.header}>
           <div className={styles.headerTitleGroup}>
             <div className={styles.headerIconWrapper}>
-              <span className="material-symbols-outlined text-xl">pending_actions</span>
+              <span className="material-symbols-outlined text-xl">history</span>
             </div>
-            <h3 className={styles.headerTitle}>
-              Revisar pedido
-            </h3>
+            <div>
+              <h3 className={styles.headerTitle}>Último pedido</h3>
+              {fechaFormateada && (
+                <span className="text-xs text-slate-400 block mt-0.5 font-normal">
+                  {fechaFormateada}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className={styles.headerActionGroup}>
             <button
               type="button"
               onClick={onClose}
-              disabled={isSubmitting}
               className={styles.headerIconButton}
               title="Cerrar modal"
             >
@@ -144,30 +164,26 @@ export default function ConfirmarPedidoModal({
           </div>
         </div>
 
-        {/* Cuerpo del modal con tabla estilo PreCargaReciboModal */}
+        {/* Cuerpo del modal con tabla estilo modal de confirmación */}
         <div ref={bodyRef} className={styles.bodyContainer}>
-          <div
-            className={styles.tableWrapper}
-            onWheel={handleTableWheel}
-          >
+          <div className={styles.tableWrapper} onWheel={handleTableWheel}>
             <table className={styles.table}>
               <thead>
                 <tr className={styles.tableHeaderRow}>
                   <th className={styles.tableHeaderCellLeft}>PRODUCTO</th>
                   <th className={styles.tableHeaderCellLeft}>COLOR</th>
                   <th className={styles.tableHeaderCellCenter}>CANTIDAD</th>
-                  <th className={styles.tableHeaderCellAction}>ACCIÓN</th>
                 </tr>
               </thead>
               <tbody className={styles.tableBody}>
-                {items.length === 0 ? (
+                {pedido.items.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className={styles.tableEmptyCell}>
-                      No hay equipos seleccionados en este pedido actualmente.
+                    <td colSpan={3} className={styles.tableEmptyCell}>
+                      No hay equipos registrados en este pedido.
                     </td>
                   </tr>
                 ) : (
-                  items.map((item) => {
+                  pedido.items.map((item, idx) => {
                     const marca = item.marca?.trim() || '';
                     const modelo = item.modelo?.trim() || '';
                     const baseName = marca && modelo
@@ -179,12 +195,11 @@ export default function ConfirmarPedidoModal({
                       item.ram?.trim(),
                     ].filter(Boolean);
                     const specs = specsList.length > 0 ? `(${specsList.join(' / ')})` : '';
-
                     const prodColor = item.color || 'N/A';
 
                     return (
-                      <tr key={item.producto_id} className={styles.tableRow}>
-                        {/* Producto con modelo y especificaciones entre paréntesis */}
+                      <tr key={`${item.producto_id || idx}-${idx}`} className={styles.tableRow}>
+                        {/* Producto con especificaciones */}
                         <td className={styles.tableCell}>
                           <span>{baseName}</span>
                           {specs && <span className="text-slate-400 ml-1.5">{specs}</span>}
@@ -195,44 +210,11 @@ export default function ConfirmarPedidoModal({
                           {prodColor}
                         </td>
 
-                        {/* Cantidad con botones compactos */}
+                        {/* Cantidad badge centrado */}
                         <td className={styles.tableCellCenter}>
-                          <div className="inline-flex items-center bg-[#060b18] border border-[#16233a] rounded-xl p-0.5 shadow-inner">
-                            <button
-                              type="button"
-                              onClick={() => onUpdateCantidad(item.producto_id, -1)}
-                              disabled={isSubmitting}
-                              className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 hover:text-white flex items-center justify-center font-bold text-sm transition-colors cursor-pointer disabled:opacity-40"
-                              title="Disminuir"
-                            >
-                              −
-                            </button>
-                            <span className="w-9 text-center font-black text-white text-xs sm:text-sm">
-                              {item.cantidad}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => onUpdateCantidad(item.producto_id, 1)}
-                              disabled={isSubmitting}
-                              className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 hover:text-white flex items-center justify-center font-bold text-sm transition-colors cursor-pointer disabled:opacity-40"
-                              title="Aumentar"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </td>
-
-                        {/* Acción para eliminar */}
-                        <td className={styles.tableCellAction}>
-                          <button
-                            type="button"
-                            onClick={() => onRemoveItem(item.producto_id)}
-                            disabled={isSubmitting}
-                            className={styles.deleteButton}
-                            title="Eliminar de este pedido"
-                          >
-                            <span className="material-symbols-outlined text-lg">delete</span>
-                          </button>
+                          <span className="inline-block px-3 py-1 rounded-lg bg-slate-800 text-white font-black text-xs sm:text-sm border border-slate-700">
+                            {item.cantidad}
+                          </span>
                         </td>
                       </tr>
                     );
@@ -243,31 +225,25 @@ export default function ConfirmarPedidoModal({
           </div>
         </div>
 
-        {/* Footer con resumen a la izquierda y acciones fijas abajo */}
+        {/* Footer con resumen a la izquierda y únicamente el botón de Excel a la derecha */}
         <div className={styles.footer}>
           <div className={styles.footerCounter}>
-            {totalEquipos === 1 ? (
-              <span><strong className="text-white">1 equipo</strong> listo para solicitar</span>
-            ) : (
-              <span><strong className="text-white">{totalEquipos} equipos</strong> listos para solicitar</span>
-            )}
+            <span>
+              <strong className="text-white">
+                {totalEquipos} {totalEquipos === 1 ? 'equipo' : 'equipos'}
+              </strong>{' '}
+              en este pedido
+            </span>
           </div>
 
           <div className={styles.footerActions}>
             <button
               type="button"
-              onClick={onConfirm}
-              disabled={items.length === 0 || totalEquipos === 0 || isSubmitting}
-              className={styles.confirmButton(items.length === 0 || totalEquipos === 0 || isSubmitting)}
+              onClick={handleDescargarExcel}
+              className="flex items-center justify-center h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all cursor-pointer shadow-md shrink-0 active:scale-95"
+              title="Descargar este pedido en Excel"
             >
-              {isSubmitting ? (
-                <span className="flex items-center gap-2">
-                  <span className="animate-spin h-4 w-4 border-2 border-slate-950 border-t-transparent rounded-full" />
-                  <span>Confirmando...</span>
-                </span>
-              ) : (
-                <span>Confirmar pedido</span>
-              )}
+              <span className="material-symbols-outlined text-xl block">download</span>
             </button>
           </div>
         </div>

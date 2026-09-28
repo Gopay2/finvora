@@ -52,6 +52,11 @@ const getBadgeStyles = (role: string) => {
     case "JCI":
       return "bg-teal-500/10 text-teal-400 border-teal-500/20";
     case "Closer":
+    case "Closer Jr":
+    case "Closer Sr.":
+    case "Closer Advanced":
+    case "Closer Pro":
+    case "Closer Expert":
     case "Cambaceador":
     case "CambaCloser":
       return "bg-violet-500/10 text-violet-400 border-violet-500/20";

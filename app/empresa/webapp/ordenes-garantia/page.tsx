@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { getUserProfile, isAllowed } from "@/utils/auth-check";
+import { getUserProfile, isAllowed, CLOSER_ROLES } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
 import OrdenesGarantiaForm from "@/components/empresa/OrdenesGarantiaForm";
 import { createClient } from "@/utils/supabase/server";
@@ -28,7 +28,7 @@ interface ZonaRepartoRaw {
 export default async function OrdenesGarantiaPage() {
   const { role: userRole } = await getUserProfile();
 
-  if (!isAllowed(userRole, ["Admin", "Closer", "Cambaceador", "Supervisor", "Developer", "CambaCloser"])) {
+  if (!isAllowed(userRole, ["Admin", ...CLOSER_ROLES, "Cambaceador", "Supervisor", "Developer", "CambaCloser"])) {
     return <AccessDenied role={userRole} sectionName="Orden de Garantía" />;
   }
 

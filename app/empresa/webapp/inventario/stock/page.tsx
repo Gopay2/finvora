@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { getUserProfile, isAllowed } from "@/utils/auth-check";
+import { getUserProfile, isAllowed, CLOSER_ROLES } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
 import { createClient } from "@/utils/supabase/server";
 import { getVendedores, getDistinctBrands } from "@/app/empresa/webapp/stock/stock-actions";
@@ -24,7 +24,7 @@ export default async function StockPage() {
   const { role: userRole } = await getUserProfile();
   const canEdit = isAllowed(userRole, ["Admin", "Supervisor", "Developer", "JCI"]);
 
-  if (!isAllowed(userRole, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser", "JCI"])) {
+  if (!isAllowed(userRole, ["Admin", "Supervisor", ...CLOSER_ROLES, "Cambaceador", "Repartidor", "Developer", "CambaCloser", "JCI"])) {
     return <AccessDenied role={userRole} sectionName="Stock Disponible" />;
   }
 
