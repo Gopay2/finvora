@@ -2,9 +2,11 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
-import { getUserProfile, isAllowed } from "@/utils/auth-check";
+import { getUserProfile, isAllowed, CLOSER_ROLES } from "@/utils/auth-check";
 import { getDriverRestDayInfo } from "@/utils/driver-schedule";
 import { fetchAllFromTable } from "@/utils/supabase/pagination";
+
+const ALLOWED_LOGISTICS_ROLES = ["Admin", "Supervisor", ...CLOSER_ROLES, "Cambaceador", "Repartidor", "Developer", "CambaCloser"];
 
 /**
  * Obtiene todos los repartos programados para un mes y año específicos.
@@ -17,7 +19,7 @@ import { fetchAllFromTable } from "@/utils/supabase/pagination";
  */
 export async function getRepartosMes(year: number, month: number) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser"])) {
+  if (!isAllowed(role, ALLOWED_LOGISTICS_ROLES)) {
     return { success: false, error: "No autorizado" };
   }
 
@@ -80,7 +82,7 @@ export async function getRepartosMes(year: number, month: number) {
  */
 export async function getLogisticsFormData() {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser"])) {
+  if (!isAllowed(role, ALLOWED_LOGISTICS_ROLES)) {
     return { success: false, error: "No autorizado" };
   }
 
@@ -174,7 +176,7 @@ export async function crearReparto(formData: {
   notas?: string;
 }) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer", "Repartidor", "Closer", "Cambaceador", "CambaCloser"])) {
+  if (!isAllowed(role, ALLOWED_LOGISTICS_ROLES)) {
     return { success: false, error: "No autorizado" };
   }
 
@@ -230,7 +232,7 @@ export async function crearReparto(formData: {
  */
 export async function eliminarReparto(repartoId: string) {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Developer", "Repartidor", "Closer", "Cambaceador", "CambaCloser"])) {
+  if (!isAllowed(role, ALLOWED_LOGISTICS_ROLES)) {
     return { success: false, error: "No autorizado" };
   }
 
@@ -263,7 +265,7 @@ export async function eliminarReparto(repartoId: string) {
  */
 export async function getRepartidoresList() {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser"])) {
+  if (!isAllowed(role, ALLOWED_LOGISTICS_ROLES)) {
     return { success: false, error: "No autorizado" };
   }
 
@@ -384,7 +386,7 @@ export async function eliminarRepartidor(repartidorId: string) {
  */
 export async function getZonasList() {
   const { role } = await getUserProfile();
-  if (!isAllowed(role, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser"])) {
+  if (!isAllowed(role, ALLOWED_LOGISTICS_ROLES)) {
     return { success: false, error: "No autorizado" };
   }
 

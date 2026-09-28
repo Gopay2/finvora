@@ -60,7 +60,7 @@ export function StockVentaModal({
               const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
               return (
                 <option key={vendedor.id} value={vendedor.id}>
-                  {vendedor.role ? `[${vendedor.role}]` : "[Closer]"} {capitalizedName}
+                  {vendedor.role ? `[${vendedor.role}]` : "[Vendedor]"} {capitalizedName}
                 </option>
               );
             })}

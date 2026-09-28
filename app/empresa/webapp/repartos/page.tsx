@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import RepartosCalendar from "@/components/empresa/RepartosCalendar";
-import { getUserProfile, isAllowed } from "@/utils/auth-check";
+import { getUserProfile, isAllowed, CLOSER_ROLES } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
 
 export const revalidate = 0;
@@ -10,7 +10,7 @@ export default async function RepartosPage() {
   const { role: userRole } = await getUserProfile();
   const canEdit = isAllowed(userRole, ["Admin", "Supervisor", "Developer"]);
 
-  if (!isAllowed(userRole, ["Admin", "Supervisor", "Closer", "Cambaceador", "Repartidor", "Developer", "CambaCloser"])) {
+  if (!isAllowed(userRole, ["Admin", "Supervisor", ...CLOSER_ROLES, "Cambaceador", "Repartidor", "Developer", "CambaCloser"])) {
     return <AccessDenied role={userRole} sectionName="Logística y Repartos" />;
   }
 

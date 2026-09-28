@@ -2,13 +2,13 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
-import { getUserProfile, isAllowed } from "@/utils/auth-check";
+import { getUserProfile, isAllowed, isCloserRole, CLOSER_ROLES } from "@/utils/auth-check";
 import { getTijuanaDate } from "@/utils/date-helpers";
 import { fetchAllFromTable } from "@/utils/supabase/pagination";
 import type { PedidoItemInput, ConsolidadoPedidoItem } from "@/types/pedidos-stock";
 
-const ALLOWED_PEDIDO_ROLES = ["Admin", "Supervisor", "Developer", "JCI", "Closer"];
-const ALLOWED_CONSOLIDADO_ROLES = ["Admin", "Supervisor", "Developer", "JCI"];
+const ALLOWED_PEDIDO_ROLES = ["Admin", "Supervisor", "Developer", "JCI", "Bodega", ...CLOSER_ROLES];
+const ALLOWED_CONSOLIDADO_ROLES = ["Admin", "Supervisor", "Developer", "JCI", "Bodega"];
 
 interface RegistrarPedidoParams {
   zona: string;
@@ -202,3 +202,77 @@ export async function obtenerConsolidadoPedidos({
     };
   }
 }
+
+/**
+ * Obtiene el último pedido registrado en pedidos_stock (un solo pedido_id).
+ * Si el usuario es Closer, obtiene su último pedido realizado.
+ * Si es cargo superior (Admin, Supervisor, Developer, JCI), obtiene el último pedido en el sistema.
+ */
+export async function obtenerUltimoPedidoRealizado() {
+  const { role, id: userId } = await getUserProfile();
+
+  if (!isAllowed(role, ALLOWED_PEDIDO_ROLES)) {
+    return { error: "No tienes permisos para consultar pedidos.", pedido: null };
+  }
+
+  const supabase = await createClient();
+
+  // 1. Obtener la fila más reciente para descubrir el último pedido_id
+  let queryUltimo = supabase
+    .from("pedidos_stock")
+    .select("pedido_id, fecha_pedido")
+    .order("fecha_pedido", { ascending: false })
+    .limit(1);
+
+  if (isCloserRole(role)) {
+    queryUltimo = queryUltimo.eq("vendedor_id", userId);
+  }
+
+  const { data: latestRow, error: errorUltimo } = await queryUltimo;
+
+  if (errorUltimo) {
+    console.error("Error al obtener último pedido:", errorUltimo);
+    return { error: "Error al consultar la base de datos.", pedido: null };
+  }
+
+  if (!latestRow || latestRow.length === 0) {
+    return { pedido: null };
+  }
+
+  const ultimoPedidoId = latestRow[0].pedido_id;
+
+  // 2. Traer exclusivamente las líneas que pertenecen a ese único pedido_id
+  const { data: filasPedido, error: errorFilas } = await supabase
+    .from("pedidos_stock")
+    .select("*")
+    .eq("pedido_id", ultimoPedidoId)
+    .order("created_at", { ascending: true });
+
+  if (errorFilas || !filasPedido || filasPedido.length === 0) {
+    return { pedido: null };
+  }
+
+  const primerItem = filasPedido[0];
+  const totalEquipos = (filasPedido as any[]).reduce((acc: number, it: any) => acc + (it.cantidad || 0), 0);
+
+  return {
+    pedido: {
+      pedidoId: ultimoPedidoId,
+      fechaPedido: primerItem.fecha_pedido,
+      zona: primerItem.zona,
+      vendedorNombre: primerItem.vendedor_nombre,
+      vendedorId: primerItem.vendedor_id,
+      items: (filasPedido as any[]).map((it: any) => ({
+        producto_id: it.producto_id,
+        marca: it.marca,
+        modelo: it.modelo,
+        almacenamiento: it.almacenamiento,
+        ram: it.ram,
+        color: it.color,
+        cantidad: it.cantidad,
+      })),
+      totalEquipos,
+    },
+  };
+}
+

@@ -3,8 +3,9 @@
 import React, { useState, useMemo } from 'react';
 import ConfirmarPedidoModal from './ConfirmarPedidoModal';
 import ResumenPedidoModal from './ResumenPedidoModal';
+import UltimoPedidoModal from './UltimoPedidoModal';
 import ConsolidadoPedidosView from './ConsolidadoPedidosView';
-import { registrarPedidoStock } from '@/app/empresa/webapp/inventario/pedidos/pedidos-actions';
+import { registrarPedidoStock, obtenerUltimoPedidoRealizado } from '@/app/empresa/webapp/inventario/pedidos/pedidos-actions';
 
 import type { Product, ZonaRepartoItem } from '@/types/stock';
 import type { PedidoItemInput, UltimoPedidoResumen } from '@/types/pedidos-stock';
@@ -29,8 +30,8 @@ const styles = {
   label: 'text-xs uppercase font-extrabold tracking-wider text-slate-400 block mb-2 flex items-center gap-1.5',
   select: 'w-full bg-slate-950/80 border border-slate-800 hover:border-slate-700/80 text-slate-100 rounded-xl px-4 py-3 pr-10 text-sm font-semibold focus:outline-none focus:border-secondary transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
   itemCard: 'flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700/80 transition-all shadow-sm',
-  btnCounter: 'w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-100 hover:text-white flex items-center justify-center font-black text-xl transition-all cursor-pointer shadow-md select-none touch-manipulation',
-  counterBadge: 'w-14 sm:w-16 h-11 sm:h-12 flex items-center justify-center bg-slate-950 border border-slate-800 rounded-xl font-black text-lg text-white shadow-inner',
+  btnCounter: 'w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-100 hover:text-white flex items-center justify-center font-bold text-base sm:text-lg transition-all cursor-pointer shadow-md select-none touch-manipulation',
+  counterBadge: 'w-10 sm:w-12 h-8 sm:h-9 flex items-center justify-center bg-slate-950 border border-slate-800 rounded-lg sm:rounded-xl font-bold text-sm sm:text-base text-white shadow-inner',
 };
 
 export default function PedidosClientView({
@@ -62,6 +63,9 @@ export default function PedidosClientView({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ultimoResumen, setUltimoResumen] = useState<UltimoPedidoResumen | null>(null);
   const [isResumenModalOpen, setIsResumenModalOpen] = useState(false);
+  const [isUltimoModalOpen, setIsUltimoModalOpen] = useState(false);
+  const [ultimoPedidoData, setUltimoPedidoData] = useState<UltimoPedidoResumen | null>(null);
+  const [isLoadingUltimoPedido, setIsLoadingUltimoPedido] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // 5. Determinar la sigla técnica de la zona seleccionada (ej: Monterrey -> MTY, Guadalajara -> GDL, Resto -> TIJ)
@@ -178,6 +182,7 @@ export default function PedidosClientView({
 
     if (res.success && res.resumen) {
       setUltimoResumen(res.resumen);
+      setUltimoPedidoData(res.resumen);
       setCart({}); // Limpiar carrito tras éxito
       setIsConfirmModalOpen(false);
       setIsResumenModalOpen(true);
@@ -190,7 +195,32 @@ export default function PedidosClientView({
     setIsSubmitting(false);
   };
 
-  const canViewConsolidado = ['Admin', 'Supervisor', 'Developer', 'JCI'].includes(userRole);
+  // 11. Abrir y consultar el último pedido realizado exclusivamente
+  const handleAbrirUltimoPedido = async () => {
+    setIsLoadingUltimoPedido(true);
+    setStatusMessage(null);
+
+    const res = await obtenerUltimoPedidoRealizado();
+    setIsLoadingUltimoPedido(false);
+
+    if (res.error) {
+      setStatusMessage({ type: 'error', message: res.error });
+      return;
+    }
+
+    if (!res.pedido) {
+      setStatusMessage({
+        type: 'error',
+        message: 'Aún no se ha registrado ningún pedido previo en el sistema.',
+      });
+      return;
+    }
+
+    setUltimoPedidoData(res.pedido);
+    setIsUltimoModalOpen(true);
+  };
+
+  const canViewConsolidado = ['Admin', 'Supervisor', 'Developer', 'JCI', 'Bodega'].includes(userRole);
 
   return (
     <div className={styles.container}>
@@ -236,6 +266,9 @@ export default function PedidosClientView({
             </label>
             <div className="relative">
               <select
+                id="pedido-select-zona"
+                name="zona"
+                suppressHydrationWarning
                 value={selectedZona}
                 onChange={handleZonaChange}
                 className={styles.select}
@@ -264,6 +297,9 @@ export default function PedidosClientView({
             </label>
             <div className="relative">
               <select
+                id="pedido-select-marca"
+                name="marca"
+                suppressHydrationWarning
                 value={selectedMarca}
                 onChange={(e) => setSelectedMarca(e.target.value)}
                 disabled={!selectedZona}
@@ -342,19 +378,21 @@ export default function PedidosClientView({
                           {producto.modelo}
                         </span>
                         {producto.color && (
-                          <span className="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700/60 uppercase">
+                          <span className="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700/60 uppercase whitespace-nowrap shrink-0">
                             {producto.color}
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-400">
+                      <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-400 whitespace-nowrap">
                         {producto.almacenamiento && (
-                          <span className="font-semibold text-slate-300">
+                          <span className="font-semibold text-slate-300 whitespace-nowrap shrink-0">
                             {producto.almacenamiento}
                           </span>
                         )}
                         {producto.ram && (
-                          <span>• RAM {producto.ram}</span>
+                          <span className="whitespace-nowrap shrink-0">
+                            {producto.almacenamiento ? '• ' : ''}RAM&nbsp;{producto.ram}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -406,8 +444,21 @@ export default function PedidosClientView({
           )}
         </div>
 
-        {/* Botón Solicitar dentro de la tarjeta (alineado a la derecha, solo texto) */}
-        <div className="pt-4 border-t border-slate-800/80 flex items-center justify-end">
+        {/* Botones de acción: Último pedido y Solicitar */}
+        <div className="pt-2 flex flex-col-reverse sm:flex-row items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={handleAbrirUltimoPedido}
+            disabled={isLoadingUltimoPedido}
+            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 hover:text-white border border-slate-700 font-bold text-sm transition-all cursor-pointer shadow-md disabled:opacity-40 flex items-center justify-center gap-2"
+            title="Ver los detalles del último pedido registrado"
+          >
+            {isLoadingUltimoPedido ? (
+              <span className="animate-spin h-4 w-4 border-2 border-slate-400 border-t-transparent rounded-full" />
+            ) : null}
+            <span>Último pedido</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setIsConfirmModalOpen(true)}
@@ -428,7 +479,6 @@ export default function PedidosClientView({
       <ConfirmarPedidoModal
         isOpen={isConfirmModalOpen}
         onClose={() => setIsConfirmModalOpen(false)}
-        zona={selectedZona}
         items={itemsEnPedido}
         onUpdateCantidad={(id, delta) => {
           const item = cart[id];
@@ -439,7 +489,7 @@ export default function PedidosClientView({
         isSubmitting={isSubmitting}
       />
 
-      {/* ─── MODAL 2: RESUMEN DEL ÚLTIMO PEDIDO Y EXCEL ─────────────────────── */}
+      {/* ─── MODAL 2: RESUMEN DEL ÚLTIMO PEDIDO Y EXCEL TRAS CONFIRMAR ─────── */}
       <ResumenPedidoModal
         isOpen={isResumenModalOpen}
         onClose={() => {
@@ -447,6 +497,13 @@ export default function PedidosClientView({
           setUltimoResumen(null);
         }}
         resumen={ultimoResumen}
+      />
+
+      {/* ─── MODAL 3: CONSULTA DE ÚLTIMO PEDIDO REALIZADO ────────────────────── */}
+      <UltimoPedidoModal
+        isOpen={isUltimoModalOpen}
+        onClose={() => setIsUltimoModalOpen(false)}
+        pedido={ultimoPedidoData}
       />
     </div>
   );

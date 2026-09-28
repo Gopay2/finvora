@@ -24,7 +24,15 @@ export default function ConsolidadoPedidosView({ vendedores }: ConsolidadoPedido
   const [isPending, startTransition] = useTransition();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const hasDateFilter = Boolean(dateFrom || dateTo);
+
   const fetchConsolidado = useCallback(() => {
+    // No traer datos sin antes haber seleccionado un rango de fechas
+    if (!dateFrom && !dateTo) {
+      setItems([]);
+      return;
+    }
+
     startTransition(async () => {
       setErrorMessage(null);
       const res = await obtenerConsolidadoPedidos({
@@ -61,10 +69,10 @@ export default function ConsolidadoPedidosView({ vendedores }: ConsolidadoPedido
 
     const worksheet = XLSX.utils.json_to_sheet(dataParaExcel);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Consolidado');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Resumen Pedidos');
 
     const hoy = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(workbook, `Consolidado_Pedidos_Stock_${hoy}.xlsx`);
+    XLSX.writeFile(workbook, `Resumen_Pedidos_${hoy}.xlsx`);
   };
 
   const handleClearFilters = () => {
@@ -77,44 +85,10 @@ export default function ConsolidadoPedidosView({ vendedores }: ConsolidadoPedido
 
   return (
     <section className="bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
-      {/* Cabecera del consolidado */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-secondary text-2xl">analytics</span>
-            <h3 className="text-lg sm:text-xl font-bold text-white">Consolidado de Pedidos</h3>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Resumen acumulado para auditoría, compras y planeación de stock
-          </p>
-        </div>
-
-        {/* Acciones superiores */}
-        <div className="flex items-center gap-2.5 self-start md:self-auto">
-          {items.length > 0 && (
-            <button
-              type="button"
-              onClick={handleDescargarExcel}
-              className="flex items-center justify-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 rounded-xl transition-all text-xs font-bold cursor-pointer shadow-sm"
-              title="Descargar este reporte consolidado en Excel"
-            >
-              <span className="material-symbols-outlined text-base">download</span>
-              <span>Exportar Excel</span>
-            </button>
-          )}
-
-          {hasFilters && (
-            <button
-              type="button"
-              onClick={handleClearFilters}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl transition-all text-xs font-bold cursor-pointer"
-              title="Limpiar todos los filtros"
-            >
-              <span className="material-symbols-outlined text-sm">filter_alt_off</span>
-              <span className="hidden sm:inline">Limpiar</span>
-            </button>
-          )}
-        </div>
+      {/* Cabecera del resumen de pedidos */}
+      <div className="flex items-center gap-2">
+        <span className="material-symbols-outlined text-secondary text-2xl">receipt_long</span>
+        <h3 className="text-lg sm:text-xl font-bold text-white">Resumen de Pedidos</h3>
       </div>
 
       {/* Barra de Filtros: Fechas (Desde / Hasta) y Vendedor */}
@@ -138,12 +112,15 @@ export default function ConsolidadoPedidosView({ vendedores }: ConsolidadoPedido
           </label>
           <div className="relative flex-1 sm:w-60">
             <select
+              id="consolidado-select-vendedor"
+              name="vendedor"
+              suppressHydrationWarning
               value={selectedVendedorId}
               onChange={(e) => setSelectedVendedorId(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl px-3.5 py-2 pr-10 text-xs sm:text-sm text-slate-200 font-semibold focus:outline-none focus:border-secondary transition-all appearance-none cursor-pointer"
+              className="w-full h-10 bg-slate-950 border border-slate-800 hover:border-slate-700 rounded-xl px-3.5 pr-10 text-xs text-slate-200 font-medium focus:outline-none focus:border-secondary transition-all appearance-none cursor-pointer"
               style={{ colorScheme: 'dark' }}
             >
-              <option value="">TODOS LOS VENDEDORES</option>
+              <option value="">Todos los vendedores</option>
               {vendedores.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.username || 'Sin nombre'} ({v.role})
@@ -165,6 +142,35 @@ export default function ConsolidadoPedidosView({ vendedores }: ConsolidadoPedido
         </div>
       )}
 
+      {/* Acciones: Limpiar (izquierda) y Excel siempre a la derecha, arriba de la tabla */}
+      <div className="flex items-center justify-end gap-2.5">
+        {hasFilters && (
+          <button
+            type="button"
+            onClick={handleClearFilters}
+            className="flex items-center justify-center gap-1.5 px-3 md:px-3.5 py-2 md:py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl transition-all text-xs font-bold cursor-pointer"
+            title="Limpiar todos los filtros"
+          >
+            <span className="material-symbols-outlined text-sm md:text-base shrink-0">filter_alt_off</span>
+            <span className="hidden sm:inline">Limpiar</span>
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={handleDescargarExcel}
+          disabled={items.length === 0}
+          className={`flex items-center justify-center px-3 md:px-4 py-2 md:py-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl transition-all ${
+            items.length === 0
+              ? 'opacity-40 cursor-not-allowed'
+              : 'hover:bg-slate-700 hover:text-white cursor-pointer'
+          }`}
+          title="Descargar este resumen en Excel"
+        >
+          <span className="material-symbols-outlined text-base md:text-xl shrink-0">download</span>
+        </button>
+      </div>
+
       {/* Tabla Consolidada: Zona | Modelo | Cantidad */}
       <div className="bg-slate-950/80 border border-slate-800/90 rounded-2xl overflow-hidden shadow-inner">
         <div className="overflow-x-auto custom-scrollbar">
@@ -182,8 +188,16 @@ export default function ConsolidadoPedidosView({ vendedores }: ConsolidadoPedido
                   <td colSpan={3} className="px-6 py-14 text-center text-slate-400 text-sm">
                     <div className="flex items-center justify-center gap-2.5">
                       <span className="animate-spin h-5 w-5 border-2 border-secondary border-t-transparent rounded-full" />
-                      <span>Cargando consolidado de pedidos...</span>
+                      <span>Cargando resumen de pedidos...</span>
                     </div>
+                  </td>
+                </tr>
+              ) : !hasDateFilter ? (
+                <tr>
+                  <td colSpan={3} className="px-6 py-14 text-center text-slate-400 text-sm">
+                    <span className="material-symbols-outlined text-3xl mb-1.5 block text-slate-500 opacity-60">calendar_month</span>
+                    <span className="font-semibold text-slate-300">Selecciona un rango de fechas</span>
+                    <span className="block text-xs text-slate-500 mt-1">Elige las fechas para consultar los pedidos registrados</span>
                   </td>
                 </tr>
               ) : items.length === 0 ? (
@@ -209,15 +223,15 @@ export default function ConsolidadoPedidosView({ vendedores }: ConsolidadoPedido
                         </span>
                         <span className="font-semibold text-white">{fila.modelo}</span>
                         {(fila.almacenamiento || fila.ram) && (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 shrink-0 whitespace-nowrap">
                             {fila.almacenamiento && (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700/60">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700/60 whitespace-nowrap">
                                 {fila.almacenamiento}
                               </span>
                             )}
                             {fila.ram && (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700/60">
-                                RAM {fila.ram}
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700/60 whitespace-nowrap">
+                                RAM&nbsp;{fila.ram}
                               </span>
                             )}
                           </div>
