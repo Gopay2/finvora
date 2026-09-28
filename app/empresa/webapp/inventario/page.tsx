@@ -29,7 +29,7 @@ export default async function InventarioPage() {
   const canAccessRecibo = isAllowed(userRole, ["Admin", "Supervisor", "Developer", "Bodega", "JCI"]);
   const canAccessStock = isAllowed(userRole, ["Admin", "Supervisor", ...CLOSER_ROLES, "Cambaceador", "Repartidor", "Developer", "CambaCloser", "JCI"]);
   const canAccessJci = isAllowed(userRole, ["Admin", "Supervisor", "Developer", "JCI"]);
-  const canAccessPedidos = isAllowed(userRole, ["Admin", "Supervisor", "Developer", "JCI", "Bodega", ...CLOSER_ROLES]);
+  const canAccessPedidos = isAllowed(userRole, ["Admin", "Supervisor", "Developer", "JCI", "Bodega", "Closer Pro", "Closer Expert"]);
 
   return (
     <div className={styles.container}>
