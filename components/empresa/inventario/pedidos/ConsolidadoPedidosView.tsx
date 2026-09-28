@@ -59,6 +59,7 @@ export default function ConsolidadoPedidosView({ vendedores }: ConsolidadoPedido
     if (items.length === 0) return;
 
     const dataParaExcel = items.map((it) => ({
+      'Solicitado por': it.solicitadoPor,
       'Ciudad / Zona': it.zona,
       'Marca': it.marca,
       'Modelo': it.modelo,
@@ -171,21 +172,22 @@ export default function ConsolidadoPedidosView({ vendedores }: ConsolidadoPedido
         </button>
       </div>
 
-      {/* Tabla Consolidada: Zona | Modelo | Cantidad */}
+      {/* Tabla Consolidada: Solicitado por | Zona | Modelo | Cantidad */}
       <div className="bg-slate-950/80 border border-slate-800/90 rounded-2xl overflow-hidden shadow-inner">
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full border-collapse text-left text-sm">
             <thead>
               <tr className="bg-slate-950 border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                <th className="px-5 py-3.5" style={{ width: '30%' }}>Zona</th>
-                <th className="px-5 py-3.5" style={{ width: '50%' }}>Modelo</th>
-                <th className="px-5 py-3.5 text-center" style={{ width: '20%' }}>Cantidad</th>
+                <th className="px-5 py-3.5 whitespace-nowrap">Solicitado por</th>
+                <th className="px-5 py-3.5 whitespace-nowrap">Zona</th>
+                <th className="px-5 py-3.5 min-w-[200px]">Modelo</th>
+                <th className="px-5 py-3.5 text-center whitespace-nowrap">Cantidad</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/40">
               {isPending ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-14 text-center text-slate-400 text-sm">
+                  <td colSpan={4} className="px-6 py-14 text-center text-slate-400 text-sm">
                     <div className="flex items-center justify-center gap-2.5">
                       <span className="animate-spin h-5 w-5 border-2 border-secondary border-t-transparent rounded-full" />
                       <span>Cargando resumen de pedidos...</span>
@@ -194,7 +196,7 @@ export default function ConsolidadoPedidosView({ vendedores }: ConsolidadoPedido
                 </tr>
               ) : !hasDateFilter ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-14 text-center text-slate-400 text-sm">
+                  <td colSpan={4} className="px-6 py-14 text-center text-slate-400 text-sm">
                     <span className="material-symbols-outlined text-3xl mb-1.5 block text-slate-500 opacity-60">calendar_month</span>
                     <span className="font-semibold text-slate-300">Selecciona un rango de fechas</span>
                     <span className="block text-xs text-slate-500 mt-1">Elige las fechas para consultar los pedidos registrados</span>
@@ -202,15 +204,21 @@ export default function ConsolidadoPedidosView({ vendedores }: ConsolidadoPedido
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-14 text-center text-slate-500 italic text-sm">
+                  <td colSpan={4} className="px-6 py-14 text-center text-slate-500 italic text-sm">
                     <span className="material-symbols-outlined text-3xl mb-1.5 block opacity-40">inventory</span>
                     No se encontraron pedidos registrados con los filtros aplicados.
                   </td>
                 </tr>
               ) : (
                 items.map((fila, idx) => (
-                  <tr key={`${fila.zona}_${fila.modelo}_${idx}`} className="hover:bg-slate-900/50 transition-colors">
-                    <td className="px-5 py-3.5 font-bold text-slate-100 text-xs sm:text-sm">
+                  <tr key={`${fila.solicitadoPor}_${fila.zona}_${fila.modelo}_${idx}`} className="hover:bg-slate-900/50 transition-colors">
+                    <td className="px-5 py-3.5 font-bold text-slate-100 text-xs sm:text-sm whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-slate-400 text-base shrink-0">person</span>
+                        <span className="font-semibold text-slate-200">{fila.solicitadoPor}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5 font-bold text-slate-100 text-xs sm:text-sm whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <span className="material-symbols-outlined text-secondary text-base shrink-0">location_on</span>
                         <span>{fila.zona}</span>
@@ -249,7 +257,7 @@ export default function ConsolidadoPedidosView({ vendedores }: ConsolidadoPedido
             {!isPending && items.length > 0 && (
               <tfoot className="bg-slate-950 border-t-2 border-slate-800 font-bold">
                 <tr>
-                  <td colSpan={2} className="px-5 py-3.5 text-left text-xs uppercase tracking-wider text-slate-300">
+                  <td colSpan={3} className="px-5 py-3.5 text-left text-xs uppercase tracking-wider text-slate-300">
                     Total Acumulado Solicitado
                   </td>
                   <td className="px-5 py-3.5 text-center text-secondary font-black text-base bg-secondary/10 border-l border-slate-800">

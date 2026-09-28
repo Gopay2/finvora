@@ -26,6 +26,8 @@ export interface PedidoStockRow {
 }
 
 export interface ConsolidadoPedidoItem {
+  solicitadoPor: string;
+  vendedorId?: string | null;
   zona: string;
   modelo: string;
   marca: string;

@@ -112,12 +112,13 @@ interface PedidoRawRow {
   ram?: string | null;
   cantidad: number;
   vendedor_id: string | null;
+  vendedor_nombre?: string | null;
   fecha_pedido: string;
 }
 
 /**
  * Consulta y consolida todos los pedidos registrados en pedidos_stock,
- * agrupando por (zona, modelo) y sumando la cantidad total según los filtros de fecha y vendedor.
+ * agrupando por (solicitante, zona, modelo) y sumando la cantidad total según los filtros de fecha y vendedor.
  */
 export async function obtenerConsolidadoPedidos({
   fechaDesde,
@@ -154,7 +155,7 @@ export async function obtenerConsolidadoPedidos({
     const pedidos = await fetchAllFromTable<PedidoRawRow>(
       supabase,
       "pedidos_stock",
-      "id, zona, modelo, marca, almacenamiento, ram, cantidad, vendedor_id, fecha_pedido",
+      "id, zona, modelo, marca, almacenamiento, ram, cantidad, vendedor_id, vendedor_nombre, fecha_pedido",
       {
         orderColumn: "fecha_pedido",
         ascending: false,
@@ -169,13 +170,16 @@ export async function obtenerConsolidadoPedidos({
       }
     );
 
-    // Agrupación en memoria por Zona + Modelo + Specs
+    // Agrupación en memoria por Solicitante + Zona + Modelo + Specs
     const map = new Map<string, ConsolidadoPedidoItem>();
 
     pedidos.forEach((row) => {
-      const clave = `${row.zona.toUpperCase()}___${row.modelo.toUpperCase()}___${(row.almacenamiento || "").toUpperCase()}___${(row.ram || "").toUpperCase()}`;
+      const solicitadoPor = row.vendedor_nombre?.trim() || "Vendedor";
+      const clave = `${solicitadoPor.toUpperCase()}___${row.zona.toUpperCase()}___${row.modelo.toUpperCase()}___${(row.almacenamiento || "").toUpperCase()}___${(row.ram || "").toUpperCase()}`;
       if (!map.has(clave)) {
         map.set(clave, {
+          solicitadoPor,
+          vendedorId: row.vendedor_id || null,
           zona: row.zona,
           modelo: row.modelo,
           marca: row.marca,
@@ -188,6 +192,8 @@ export async function obtenerConsolidadoPedidos({
     });
 
     const resultado: ConsolidadoPedidoItem[] = Array.from(map.values()).sort((a, b) => {
+      const cmpSolicitado = a.solicitadoPor.localeCompare(b.solicitadoPor);
+      if (cmpSolicitado !== 0) return cmpSolicitado;
       const cmpZona = a.zona.localeCompare(b.zona);
       if (cmpZona !== 0) return cmpZona;
       return a.modelo.localeCompare(b.modelo);
