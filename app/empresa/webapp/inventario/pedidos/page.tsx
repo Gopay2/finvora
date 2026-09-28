@@ -9,7 +9,7 @@ import type { Product, ZonaRepartoItem } from '@/types/stock';
 
 export const revalidate = 0;
 
-const ALLOWED_ROLES = ['Admin', 'Supervisor', 'Developer', 'JCI', 'Bodega', ...CLOSER_ROLES];
+const ALLOWED_ROLES = ['Admin', 'Supervisor', 'Developer', 'JCI', 'Bodega', 'Closer Pro', 'Closer Expert'];
 
 const styles = {
   container: 'max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 pb-12',

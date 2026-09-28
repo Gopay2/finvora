@@ -1,4 +1,4 @@
-import { CLOSER_ROLES, type CloserRole } from "@/utils/auth-check";
+import { CLOSER_ROLES, type CloserRole } from "@/utils/roles";
 
 export { CLOSER_ROLES, type CloserRole };
 

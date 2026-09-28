@@ -7,7 +7,7 @@ import { getTijuanaDate } from "@/utils/date-helpers";
 import { fetchAllFromTable } from "@/utils/supabase/pagination";
 import type { PedidoItemInput, ConsolidadoPedidoItem } from "@/types/pedidos-stock";
 
-const ALLOWED_PEDIDO_ROLES = ["Admin", "Supervisor", "Developer", "JCI", "Bodega", ...CLOSER_ROLES];
+const ALLOWED_PEDIDO_ROLES = ["Admin", "Supervisor", "Developer", "JCI", "Bodega", "Closer Pro", "Closer Expert"];
 const ALLOWED_CONSOLIDADO_ROLES = ["Admin", "Supervisor", "Developer", "JCI", "Bodega"];
 
 interface RegistrarPedidoParams {
