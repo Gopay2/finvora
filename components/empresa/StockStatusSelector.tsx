@@ -91,7 +91,8 @@ export default function StockStatusSelector({
     Vendido: "bg-red-500/10 text-red-400 border-red-500/30",
     "A consultar": "bg-purple-500/10 text-purple-400 border-purple-500/30",
     Recambio: "bg-indigo-500/10 text-indigo-400 border-indigo-500/30",
-    Concesión: "bg-orange-500/10 text-orange-400 border-orange-500/30"
+    Concesión: "bg-orange-500/10 text-orange-400 border-orange-500/30",
+    Test: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30"
   };
 
   useEffect(() => {
@@ -128,7 +129,7 @@ export default function StockStatusSelector({
         return diffSecs > 0 ? diffSecs : 0;
       };
 
-      const estadoDestino = estadoPrevioState === "Concesión" ? "Concesión" : "Disponible";
+      const estadoDestino = estadoPrevioState === "Concesión" ? "Concesión" : (estadoPrevioState === "Test" ? "Test" : "Disponible");
 
       const segundosIniciales = calcularSegundosRestantes();
       setEnvioCountdown(segundosIniciales);
@@ -339,6 +340,7 @@ export default function StockStatusSelector({
             <option value="Vendido" className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>VENDIDO</option>
             <option value="Recambio" className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>RECAMBIO</option>
             <option value="Concesión" className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>CONCESIÓN</option>
+            <option value="Test" className="bg-slate-950 text-white font-sans text-center text-xs" style={{ fontSize: '12px' }}>TEST</option>
           </select>
 
           {loading && !timeLeft && (

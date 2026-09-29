@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { getUserProfile, isAllowed, CLOSER_ROLES } from "@/utils/auth-check";
+import { getUserProfile, isAllowed } from "@/utils/auth-check";
 import AccessDenied from "@/components/empresa/AccessDenied";
 
 export const revalidate = 0;
@@ -22,12 +22,12 @@ const styles = {
 export default async function InventarioPage() {
   const { role: userRole } = await getUserProfile();
 
-  if (!isAllowed(userRole, ["Admin", "Supervisor", ...CLOSER_ROLES, "Cambaceador", "Repartidor", "Developer", "CambaCloser", "Bodega", "JCI"])) {
+  if (!isAllowed(userRole, ["Admin", "Supervisor", "Repartidor", "Developer", "Bodega", "JCI", "Closer Pro", "Closer Expert"])) {
     return <AccessDenied role={userRole} sectionName="Inventario" />;
   }
 
   const canAccessRecibo = isAllowed(userRole, ["Admin", "Supervisor", "Developer", "Bodega", "JCI"]);
-  const canAccessStock = isAllowed(userRole, ["Admin", "Supervisor", ...CLOSER_ROLES, "Cambaceador", "Repartidor", "Developer", "CambaCloser", "JCI"]);
+  const canAccessStock = isAllowed(userRole, ["Admin", "Supervisor", "Repartidor", "Developer", "JCI"]);
   const canAccessJci = isAllowed(userRole, ["Admin", "Supervisor", "Developer", "JCI"]);
   const canAccessPedidos = isAllowed(userRole, ["Admin", "Supervisor", "Developer", "JCI", "Bodega", "Closer Pro", "Closer Expert"]);
 
