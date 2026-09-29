@@ -44,6 +44,7 @@ export default function DownloadExcelButton({ data, type, repartidores, label, c
           "RAM": stockItem.productos?.ram || "N/A",
           "Almacenamiento": stockItem.productos?.almacenamiento || "N/A",
           "Ubicación": nombreUbicacion,
+          "Costo": stockItem.costo || 0,
           "Estado": stockItem.estado,
           "Fecha de Ingreso": new Date(stockItem.fecha_ingreso).toLocaleDateString('es-AR')
         };

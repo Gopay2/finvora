@@ -87,7 +87,7 @@ export default function ComprobantesForm({
       .map(p => {
         const unidadesValidas = stockFiltrado.filter(item => item.producto_id === p.id);
         const cantidadDisponible = unidadesValidas.filter(
-          item => item.estado === 'Disponible' || item.estado === 'Concesión' || item.estado === 'Concesion'
+          item => item.estado === 'Disponible' || item.estado === 'Concesión' || item.estado === 'Concesion' || item.estado === 'Test'
         ).length;
         const cantidadAConsultar = unidadesValidas.filter(item => item.estado === 'A consultar').length;
         const cantidadEnEnvio = unidadesValidas.filter(item => item.estado === 'En envío').length;
@@ -148,7 +148,7 @@ export default function ComprobantesForm({
     const matchingProductIds = new Set(matchingProducts.map(p => p.id));
     return stockFiltrado.filter(
       item => matchingProductIds.has(item.producto_id) && 
-        (item.estado === 'Disponible' || item.estado === 'Concesión' || item.estado === 'Concesion' || item.estado === 'A consultar' || item.estado === 'En envío') && 
+        (item.estado === 'Disponible' || item.estado === 'Concesión' || item.estado === 'Concesion' || item.estado === 'A consultar' || item.estado === 'En envío' || item.estado === 'Test') && 
         item.imei
     );
   }, [selectedModelKey, selectedColor, productosConStock, stockFiltrado]);
