@@ -17,7 +17,7 @@ export const WEEKDAY_NAMES = [
  * Valor: Lista de números de días donde descansa (0 = Domingo, 1 = Lunes, ..., 3 = Miércoles, ..., 6 = Sábado).
  */
 export const DRIVER_REST_DAYS: Record<string, number[]> = {
-  felix: [3], // 3 = Miércoles
+  // felix: [3], // 3 = Miércoles (desactivado temporalmente)
   angel: [2], // 2 = Martes
 };
 
