@@ -76,6 +76,78 @@ export async function submitOrdenEntrega(formData: FormData) {
     }
   }
 
+  // 3.37. CONTROL DE ANTICIPACIÓN MÍNIMA (1 HORA RESPECTO A LA HORA LOCAL DEL REPARTIDOR)
+  if (data.fecha && data.hora && (data.repartidor_id || data.zona || data.repartidor)) {
+    let driverTimeZone = "America/Mexico_City";
+    if (data.repartidor_id) {
+      const { data: driverRow } = await supabase
+        .from("repartidores")
+        .select("zona_horaria")
+        .eq("id", data.repartidor_id)
+        .maybeSingle();
+      if (driverRow?.zona_horaria) {
+        driverTimeZone = driverRow.zona_horaria;
+      }
+    } else {
+      const normZona = (data.zona || "").toLowerCase();
+      const normRep = (data.repartidor || "").toLowerCase();
+      if (normZona.includes("tijuana") || normZona.includes("mexicali") || normZona.includes("rosarito") || normRep.includes("ct")) {
+        driverTimeZone = "America/Tijuana";
+      } else if (normZona.includes("cancun")) {
+        driverTimeZone = "America/Cancun";
+      } else if (normZona.includes("sonora") || normZona.includes("hermosillo") || normZona.includes("mazatlan")) {
+        driverTimeZone = "America/Hermosillo";
+      }
+    }
+
+    try {
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: driverTimeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      });
+
+      const parts = formatter.formatToParts(new Date());
+      const getVal = (type: string) => parts.find((part) => part.type === type)?.value || "";
+      const currentYear = getVal("year");
+      const currentMonth = getVal("month");
+      const currentDay = getVal("day");
+      const currentHour = parseInt(getVal("hour") || "0", 10);
+      const currentMinute = parseInt(getVal("minute") || "0", 10);
+      const currentDateStr = `${currentYear}-${currentMonth}-${currentDay}`;
+
+      if (data.fecha < currentDateStr) {
+        return {
+          success: false,
+          error: "La fecha de entrega no puede ser en el pasado."
+        };
+      }
+
+      if (data.fecha === currentDateStr) {
+        const [hStr, mStr] = data.hora.split(":");
+        const deliveryHour = parseInt(hStr, 10);
+        const deliveryMinute = parseInt(mStr, 10);
+        if (!isNaN(deliveryHour) && !isNaN(deliveryMinute)) {
+          const deliveryTotalMinutes = deliveryHour * 60 + deliveryMinute;
+          const currentTotalMinutesWithLeadTime = currentHour * 60 + currentMinute + 60; // 1 hora de anticipación obligatoria
+
+          if (deliveryTotalMinutes < currentTotalMinutesWithLeadTime) {
+            return {
+              success: false,
+              error: "Los horarios de entrega deben ser solicitados con al menos 1 hora de anticipación respecto a la hora local del repartidor."
+            };
+          }
+        }
+      }
+    } catch (tzErr) {
+      console.error("Error validando horario de entrega con zona horaria:", tzErr);
+    }
+  }
+
   // 3.4. CONTROL DE SOBRECUPO / RACE CONDITION (Verificar disponibilidad inmediata)
   if (data.fecha && data.hora && data.repartidor_id) {
     const { data: repartoOcupado } = await supabase
