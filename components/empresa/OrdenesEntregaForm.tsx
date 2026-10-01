@@ -89,6 +89,7 @@ function getZoneTimeInfo(selectedTimeZone: string, isMounted: boolean) {
 
 /**
  * Calcula los slots de horarios disponibles para entrega según la fecha, zona horaria y estado del repartidor.
+ * Exige al menos 1 hora (60 min) de anticipación respecto a la hora local actual si la entrega es para hoy.
  */
 function computeAvailableHours(
   fechaEntrega: string,
@@ -104,15 +105,18 @@ function computeAvailableHours(
   const startTotalMinutes = startHour * 60 + startMinute;
   const endTotalMinutes = endHour * 60 + endMinute;
 
+  // Hora actual local de la zona en minutos + 60 minutos de anticipación obligatoria
+  const currentTotalMinutesWithLeadTime = (zoneTime.hour * 60) + zoneTime.minute + 60;
+
   for (let m = startTotalMinutes; m <= endTotalMinutes; m += 30) {
     const h = Math.floor(m / 60);
     const min = m % 60;
     const pad = (n: number) => n.toString().padStart(2, "0");
     const slotStr = `${pad(h)}:${pad(min)}`;
 
-    // Si es hoy, filtrar horarios pasados
+    // Si es hoy, filtrar horarios que tengan menos de 1 hora de anticipación
     if (fechaEntrega === zoneTime.dateStr) {
-      if (h < zoneTime.hour || (h === zoneTime.hour && min <= zoneTime.minute)) {
+      if (m < currentTotalMinutesWithLeadTime) {
         continue;
       }
     }
@@ -483,16 +487,27 @@ export default function OrdenesEntregaForm({
   }, [selectedRepartidorId, repartidoresValidos, activeZoneInfo]);
 
   const isRepartidorCT = useMemo(() => {
-    return selectedRepartidorName.toLowerCase() === "repartidor ct";
+    const norm = (selectedRepartidorName || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return norm.includes("ct");
   }, [selectedRepartidorName]);
 
   const selectedTimeZone = useMemo(() => {
     if (activeZoneInfo?.repartidor_zona_horaria) {
       return activeZoneInfo.repartidor_zona_horaria;
     }
-    if (selectedZona.toLowerCase().includes("tijuana")) return "America/Tijuana";
+    const normZona = (selectedZona || "").toLowerCase();
+    const normRep = (selectedRepartidorName || "").toLowerCase();
+    if (normZona.includes("tijuana") || normZona.includes("mexicali") || normZona.includes("rosarito") || normRep.includes("ct")) {
+      return "America/Tijuana";
+    }
+    if (normZona.includes("cancun")) {
+      return "America/Cancun";
+    }
+    if (normZona.includes("sonora") || normZona.includes("hermosillo") || normZona.includes("mazatlan")) {
+      return "America/Hermosillo";
+    }
     return "America/Mexico_City";
-  }, [activeZoneInfo, selectedZona]);
+  }, [activeZoneInfo, selectedZona, selectedRepartidorName]);
 
   const selectedZoneDisplayName = useMemo(() => {
     if (isRepartidorCT) return "Tijuana";
