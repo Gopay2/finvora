@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { getDriverRestDayInfo } from '@/utils/driver-schedule';
+import { getDriverRestDayInfo, getDriverSlotList } from '@/utils/driver-schedule';
 
 interface RepartosModalListProps {
   year: number;
@@ -141,24 +141,14 @@ export function RepartosModalList({
         {selectedRepartidorTab ? (() => {
           const driverReps = repartosDelDiaSeleccionado.filter(rep => rep.repartidores?.id === selectedRepartidorTab);
           const currentTabDriverObj = repartidoresFiltradosLogistica.find(r => r.id === selectedRepartidorTab);
-          const isTabDriverCT = (currentTabDriverObj?.nombre || "").toLowerCase() === "repartidor ct";
 
           const formattedDayStr = selectedDay !== null 
             ? `${year}-${String(month + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
             : '';
-          const driverRestInfo = getDriverRestDayInfo(currentTabDriverObj?.nombre, formattedDayStr);
+          const driverRestInfo = getDriverRestDayInfo(currentTabDriverObj, formattedDayStr);
 
-          const minStandardHour = isTabDriverCT ? 10 : 9;
-          const maxStandardHour = isTabDriverCT ? 17 : 19;
-
-          const standardSlots: string[] = [];
-          for (let h = minStandardHour; h <= maxStandardHour; h++) {
-            const hStr = String(h).padStart(2, '0');
-            standardSlots.push(`${hStr}:00`);
-            if (h < maxStandardHour) {
-              standardSlots.push(`${hStr}:30`);
-            }
-          }
+          // Generar slots dinámicos basados en la configuración de horario del repartidor
+          const standardSlots = getDriverSlotList(currentTabDriverObj);
 
           const extraSlots = new Set<string>();
           driverReps.forEach(rep => {

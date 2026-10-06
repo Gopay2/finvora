@@ -20,6 +20,9 @@ export interface RepartoZonaInfo {
   repartidor_nombre: string;
   repartidor_activo: boolean;
   repartidor_zona_horaria?: string;
+  repartidor_dias?: number[];
+  repartidor_horario_inicio?: string;
+  repartidor_horario_fin?: string;
 }
 
 export interface StockItem {

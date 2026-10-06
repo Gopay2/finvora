@@ -337,7 +337,7 @@ export default function ZonasConfig({ initialZonas, repartidores }: Props) {
           <div className={styles.listHeader}>
             <h2 className={styles.listTitle}>
               <span className={styles.listTitleIcon}>map</span>
-              Zonas de Reparto Registradas
+              Zonas Registradas
             </h2>
           </div>
 
