@@ -95,11 +95,11 @@ function computeAvailableHours(
   fechaEntrega: string,
   isRestDay: boolean,
   zoneTime: { dateStr: string; hour: number; minute: number },
-  driverName: string
+  driverSchedule: { nombre?: string; horario_inicio?: string; horario_fin?: string } | string
 ): string[] {
   if (!fechaEntrega || isRestDay || fechaEntrega < zoneTime.dateStr) return [];
 
-  const { startHour, startMinute, endHour, endMinute } = getDriverScheduleConfig(driverName);
+  const { startHour, startMinute, endHour, endMinute } = getDriverScheduleConfig(driverSchedule);
   const allSlots: string[] = [];
 
   const startTotalMinutes = startHour * 60 + startMinute;
@@ -519,17 +519,27 @@ export default function OrdenesEntregaForm({
   }, [isMounted, selectedTimeZone]);
 
   const driverRestDayInfo = useMemo(() => {
-    return getDriverRestDayInfo(selectedRepartidorName, fechaEntrega);
-  }, [selectedRepartidorName, fechaEntrega]);
+    return getDriverRestDayInfo(
+      {
+        nombre: selectedRepartidorName,
+        dias: activeZoneInfo?.repartidor_dias
+      },
+      fechaEntrega
+    );
+  }, [selectedRepartidorName, activeZoneInfo?.repartidor_dias, fechaEntrega]);
 
   const horasDisponibles = useMemo(() => {
     return computeAvailableHours(
       fechaEntrega,
       driverRestDayInfo.isRestDay,
       zoneTime,
-      selectedRepartidorName
+      {
+        nombre: selectedRepartidorName,
+        horario_inicio: activeZoneInfo?.repartidor_horario_inicio,
+        horario_fin: activeZoneInfo?.repartidor_horario_fin
+      }
     );
-  }, [fechaEntrega, zoneTime, selectedRepartidorName, driverRestDayInfo.isRestDay]);
+  }, [fechaEntrega, zoneTime, selectedRepartidorName, activeZoneInfo?.repartidor_horario_inicio, activeZoneInfo?.repartidor_horario_fin, driverRestDayInfo.isRestDay]);
 
   const horariosOcupados = useMemo(() => {
     if (!selectedRepartidorId || !fechaEntrega || !repartosExistentes || !repartosExistentes.length) {

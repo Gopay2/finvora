@@ -19,21 +19,44 @@ export default async function RepartidoresPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700">
-      <header className="flex items-center justify-between gap-4 md:gap-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-            Configuración de Repartidores y Locales
-          </h1>
-          <p className="text-slate-500 text-sm">Gestiona el personal activo para logística y asignación de zonas</p>
+      <div className="space-y-4">
+        {/* Volver en Celular (arriba del título) */}
+        <div className="flex justify-end sm:hidden">
+          <Link 
+            href="/empresa/webapp/repartos" 
+            className="text-slate-500 hover:text-slate-300 flex items-center gap-2 text-sm transition-colors cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-base">arrow_back</span>
+            Volver
+          </Link>
         </div>
-        <Link 
-          href="/empresa/webapp/repartos" 
-          className="text-slate-500 hover:text-slate-300 flex items-center gap-2 text-sm transition-colors cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-base">arrow_back</span>
-          Volver
-        </Link>
-      </header>
+
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-6">
+          <div className="space-y-1">
+            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+              Configuración de Repartidores y Locales
+            </h1>
+            <p className="text-slate-500 text-sm">Gestiona el personal activo para logística y asignación de zonas</p>
+          </div>
+          <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
+            <Link 
+              href="/empresa/webapp/repartos/repartidores/horarios" 
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 text-slate-300 border border-slate-700 rounded-xl hover:bg-slate-700 hover:text-white transition-all text-xs font-semibold cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm">schedule</span>
+              <span>Horarios</span>
+            </Link>
+            {/* Volver en PC */}
+            <Link 
+              href="/empresa/webapp/repartos" 
+              className="hidden sm:flex text-slate-500 hover:text-slate-300 items-center gap-2 text-sm transition-colors cursor-pointer pl-1"
+            >
+              <span className="material-symbols-outlined text-base">arrow_back</span>
+              Volver
+            </Link>
+          </div>
+        </header>
+      </div>
 
       <RepartidoresConfig initialRepartidores={repartidores} />
     </div>

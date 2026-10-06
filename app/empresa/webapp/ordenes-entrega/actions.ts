@@ -65,13 +65,29 @@ export async function submitOrdenEntrega(formData: FormData) {
 
   const verificacionFile = formData.get("verificacion_crediticia") as File | null;
 
-  // 3.35. CONTROL DE DÍA DE DESCANSO DEL REPARTIDOR
-  if (data.fecha && data.repartidor) {
-    const restDayInfo = getDriverRestDayInfo(data.repartidor, data.fecha);
+  // 3.35. CONTROL DE DÍA DE DESCANSO Y HORARIOS DEL REPARTIDOR
+  let driverRowData: { zona_horaria?: string; dias?: number[]; horario_inicio?: string; horario_fin?: string; nombre?: string } | null = null;
+  if (data.repartidor_id) {
+    const { data: repRow } = await supabase
+      .from("repartidores")
+      .select("zona_horaria, dias, horario_inicio, horario_fin, nombre")
+      .eq("id", data.repartidor_id)
+      .maybeSingle();
+    driverRowData = repRow;
+  }
+
+  if (data.fecha && (data.repartidor || driverRowData?.nombre)) {
+    const restDayInfo = getDriverRestDayInfo(
+      {
+        nombre: driverRowData?.nombre || data.repartidor,
+        dias: driverRowData?.dias
+      },
+      data.fecha
+    );
     if (restDayInfo.isRestDay) {
       return {
         success: false,
-        error: `El repartidor ${data.repartidor} no realiza entregas los días ${restDayInfo.restDayNames.join(", ")} (Día de descanso).`
+        error: `El repartidor ${driverRowData?.nombre || data.repartidor} no realiza entregas los días ${restDayInfo.restDayNames.join(", ")} (Día de descanso).`
       };
     }
   }
@@ -79,15 +95,8 @@ export async function submitOrdenEntrega(formData: FormData) {
   // 3.37. CONTROL DE ANTICIPACIÓN MÍNIMA (1 HORA RESPECTO A LA HORA LOCAL DEL REPARTIDOR)
   if (data.fecha && data.hora && (data.repartidor_id || data.zona || data.repartidor)) {
     let driverTimeZone = "America/Mexico_City";
-    if (data.repartidor_id) {
-      const { data: driverRow } = await supabase
-        .from("repartidores")
-        .select("zona_horaria")
-        .eq("id", data.repartidor_id)
-        .maybeSingle();
-      if (driverRow?.zona_horaria) {
-        driverTimeZone = driverRow.zona_horaria;
-      }
+    if (driverRowData?.zona_horaria) {
+      driverTimeZone = driverRowData.zona_horaria;
     } else {
       const normZona = (data.zona || "").toLowerCase();
       const normRep = (data.repartidor || "").toLowerCase();

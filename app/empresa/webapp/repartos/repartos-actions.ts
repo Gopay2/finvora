@@ -91,7 +91,7 @@ export async function getLogisticsFormData() {
   // 1. Obtener repartidores activos
   const { data: repartidores, error: repError } = await supabase
     .from('repartidores')
-    .select('id, nombre, zona_horaria')
+    .select('id, nombre, zona_horaria, dias, horario_inicio, horario_fin')
     .eq('activo', true)
     .order('nombre');
 
@@ -284,14 +284,23 @@ export async function getRepartidoresList() {
 
 
 /**
- * Registra un nuevo repartidor en el sistema con estado activo.
+ * Registra un nuevo repartidor en el sistema con estado activo y horarios por defecto.
  * 
  * @security Permisos requeridos: Admin, Supervisor, Developer
- * @param nombre Nombre completo del repartidor
+ * @param nombre Nombre completo del repartidor o ubicación
  * @param zonaHoraria Zona horaria para control de entregas (default: America/Mexico_City)
+ * @param dias Array opcional de días laborales (default: [0,1,2,3,4,5,6])
+ * @param horarioInicio Horario de inicio (default: "09:00")
+ * @param horarioFin Horario de fin (default: "19:00")
  * @returns Estado de éxito o error de la creación
  */
-export async function crearRepartidor(nombre: string, zonaHoraria?: string) {
+export async function crearRepartidor(
+  nombre: string, 
+  zonaHoraria?: string,
+  dias?: number[],
+  horarioInicio?: string,
+  horarioFin?: string
+) {
   const { role } = await getUserProfile();
   if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
     return { success: false, error: "No autorizado" };
@@ -300,7 +309,14 @@ export async function crearRepartidor(nombre: string, zonaHoraria?: string) {
   const supabase = await createClient();
   const { error } = await supabase
     .from('repartidores')
-    .insert({ nombre, activo: true, zona_horaria: zonaHoraria || 'America/Mexico_City' });
+    .insert({ 
+      nombre, 
+      activo: true, 
+      zona_horaria: zonaHoraria || 'America/Mexico_City',
+      dias: dias && dias.length > 0 ? dias : [0, 1, 2, 3, 4, 5, 6],
+      horario_inicio: horarioInicio || '09:00',
+      horario_fin: horarioFin || '19:00'
+    });
 
   if (error) {
     console.error("Error al crear repartidor:", error);
@@ -308,6 +324,63 @@ export async function crearRepartidor(nombre: string, zonaHoraria?: string) {
   }
 
   revalidatePath('/empresa/webapp/repartos/repartidores');
+  revalidatePath('/empresa/webapp/repartos/repartidores/horarios');
+  return { success: true };
+}
+
+
+/**
+ * Actualiza la configuración de días laborales y franja horaria de un repartidor o ubicación.
+ * 
+ * @security Permisos requeridos: Admin, Supervisor, Developer
+ * @param repartidorId ID único del repartidor/ubicación
+ * @param dias Array de índices de días laborales (0=Dom...6=Sáb)
+ * @param horarioInicio Hora de inicio en formato HH:MM
+ * @param horarioFin Hora de fin en formato HH:MM
+ * @returns Estado de éxito o error de la operación
+ */
+export async function actualizarHorariosRepartidor(
+  repartidorId: string,
+  dias: number[],
+  horarioInicio: string,
+  horarioFin: string
+) {
+  const { role } = await getUserProfile();
+  if (!isAllowed(role, ["Admin", "Supervisor", "Developer"])) {
+    return { success: false, error: "No autorizado" };
+  }
+
+  if (!repartidorId) {
+    return { success: false, error: "ID de repartidor no válido" };
+  }
+
+  if (!dias || dias.length === 0) {
+    return { success: false, error: "Debe seleccionar al menos un día de atención" };
+  }
+
+  if (!horarioInicio || !horarioFin) {
+    return { success: false, error: "Los horarios de inicio y fin son obligatorios" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('repartidores')
+    .update({
+      dias,
+      horario_inicio: horarioInicio,
+      horario_fin: horarioFin
+    })
+    .eq('id', repartidorId);
+
+  if (error) {
+    console.error("Error al actualizar horarios de repartidor:", error);
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath('/empresa/webapp/repartos/repartidores/horarios');
+  revalidatePath('/empresa/webapp/repartos/repartidores');
+  revalidatePath('/empresa/webapp/repartos');
+  revalidatePath('/empresa/webapp/ordenes-entrega');
   return { success: true };
 }
 

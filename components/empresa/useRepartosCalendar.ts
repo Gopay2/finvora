@@ -47,6 +47,9 @@ export interface Repartidor {
   id: string;
   nombre: string;
   zona_horaria: string;
+  dias?: number[];
+  horario_inicio?: string;
+  horario_fin?: string;
 }
 
 export interface Zona {
@@ -260,7 +263,13 @@ export function useRepartosCalendar(userRole?: string) {
     setActionLoading(true);
 
     const repartidorObj = repartidoresFiltradosLogistica.find(repartidor => repartidor.id === formRepartidor);
-    const restDayInfo = getDriverRestDayInfo(repartidorObj?.nombre, formattedSelectedDayStr);
+    const restDayInfo = getDriverRestDayInfo(
+      {
+        nombre: repartidorObj?.nombre,
+        dias: repartidorObj?.dias
+      },
+      formattedSelectedDayStr
+    );
     if (restDayInfo.isRestDay) {
       setFormError(`El repartidor ${repartidorObj?.nombre || ''} no realiza entregas los días ${restDayInfo.restDayNames.join(", ")} (Día de descanso).`);
       setActionLoading(false);

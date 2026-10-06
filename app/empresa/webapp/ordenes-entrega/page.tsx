@@ -74,7 +74,10 @@ export default async function OrdenesEntregaPage() {
         id,
         nombre,
         activo,
-        zona_horaria
+        zona_horaria,
+        dias,
+        horario_inicio,
+        horario_fin
       )
     `)
     .order("nombre_zona", { ascending: true });
@@ -88,6 +91,9 @@ export default async function OrdenesEntregaPage() {
       nombre: string;
       activo: boolean;
       zona_horaria?: string;
+      dias?: number[];
+      horario_inicio?: string;
+      horario_fin?: string;
     } | null;
   }
 
@@ -100,7 +106,10 @@ export default async function OrdenesEntregaPage() {
       repartidor_id: zonaInfo.repartidor_id,
       repartidor_nombre: zonaInfo.repartidores!.nombre,
       repartidor_activo: zonaInfo.repartidores!.activo,
-      repartidor_zona_horaria: zonaInfo.repartidores!.zona_horaria || "America/Mexico_City"
+      repartidor_zona_horaria: zonaInfo.repartidores!.zona_horaria || "America/Mexico_City",
+      repartidor_dias: zonaInfo.repartidores!.dias || [0, 1, 2, 3, 4, 5, 6],
+      repartidor_horario_inicio: zonaInfo.repartidores!.horario_inicio || "09:00",
+      repartidor_horario_fin: zonaInfo.repartidores!.horario_fin || "19:00",
     }));
 
   // 6. Obtenemos repartos existentes desde la fecha actual para bloquear horarios ocupados

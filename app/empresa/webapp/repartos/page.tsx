@@ -27,7 +27,7 @@ export default async function RepartosPage() {
               <Link 
                 href="/empresa/webapp/repartos/repartidores" 
                 className="flex items-center justify-center gap-1 md:gap-2 px-2.5 md:px-5 py-2 md:py-2.5 bg-secondary text-slate-950 font-bold rounded-xl hover:bg-secondary/90 border border-transparent transition-all text-[11px] md:text-sm cursor-pointer whitespace-nowrap" 
-                title="Configurar Repartidores"
+                title="Configurar Repartidores y Locales"
               >
                 <span className="material-symbols-outlined text-[16px] md:text-lg">badge</span>
                 <span>Repartidores<span className="hidden min-[380px]:inline"> y Locales</span></span>
