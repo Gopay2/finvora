@@ -35,12 +35,11 @@ interface JciRecordItem {
 }
 
 const styles = {
-  container: "max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 pb-12",
-  header: "flex flex-col gap-1.5 sm:gap-2 pt-2 sm:pt-1",
-  headerTop: "flex items-start justify-between gap-3 sm:gap-4",
-  headerActions: "flex items-center gap-2 sm:gap-3 shrink-0 -mt-4 sm:-mt-3",
+  container: "max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-700 pb-12",
+  header: "flex flex-col gap-1.5 sm:gap-2 pt-0 sm:pt-1",
   btnPedidoSugerido: "flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-secondary text-slate-950 font-bold rounded-xl hover:bg-secondary/90 border border-transparent transition-all text-xs sm:text-sm cursor-pointer whitespace-nowrap shadow-md shadow-secondary/20",
-  title: "text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent leading-tight pt-1",
+  btnDetalleEquipos: "flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-800 text-slate-200 font-bold rounded-xl hover:bg-slate-700 hover:text-white border border-slate-700 transition-all text-xs sm:text-sm cursor-pointer whitespace-nowrap shadow-sm",
+  title: "text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent leading-tight",
   subtitle: "text-slate-500 text-xs sm:text-sm leading-relaxed",
   btnBack: "flex items-center justify-center px-3 md:px-4 py-2 sm:py-2.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-xl hover:bg-slate-700 hover:text-white transition-all cursor-pointer shrink-0",
 
@@ -298,28 +297,28 @@ export default async function JciPage({ searchParams }: PageProps) {
 
   // Calcular proveedor líder en volumen dentro del período
   const volumenPorProveedor = new Map<string, number>();
-  [...creditoRaw, ...concesionRaw].forEach((item) => {
-    const prov = (item.proveedor || "").trim() || "Desconocido";
-    volumenPorProveedor.set(prov, (volumenPorProveedor.get(prov) || 0) + 1);
+  [...creditoRaw, ...concesionRaw].forEach((registroJci) => {
+    const proveedorNombre = (registroJci.proveedor || "").trim() || "Desconocido";
+    volumenPorProveedor.set(proveedorNombre, (volumenPorProveedor.get(proveedorNombre) || 0) + 1);
   });
 
   let proveedorLider = "—";
   let maxVolumen = 0;
-  volumenPorProveedor.forEach((vol, prov) => {
-    if (vol > maxVolumen) {
-      maxVolumen = vol;
-      proveedorLider = prov;
+  volumenPorProveedor.forEach((volumen, proveedorNombre) => {
+    if (volumen > maxVolumen) {
+      maxVolumen = volumen;
+      proveedorLider = proveedorNombre;
     }
   });
 
   // 7. Formatear rango de fechas reflejado en las tablas (Horario Tijuana)
-  const formatTijuanaDateShort = (d: Date) =>
+  const formatTijuanaDateShort = (fecha: Date) =>
     new Intl.DateTimeFormat("es-MX", {
       timeZone: "America/Tijuana",
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-    }).format(d);
+    }).format(fecha);
 
   let periodoLabel = "Histórico";
   if (yearParam !== "historico" && startDate && endDate) {
@@ -335,9 +334,50 @@ export default async function JciPage({ searchParams }: PageProps) {
     <div className={styles.container}>
       {/* ─── ENCABEZADO ──────────────────────────────────────────────────────── */}
       <header className={styles.header}>
-        <div className={styles.headerTop}>
-          <h1 className={styles.title}>JCI</h1>
-          <div className={styles.headerActions}>
+        {/* Fila 1 en Celular: Botón Volver arriba a la derecha */}
+        <div className="flex sm:hidden justify-end w-full mb-1">
+          <Link href="/empresa/webapp/inventario" className={styles.btnBack} title="Volver a Inventario">
+            <span className="material-symbols-outlined text-xl">arrow_back</span>
+          </Link>
+        </div>
+
+        {/* Fila 2 en Celular: Botones de acción alineados a la derecha */}
+        <div className="flex sm:hidden items-center justify-end gap-2 w-full">
+          <Link
+            href="/empresa/webapp/inventario/jci/detalle-equipos"
+            className={styles.btnDetalleEquipos}
+            title="Ir a Detalle de Equipos"
+          >
+            <span className="material-symbols-outlined text-base">smartphone</span>
+            <span>Detalle equipos</span>
+          </Link>
+          <Link
+            href="/empresa/webapp/inventario/jci/pedido-sugerido"
+            className={styles.btnPedidoSugerido}
+            title="Ir a Pedido Sugerido"
+          >
+            <span className="material-symbols-outlined text-base">shopping_cart</span>
+            <span>Pedido Sugerido</span>
+          </Link>
+        </div>
+
+        {/* Título y Acciones en Escritorio */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <h1 className={styles.title}>JCI</h1>
+            <p className={styles.subtitle}>Panel de control, auditoría y métricas de inventario</p>
+          </div>
+
+          {/* Acciones en Escritorio: Al lado derecho del título */}
+          <div className="hidden sm:flex items-center gap-2 sm:gap-3 shrink-0">
+            <Link
+              href="/empresa/webapp/inventario/jci/detalle-equipos"
+              className={styles.btnDetalleEquipos}
+              title="Ir a Detalle de Equipos"
+            >
+              <span className="material-symbols-outlined text-base sm:text-lg">smartphone</span>
+              <span>Detalle equipos</span>
+            </Link>
             <Link
               href="/empresa/webapp/inventario/jci/pedido-sugerido"
               className={styles.btnPedidoSugerido}
@@ -351,7 +391,6 @@ export default async function JciPage({ searchParams }: PageProps) {
             </Link>
           </div>
         </div>
-        <p className={styles.subtitle}>Panel de control, auditoría y métricas de inventario</p>
       </header>
 
       {/* ─── FILA 1: 4 KPIS DINÁMICOS CONECTADOS ─────────────────────────────── */}

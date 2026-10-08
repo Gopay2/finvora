@@ -1,5 +1,15 @@
+// ─── Grupo 1: React y Next.js ───────────────────────────────────────────────
 import React from "react";
-import { Metadata } from "next";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+
+// ─── Grupo 2: Componentes Internos ──────────────────────────────────────────
+import HeaderActions from "@/components/empresa/HeaderActions";
+import OnboardingModal from "@/components/empresa/OnboardingModal";
+
+// ─── Grupo 3: Utilidades y Base de Datos ────────────────────────────────────
+import { createClient } from "@/utils/supabase/server";
 
 export const metadata: Metadata = {
   title: "Finvora WebApp",
@@ -8,23 +18,23 @@ export const metadata: Metadata = {
     follow: false,
   },
 };
-import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
-import { logout } from "../login/actions";
-import Link from "next/link";
-import OnboardingModal from "@/components/empresa/OnboardingModal";
-import HeaderActions from "@/components/empresa/HeaderActions";
 
 export const revalidate = 0;
 
 const styles = {
   wrapper: "min-h-screen bg-slate-950 text-slate-100 font-[family-name:var(--font-outfit)]",
-  container: "max-w-7xl mx-auto p-6 md:p-12",
-  header: "flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6",
+  container: "max-w-7xl mx-auto p-4 sm:p-6 md:p-12",
+  header: "flex flex-col md:flex-row md:items-center justify-between mb-4 sm:mb-8 md:mb-12 gap-4 md:gap-6",
   titleGroup: "space-y-1",
   title: "text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent",
   subtitle: "text-slate-400",
   logoutBtn: "px-6 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-sm font-medium transition-all flex items-center gap-2 cursor-pointer",
+  roleBadge: (isHighPrivilege: boolean) =>
+    `px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider border ${
+      isHighPrivilege
+        ? "bg-secondary/10 text-secondary border-secondary/20"
+        : "bg-slate-800 text-slate-400 border-slate-700"
+    }`,
 };
 
 export default async function WebAppLayout({
@@ -77,9 +87,7 @@ export default async function WebAppLayout({
               <div className={styles.subtitle}>
                 {username ? (
                   <div className="flex items-center gap-3">
-                    <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider border ${
-                      isHighPrivilege ? "bg-secondary/10 text-secondary border-secondary/20" : "bg-slate-800 text-slate-400 border-slate-700"
-                    }`}>
+                    <span className={styles.roleBadge(isHighPrivilege)}>
                       {userRole}
                     </span>
                     <span className="text-white font-bold text-lg">
