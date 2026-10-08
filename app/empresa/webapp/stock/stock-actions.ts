@@ -303,7 +303,13 @@ export async function registrarVenta(imei: string, vendedorId?: string) {
 
   if (fetchError || !item) return { error: "No se encontró el equipo en stock" };
 
-  // 2. Mover la unidad a la tabla histórica de ventas (congelando el precio de costo actual del catálogo)
+  // 2. Mover la unidad a la tabla histórica de ventas:
+  // Si estaba 'En envío', recuperamos su estado previo ('Disponible', 'Concesión', 'Test', 'A consultar')
+  // Si se vendió directamente desde stock, capturamos su estado actual ('Disponible', 'Concesión', 'Test', 'A consultar')
+  const estadoOrigen = item.estado === 'En envío'
+    ? (item.estado_previo || 'Disponible')
+    : item.estado;
+
   const { error: insertError } = await supabase
     .from('ventas')
     .insert({
@@ -313,7 +319,8 @@ export async function registrarVenta(imei: string, vendedorId?: string) {
       vendedor_nombre: vendedorNombre,
       zona: item.zona,
       precio_costo: (item.productos as unknown as { precio: number } | null)?.precio || 0,
-      fecha_ingreso: item.fecha_ingreso
+      fecha_ingreso: item.fecha_ingreso,
+      estado_previo: estadoOrigen
     });
 
   if (insertError) {
