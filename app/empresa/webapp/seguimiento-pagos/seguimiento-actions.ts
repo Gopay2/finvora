@@ -65,6 +65,9 @@ interface SeguimientoRawResponse {
   estados_semanales?: Record<string, EstadoCuota> | null;
   created_at: string;
   updated_at?: string;
+  vendedor_nombre?: string | null;
+  creador_nombre?: string | null;
+  repartidor_nombre?: string | null;
   vendedor: PerfilSubQuery | PerfilSubQuery[] | null;
   repartidor: RepartidorSubQuery | RepartidorSubQuery[] | null;
   comprobante: ComprobanteSubQuery | ComprobanteSubQuery[] | null;
@@ -107,6 +110,9 @@ export async function getSeguimientoPagos(): Promise<{
         estados_semanales,
         created_at,
         updated_at,
+        vendedor_nombre,
+        creador_nombre,
+        repartidor_nombre,
         vendedor:vendedor_id ( id, username ),
         repartidor:repartidor_id ( id, nombre ),
         comprobante:comprobante_origen_id ( tag )
@@ -118,6 +124,9 @@ export async function getSeguimientoPagos(): Promise<{
       const vendedorObj = Array.isArray(row.vendedor) ? row.vendedor[0] : row.vendedor;
       const repartidorObj = Array.isArray(row.repartidor) ? row.repartidor[0] : row.repartidor;
       const comprobanteObj = Array.isArray(row.comprobante) ? row.comprobante[0] : row.comprobante;
+
+      const finalVendedorUsername = vendedorObj?.username || row.vendedor_nombre || null;
+      const finalRepartidorNombre = repartidorObj?.nombre || row.repartidor_nombre || null;
 
       return {
         id: row.id,
@@ -136,8 +145,8 @@ export async function getSeguimientoPagos(): Promise<{
         estados_semanales: row.estados_semanales || {},
         created_at: row.created_at,
         updated_at: row.updated_at,
-        vendedor: vendedorObj ? { id: vendedorObj.id, username: vendedorObj.username } : null,
-        repartidor: repartidorObj ? { id: repartidorObj.id, nombre: repartidorObj.nombre } : null,
+        vendedor: finalVendedorUsername ? { id: vendedorObj?.id || '', username: finalVendedorUsername } : null,
+        repartidor: finalRepartidorNombre ? { id: repartidorObj?.id || '', nombre: finalRepartidorNombre } : null,
       };
     });
 

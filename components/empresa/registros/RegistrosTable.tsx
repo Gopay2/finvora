@@ -82,7 +82,7 @@ export function RegistrosTable({
                     </td>
                     <td className={styles.td}>
                       <span className={styles.zonaBadge}>
-                        {venta.repartidor?.nombre || "Sin Asignar"}
+                        {venta.repartidor?.nombre || venta.repartidor_nombre || "Sin Asignar"}
                       </span>
                     </td>
                     <td className={styles.td}>
@@ -163,7 +163,7 @@ export function RegistrosTable({
                     </td>
                     <td className={styles.td}>
                       <span className={styles.zonaBadge}>
-                        {garantia.repartidor?.nombre || "Sin Asignar"}
+                        {garantia.repartidor?.nombre || garantia.repartidor_nombre || "Sin Asignar"}
                       </span>
                     </td>
                     <td className={styles.td}>

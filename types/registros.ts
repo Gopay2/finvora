@@ -5,6 +5,7 @@ export interface Venta {
   fecha_ingreso: string;
   fecha_venta: string;
   vendedor_nombre?: string;
+  repartidor_nombre?: string;
   repartidor?: {
     id: string;
     nombre: string;
@@ -80,6 +81,7 @@ export interface Garantia {
   fecha_ingreso: string;
   fecha_garantia: string;
   solicitante_nombre?: string;
+  repartidor_nombre?: string;
   repartidor?: {
     id: string;
     nombre: string;

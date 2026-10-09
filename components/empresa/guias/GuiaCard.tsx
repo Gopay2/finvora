@@ -46,8 +46,9 @@ export default function GuiaCard({ guia, isFeatured = false }: GuiaCardProps) {
     Boolean(guia.imagenes && guia.imagenes.length > 0) ||
     Boolean(guia.contenido && (guia.contenido.includes('![') || guia.contenido.includes('data-type="image"')));
 
-  const autorNombre = guia.autor?.username
-    ? guia.autor.username.charAt(0).toUpperCase() + guia.autor.username.slice(1)
+  const rawAutor = guia.autor?.username || guia.autor_nombre;
+  const autorNombre = rawAutor
+    ? rawAutor.charAt(0).toUpperCase() + rawAutor.slice(1)
     : 'Finvora';
 
   return (

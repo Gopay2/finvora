@@ -69,6 +69,8 @@ interface RawComprobante {
   imei: string | null;
   comprobante_url: string | null;
   created_at: string;
+  vendedor_nombre?: string | null;
+  repartidor_nombre?: string | null;
   vendedor: UserRelation | UserRelation[] | null;
   repartidor: RepartidorRelation | RepartidorRelation[] | null;
   creador: UserRelation | UserRelation[] | null;
@@ -144,6 +146,8 @@ export default async function SueldosPage() {
         imei,
         comprobante_url,
         created_at,
+        vendedor_nombre,
+        repartidor_nombre,
         vendedor:perfiles!vendedor_id (id, username, role),
         repartidor:repartidores!repartidor_id (id, nombre, perfil_id),
         creador:perfiles!creado_por (id, username, role)
@@ -179,24 +183,44 @@ export default async function SueldosPage() {
   });
 
   // Formatear datos para el cliente resolviendo costos equipo
-  const mapUserRelation = (user: UserRelation | UserRelation[] | null) => {
-    if (!user) return null;
+  const mapUserRelation = (user: UserRelation | UserRelation[] | null, fallbackUsername?: string | null) => {
+    if (!user) {
+      if (fallbackUsername) {
+        return { id: '', username: fallbackUsername, role: 'Vendedor' };
+      }
+      return null;
+    }
     const singleUser = Array.isArray(user) ? user[0] : user;
-    if (!singleUser) return null;
+    if (!singleUser) {
+      if (fallbackUsername) {
+        return { id: '', username: fallbackUsername, role: 'Vendedor' };
+      }
+      return null;
+    }
     return {
       id: singleUser.id,
-      username: singleUser.username || "Usuario sin nombre",
+      username: singleUser.username || fallbackUsername || "Usuario sin nombre",
       role: singleUser.role,
     };
   };
 
-  const mapRepartidorRelation = (repartidor: RepartidorRelation | RepartidorRelation[] | null) => {
-    if (!repartidor) return null;
+  const mapRepartidorRelation = (repartidor: RepartidorRelation | RepartidorRelation[] | null, fallbackNombre?: string | null) => {
+    if (!repartidor) {
+      if (fallbackNombre) {
+        return { id: '', nombre: fallbackNombre, perfil_id: '' };
+      }
+      return null;
+    }
     const singleRep = Array.isArray(repartidor) ? repartidor[0] : repartidor;
-    if (!singleRep) return null;
+    if (!singleRep) {
+      if (fallbackNombre) {
+        return { id: '', nombre: fallbackNombre, perfil_id: '' };
+      }
+      return null;
+    }
     return {
       id: singleRep.id,
-      nombre: singleRep.nombre || "Sin nombre",
+      nombre: singleRep.nombre || fallbackNombre || "Sin nombre",
       perfil_id: singleRep.perfil_id,
     };
   };
@@ -241,8 +265,8 @@ export default async function SueldosPage() {
       comprobante_url: comprobanteRaw.comprobante_url || "",
       created_at: comprobanteRaw.created_at,
       costo_equipo: resolvedCost || 0,
-      vendedor: mapUserRelation(comprobanteRaw.vendedor),
-      repartidor: mapRepartidorRelation(comprobanteRaw.repartidor),
+      vendedor: mapUserRelation(comprobanteRaw.vendedor, comprobanteRaw.vendedor_nombre),
+      repartidor: mapRepartidorRelation(comprobanteRaw.repartidor, comprobanteRaw.repartidor_nombre),
       creador: mapUserRelation(comprobanteRaw.creador),
     };
   });

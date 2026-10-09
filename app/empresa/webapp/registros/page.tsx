@@ -45,6 +45,7 @@ export default async function RegistrosPage() {
         fecha_ingreso,
         fecha_venta,
         vendedor_nombre,
+        repartidor_nombre,
         repartidor:repartidores!zona (
           id,
           nombre
@@ -76,6 +77,7 @@ export default async function RegistrosPage() {
         fecha_ingreso,
         fecha_garantia,
         solicitante_nombre,
+        repartidor_nombre,
         repartidor:repartidores!zona (
           id,
           nombre

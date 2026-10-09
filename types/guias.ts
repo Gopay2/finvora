@@ -8,6 +8,7 @@ export interface Guia {
   video_url?: string | null;
   imagenes: string[];
   autor_id?: string | null;
+  autor_nombre?: string | null;
   destacado: boolean;
   orden: number;
   created_at: string;

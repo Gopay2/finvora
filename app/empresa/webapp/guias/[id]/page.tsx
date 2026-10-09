@@ -68,6 +68,7 @@ export default async function GuiaDetallePage({ params }: PageProps) {
         video_url,
         imagenes,
         autor_id,
+        autor_nombre,
         destacado,
         orden,
         created_at,
