@@ -49,8 +49,9 @@ export default function GuiaDetalleView({
     currentUserRole === 'Developer' ||
     currentUserRole === 'Supervisor';
 
-  const autorNombre = guia.autor?.username
-    ? guia.autor.username.charAt(0).toUpperCase() + guia.autor.username.slice(1)
+  const rawAutor = guia.autor?.username || guia.autor_nombre;
+  const autorNombre = rawAutor
+    ? rawAutor.charAt(0).toUpperCase() + rawAutor.slice(1)
     : 'Finvora';
 
   const handleToggleDestacado = async () => {

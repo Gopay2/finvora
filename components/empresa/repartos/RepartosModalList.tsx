@@ -208,7 +208,7 @@ export function RepartosModalList({
                               <div className={styles.cardContent}>
                                 <div className={styles.cardBadgeRow}>
                                   <span className={styles.cardZoneBadge}>
-                                    📍 {rep.zonas_reparto?.nombre_zona || 'Sin Zona'}
+                                    📍 {rep.zonas_reparto?.nombre_zona || (rep as any).zona_nombre || 'Sin Zona'}
                                   </span>
                                 </div>
                                 <h4 className={styles.cardTitle}>
@@ -223,13 +223,13 @@ export function RepartosModalList({
                                   )}
                                   <span className={styles.cardDetailItem}>
                                     <span className="material-symbols-outlined text-sm text-slate-500">local_shipping</span>
-                                    Repartidor: <strong className={styles.cardDetailVal}>{rep.repartidores?.nombre || 'No asignado'}</strong>
+                                    Repartidor: <strong className={styles.cardDetailVal}>{rep.repartidores?.nombre || (rep as any).repartidor_nombre || 'No asignado'}</strong>
                                   </span>
                                   <span className={styles.cardDetailItem}>
                                     <span className="material-symbols-outlined text-sm text-slate-500">person</span>
                                     Vendedor: <strong className={styles.cardDetailVal}>
                                       {(() => {
-                                        const rawName = rep.vendedor?.username || rep.vendedor?.email || 'N/A';
+                                        const rawName = rep.vendedor?.username || rep.vendedor?.email || (rep as any).vendedor_nombre || 'N/A';
                                         return rawName !== 'N/A' ? rawName.charAt(0).toUpperCase() + rawName.slice(1) : 'N/A';
                                       })()}
                                     </strong>

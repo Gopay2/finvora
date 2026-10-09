@@ -38,6 +38,9 @@ export async function getRepartosMes(year: number, month: number) {
       horario,
       notas,
       imei,
+      vendedor_nombre,
+      repartidor_nombre,
+      zona_nombre,
       repartidores (
         id,
         nombre,
